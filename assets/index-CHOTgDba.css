@@ -35,60 +35,87 @@ div:has(> [role="button"]:has(span:contains("Region"))) {
   width: 100% !important;
   margin-top: 0.5rem !important;
 }
-/* --- Confession Card Enhancements --- */
+/* --- Confession Card Full Vertical Overhaul --- */
 
-/* 1. Feed & Post Card Center Alignment (Removes left-side extra gap) */
-main, 
-.max-w-2xl, 
-div:has(> .space-y-5) {
+/* 1. Main Feed Center & Screen Fit */
+main {
+  width: 100% !important;
+  max-width: 480px !important;
   margin-left: auto !important;
   margin-right: auto !important;
-  padding-left: 1rem !important;
-  padding-right: 1rem !important;
-  width: 100% !important;
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+  box-sizing: border-box !important;
 }
 
-/* 2. Post Card Container: Proper centering & layout */
+/* 2. Card Container: White Background & Center */
 div[class*="rounded-2xl"][class*="border"] {
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 14px !important;
+  display: block !important;
+}
+
+/* 3. Card Row to Vertical Column */
+div[class*="rounded-2xl"][class*="border"] > .flex,
+div[class*="rounded-2xl"][class*="border"] > div.flex {
   display: flex !important;
   flex-direction: column !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
   width: 100% !important;
-  cursor: pointer !important;
+  gap: 12px !important;
 }
 
-/* 3. Hero Size Image (Full width banner style on top) */
-div[class*="rounded-2xl"] img,
-div[class*="rounded-2xl"] .relative.w-20.h-20,
-div[class*="rounded-2xl"] .w-20 {
+/* 4. Hero Image (Upar, Full Width & Big) */
+div[class*="rounded-2xl"] .flex-shrink-0,
+div[class*="rounded-2xl"] .w-20,
+div[class*="rounded-2xl"] .h-20 {
   width: 100% !important;
-  height: 220px !important;
-  max-height: 240px !important;
-  border-radius: 0.75rem !important;
+  height: 200px !important;
+}
+
+div[class*="rounded-2xl"] img {
+  width: 100% !important;
+  height: 200px !important;
+  border-radius: 12px !important;
   object-fit: cover !important;
-  margin-bottom: 0.75rem !important;
 }
 
-/* 4. Post Writing: Pure White Color & 2-3 Lines Limit */
+/* 5. Location & Time Badge */
+div[class*="rounded-2xl"] .text-xs,
+div[class*="rounded-2xl"] span {
+  color: #4b5563 !important;
+}
+
+/* 6. Post Writing (Black Text, 3 Lines Max) */
 div[class*="rounded-2xl"] p,
 div[class*="rounded-2xl"] .line-clamp-4 {
-  color: #ffffff !important;
-  font-size: 1rem !important;
-  line-height: 1.55 !important;
+  color: #111827 !important;
+  font-size: 0.95rem !important;
+  line-height: 1.5 !important;
+  margin-top: 4px !important;
+  margin-bottom: 8px !important;
   display: -webkit-box !important;
   -webkit-line-clamp: 3 !important;
   -webkit-box-orient: vertical !important;
   overflow: hidden !important;
 }
 
-/* 5. Clickable Area: Entire Card & 'Tap to View' action */
-div[class*="rounded-2xl"] {
-  pointer-events: auto !important;
+/* 7. Bottom Actions Row (Like, React, Tap to view) */
+div[class*="rounded-2xl"] .mt-auto,
+div[class*="rounded-2xl"] .justify-between {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  border-top: 1px solid #f3f4f6 !important;
+  padding-top: 10px !important;
+  margin-top: 8px !important;
 }
 
-div[class*="rounded-2xl"] span:has-text("Tap to view"),
-div[class*="rounded-2xl"] [class*="text-gray"]:last-child {
-  cursor: pointer !important;
-  user-select: none !important;
+div[class*="rounded-2xl"] button,
+div[class*="rounded-2xl"] .cursor-pointer {
+  color: #374151 !important;
 }
