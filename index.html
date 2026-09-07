@@ -69,6 +69,104 @@
     <!-- Project Assets -->
     <script type="module" crossorigin src="/assets/index-Ck_WjlVM.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-CHOTgDba.css">
+
+    <!-- Custom Post Layout & Styling -->
+    <style>
+      /* Center Alignment & Responsive Viewport Fix */
+      html, body, #root {
+        width: 100% !important;
+        overflow-x: hidden !important;
+      }
+
+      main, .max-w-2xl {
+        margin-left: auto !important;
+        margin-right: auto !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        max-width: 500px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+
+      /* Post Card Container: Pure White Card in True Center */
+      article, 
+      div[class*="rounded-2xl"]:has(img) {
+        background-color: #ffffff !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 1rem !important;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3) !important;
+        margin: 1.25rem auto !important;
+        padding: 1rem !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        cursor: pointer !important;
+        display: block !important;
+      }
+
+      /* Break Horizontal Row into Vertical Stack */
+      div[class*="rounded-2xl"]:has(img) > div,
+      div[class*="rounded-2xl"]:has(img) .flex {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+      }
+
+      /* Hero Size Big Image at Top */
+      div[class*="rounded-2xl"] img {
+        width: 100% !important;
+        height: 220px !important;
+        max-height: 240px !important;
+        object-fit: cover !important;
+        border-radius: 0.75rem !important;
+        margin-bottom: 0.75rem !important;
+        display: block !important;
+      }
+
+      /* Image Constraints Override */
+      div[class*="rounded-2xl"] div:has(> img),
+      div[class*="rounded-2xl"] .flex-shrink-0,
+      div[class*="rounded-2xl"] .w-20,
+      div[class*="rounded-2xl"] .h-20 {
+        width: 100% !important;
+        height: auto !important;
+        flex: none !important;
+      }
+
+      /* Post Text: 2 to 3 Lines Clamped, Readable Black Font */
+      div[class*="rounded-2xl"] p,
+      div[class*="rounded-2xl"] .line-clamp-4 {
+        color: #111827 !important;
+        font-size: 1rem !important;
+        line-height: 1.55 !important;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 3 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
+        margin: 0.5rem 0 !important;
+      }
+
+      /* Meta Info (Location & Timestamp) */
+      div[class*="rounded-2xl"] span {
+        color: #4b5563 !important;
+      }
+
+      /* Bottom Row: Like, React, Tap to View */
+      div[class*="rounded-2xl"] .mt-auto,
+      div[class*="rounded-2xl"] div:last-child:has(button) {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        width: 100% !important;
+        border-top: 1px solid #f3f4f6 !important;
+        padding-top: 0.75rem !important;
+        margin-top: 0.5rem !important;
+      }
+
+      div[class*="rounded-2xl"] button {
+        color: #374151 !important;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
