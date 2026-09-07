@@ -35,3 +35,60 @@ div:has(> [role="button"]:has(span:contains("Region"))) {
   width: 100% !important;
   margin-top: 0.5rem !important;
 }
+/* --- Confession Card Enhancements --- */
+
+/* 1. Feed & Post Card Center Alignment (Removes left-side extra gap) */
+main, 
+.max-w-2xl, 
+div:has(> .space-y-5) {
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+  width: 100% !important;
+}
+
+/* 2. Post Card Container: Proper centering & layout */
+div[class*="rounded-2xl"][class*="border"] {
+  display: flex !important;
+  flex-direction: column !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  width: 100% !important;
+  cursor: pointer !important;
+}
+
+/* 3. Hero Size Image (Full width banner style on top) */
+div[class*="rounded-2xl"] img,
+div[class*="rounded-2xl"] .relative.w-20.h-20,
+div[class*="rounded-2xl"] .w-20 {
+  width: 100% !important;
+  height: 220px !important;
+  max-height: 240px !important;
+  border-radius: 0.75rem !important;
+  object-fit: cover !important;
+  margin-bottom: 0.75rem !important;
+}
+
+/* 4. Post Writing: Pure White Color & 2-3 Lines Limit */
+div[class*="rounded-2xl"] p,
+div[class*="rounded-2xl"] .line-clamp-4 {
+  color: #ffffff !important;
+  font-size: 1rem !important;
+  line-height: 1.55 !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 3 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+/* 5. Clickable Area: Entire Card & 'Tap to View' action */
+div[class*="rounded-2xl"] {
+  pointer-events: auto !important;
+}
+
+div[class*="rounded-2xl"] span:has-text("Tap to view"),
+div[class*="rounded-2xl"] [class*="text-gray"]:last-child {
+  cursor: pointer !important;
+  user-select: none !important;
+}
