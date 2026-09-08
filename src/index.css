@@ -10,6 +10,15 @@ html {
 body {
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
+  background-color: #1a1412; /* Website ka dark background */
+  min-height: 100vh;
+}
+
+/* Post card aur uske andar ke text ko hamesha white background aur dark text me rakhne ke liye */
+.bg-white, 
+[class*="bg-white"] {
+  background-color: #ffffff !important;
+  color: #1a1412;
 }
 
 .font-display {
@@ -28,14 +37,14 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #f0c8d4;
+  background: #3d2a24;
   border-radius: 999px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #1a1412;
 }
 
 :focus-visible {
-  outline: 2px solid #d92a5a;
+  outline: 2px solid #f26a63;
   outline-offset: 2px;
 }
