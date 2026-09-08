@@ -1,13 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
-import { Heart, MoreVertical } from 'lucide-react';
-import RegionFilterBox from './RegionFilterBox';
+import React, { useState } from 'react';
+import { MoreVertical, Heart } from 'lucide-react';
 
-export type LegalTopic =
-  | 'about'
-  | 'contact'
-  | 'privacy'
-  | 'terms'
-  | 'disclaimer';
+export type LegalTopic = 'privacy' | 'terms' | 'rules' | 'about';
 
 interface HeaderProps {
   selectedRegion: string | null;
@@ -15,71 +9,85 @@ interface HeaderProps {
   onOpenLegal: (topic: LegalTopic) => void;
 }
 
-const MENU_ITEMS: { key: LegalTopic; label: string }[] = [
-  { key: 'about', label: 'About Us' },
-  { key: 'contact', label: 'Contact Us' },
-  { key: 'privacy', label: 'Privacy Policy' },
-  { key: 'terms', label: 'Terms of Service' },
-  { key: 'disclaimer', label: 'Disclaimer & Moderation' },
-];
-
-export default function Header({ selectedRegion, onRegionChange, onOpenLegal }: HeaderProps) {
+export const Header: React.FC<HeaderProps> = ({
+  selectedRegion,
+  onRegionChange,
+  onOpenLegal,
+}) => {
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   return (
-    <header className="sticky top-0 z-30 w-full bg-white/90 backdrop-blur-md border-b border-blush-100">
-      <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blush-400 to-plum-500 flex items-center justify-center">
-            <Heart className="w-[18px] h-[18px] text-white" fill="white" strokeWidth={0} />
+    <header className="sticky top-0 z-40 bg-[#fff8f5]/90 backdrop-blur-md border-b border-[#f3e3dd] px-4 py-3">
+      <div className="max-w-4xl mx-auto flex items-center justify-between">
+        
+        {/* Left: Bada Red Heart Box + Bada Pure Red/Coral Title */}
+        <div 
+          onClick={() => onRegionChange(null)}
+          className="flex items-center gap-2.5 cursor-pointer select-none active:opacity-90"
+        >
+          {/* Bada Heart Logo */}
+          <div 
+            className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-md"
+            style={{
+              background: 'linear-gradient(135deg, #f95738 0%, #ee4266 100%)',
+              boxShadow: '0 4px 14px rgba(238, 66, 102, 0.35)'
+            }}
+          >
+            <Heart className="w-7 h-7 text-white fill-white" />
           </div>
-          <span className="font-display text-lg sm:text-xl font-semibold bg-gradient-to-r from-blush-600 to-plum-600 bg-clip-text text-transparent whitespace-nowrap">
+
+          {/* Bada Open Confess (Poora Red/Coral Colour) */}
+          <span 
+            className="text-2xl sm:text-3xl font-extrabold tracking-tight"
+            style={{ color: '#ee4266' }}
+          >
             Open Confess
           </span>
         </div>
 
-        <div className="flex-1 min-w-0">
-          <RegionFilterBox selectedRegion={selectedRegion} onRegionChange={onRegionChange} />
-        </div>
-
-        <div className="relative shrink-0" ref={menuRef}>
-          <button
-            aria-label="More options"
-            onClick={() => setMenuOpen((v) => !v)}
-            className="w-9 h-9 flex items-center justify-center rounded-full text-gray-500 hover:bg-blush-50 hover:text-blush-600 transition-colors"
+        {/* Right: Three Dots Menu */}
+        <div className="relative">
+          <button 
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="p-2 rounded-full hover:bg-stone-200/60 text-stone-700 transition-colors"
+            aria-label="Menu"
           >
-            <MoreVertical className="w-5 h-5" />
+            <MoreVertical className="w-6 h-6" />
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5 animate-fade-in">
-              {MENU_ITEMS.map((item) => (
-                <button
-                  key={item.key}
-                  onClick={() => {
-                    onOpenLegal(item.key);
-                    setMenuOpen(false);
-                  }}
-                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-blush-50 hover:text-blush-700 transition-colors"
-                >
-                  {item.label}
-                </button>
-              ))}
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-stone-100 py-2 z-50 text-sm font-medium">
+              <button
+                onClick={() => { onOpenLegal('about'); setMenuOpen(false); }}
+                className="w-full text-left px-4 py-2.5 hover:bg-stone-50 text-stone-700"
+              >
+                About
+              </button>
+              <button
+                onClick={() => { onOpenLegal('rules'); setMenuOpen(false); }}
+                className="w-full text-left px-4 py-2.5 hover:bg-stone-50 text-stone-700"
+              >
+                Community Rules
+              </button>
+              <button
+                onClick={() => { onOpenLegal('terms'); setMenuOpen(false); }}
+                className="w-full text-left px-4 py-2.5 hover:bg-stone-50 text-stone-700"
+              >
+                Terms of Service
+              </button>
+              <button
+                onClick={() => { onOpenLegal('privacy'); setMenuOpen(false); }}
+                className="w-full text-left px-4 py-2.5 hover:bg-stone-50 text-stone-700"
+              >
+                Privacy Policy
+              </button>
             </div>
           )}
         </div>
+
       </div>
     </header>
   );
-}
+};
+
+export default Header;
