@@ -8,7 +8,7 @@ export default function App() {
   const [legalTopic, setLegalTopic] = useState<LegalTopic | null>(null);
 
   return (
-    <div className="w-full min-h-screen overflow-x-hidden bg-[#fff8f5]">
+    <div className="w-full min-h-screen overflow-x-hidden bg-[#1a1412] text-white">
       <Header
         selectedRegion={regionFilter}
         onRegionChange={setRegionFilter}
