@@ -8,17 +8,11 @@ html {
 }
 
 body {
+  margin: 0;
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
-  background-color: #1a1412; /* Website ka dark background */
-  min-height: 100vh;
-}
-
-/* Post card aur uske andar ke text ko hamesha white background aur dark text me rakhne ke liye */
-.bg-white, 
-[class*="bg-white"] {
-  background-color: #ffffff !important;
-  color: #1a1412;
+  background-color: #fff8f5;
+  color: #1a1a1a;
 }
 
 .font-display {
@@ -37,14 +31,14 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #3d2a24;
+  background: #f0c8d4;
   border-radius: 999px;
 }
 ::-webkit-scrollbar-track {
-  background: #1a1412;
+  background: transparent;
 }
 
 :focus-visible {
-  outline: 2px solid #f26a63;
+  outline: 2px solid #d92a5a;
   outline-offset: 2px;
 }
