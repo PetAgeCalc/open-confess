@@ -53,23 +53,23 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
   return (
     <div className="w-full min-h-screen overflow-x-hidden">
-      {/* Hero */}
-      <section className="max-w-3xl mx-auto px-4 pt-10 pb-8 text-center">
-        {/* Tagline: Purana coral colour */}
+      {/* Hero: Padding drastically reduced to bring it up */}
+      <section className="max-w-3xl mx-auto px-4 pt-3 pb-3 text-center">
+        {/* Tagline */}
         <h1 
-          className="font-display text-3xl sm:text-4xl font-semibold leading-tight"
+          className="font-display text-2xl sm:text-3xl font-bold leading-tight"
           style={{ color: '#f26a63' }}
         >
           Real stories. Zero identities.
         </h1>
 
-        {/* Share Button: Chhota compact box aur purana coral gradient */}
+        {/* Share Button: Sleek, compact and tightly spaced */}
         <button
           onClick={() => setCreateOpen(true)}
-          className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-white font-medium text-xs shadow-md active:scale-95 transition-all"
+          className="mt-2.5 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-white font-medium text-xs shadow-sm active:scale-95 transition-all"
           style={{
             background: 'linear-gradient(90deg, #f95738 0%, #ee4266 100%)',
-            boxShadow: '0 4px 12px rgba(238, 66, 102, 0.25)'
+            boxShadow: '0 2px 8px rgba(238, 66, 102, 0.25)'
           }}
         >
           <Plus className="w-3.5 h-3.5" />
@@ -77,20 +77,20 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         </button>
       </section>
 
-      {/* Feed */}
-      <section className="max-w-md sm:max-w-lg mx-auto px-4 pb-16 space-y-4">
+      {/* Feed: Top spacing tightened so card appears right below button */}
+      <section className="max-w-md sm:max-w-lg mx-auto px-4 pt-1 pb-16 space-y-4">
         {regionFilter && (
-          <p className="text-sm text-gray-500 text-center">
+          <p className="text-xs text-gray-500 text-center mb-2">
             Showing confessions from <span className="font-medium text-gray-700">{regionFilter}</span>
           </p>
         )}
 
         {loading ? (
-          <div className="flex justify-center py-16">
+          <div className="flex justify-center py-12">
             <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#ee4266' }} />
           </div>
         ) : posts.length === 0 ? (
-          <p className="text-center text-gray-400 py-16 text-sm">
+          <p className="text-center text-gray-400 py-12 text-sm">
             No confessions here yet. Be the first to share one.
           </p>
         ) : (
@@ -100,15 +100,15 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         )}
 
         {!loading && hasMore && (
-          <div className="flex justify-center pt-4">
+          <div className="flex justify-center pt-3">
             <button
               onClick={handleLoadMore}
               disabled={loadingMore}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-full border border-rose-200 text-rose-600 text-sm font-medium hover:bg-rose-50 transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-2 rounded-full border border-rose-200 text-rose-600 text-xs font-medium hover:bg-rose-50 transition-colors disabled:opacity-50"
             >
               {loadingMore ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   Loading…
                 </>
               ) : (
