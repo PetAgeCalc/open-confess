@@ -30,7 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-40 bg-[#fff8f5]/95 backdrop-blur-md border-b border-[#f3e3dd] px-3 sm:px-4 py-2.5">
       <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
         
-        {/* Left: Bada Red Logo + Brand Name */}
+        {/* Left: Logo + Name */}
         <div 
           onClick={() => handleSelectRegion(null)}
           className="flex items-center gap-2 cursor-pointer select-none active:scale-95 transition-transform shrink-0"
@@ -78,7 +78,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Search Input Dropdown */}
+          {/* Search Dropdown */}
           {searchOpen && (
             <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-2xl shadow-xl border border-stone-200 p-2 z-50">
               <div className="flex items-center gap-1.5 px-2 py-1 bg-stone-50 rounded-xl border border-stone-200">
@@ -117,49 +117,60 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Right: Three Dots Menu */}
+        {/* Right: 3 Dots Menu Button */}
         <div className="relative shrink-0">
           <button 
             onClick={() => setMenuOpen(!menuOpen)}
-            className="p-1.5 sm:p-2 rounded-full hover:bg-stone-200/60 text-stone-700 transition-colors"
+            className="p-2 rounded-full hover:bg-stone-200/70 text-stone-800 transition-colors"
             aria-label="Menu"
           >
             <MoreVertical className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
 
+          {/* Dropdown Menu Items */}
           {menuOpen && (
-            <div className="absolute right-0 mt-2 w-44 bg-white rounded-2xl shadow-xl border border-stone-100 py-1.5 z-50 text-xs font-medium">
-              <button
-                onClick={() => { onOpenLegal && onOpenLegal('about'); setMenuOpen(false); }}
-                className="w-full text-left px-4 py-2 hover:bg-stone-50 text-stone-700"
-              >
-                About Us
-              </button>
-              <button
-                onClick={() => { onOpenLegal && onOpenLegal('contact'); setMenuOpen(false); }}
-                className="w-full text-left px-4 py-2 hover:bg-stone-50 text-stone-700"
-              >
-                Contact Us
-              </button>
-              <button
-                onClick={() => { onOpenLegal && onOpenLegal('privacy'); setMenuOpen(false); }}
-                className="w-full text-left px-4 py-2 hover:bg-stone-50 text-stone-700"
-              >
-                Privacy Policy
-              </button>
-              <button
-                onClick={() => { onOpenLegal && onOpenLegal('terms'); setMenuOpen(false); }}
-                className="w-full text-left px-4 py-2 hover:bg-stone-50 text-stone-700"
-              >
-                Terms of Service
-              </button>
-              <button
-                onClick={() => { onOpenLegal && onOpenLegal('disclaimer'); setMenuOpen(false); }}
-                className="w-full text-left px-4 py-2 hover:bg-stone-50 text-stone-700"
-              >
-                Disclaimer
-              </button>
-            </div>
+            <>
+              {/* Invisible backdrop to close on outside click */}
+              <div 
+                className="fixed inset-0 z-40" 
+                onClick={() => setMenuOpen(false)} 
+              />
+              
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-2xl border border-stone-200 py-2 z-50 text-xs sm:text-sm font-medium divide-y divide-stone-100">
+                <div className="py-1">
+                  <button
+                    onClick={() => { onOpenLegal?.('about'); setMenuOpen(false); }}
+                    className="w-full text-left px-4 py-2.5 hover:bg-rose-50 text-stone-800 transition-colors"
+                  >
+                    About Us
+                  </button>
+                  <button
+                    onClick={() => { onOpenLegal?.('contact'); setMenuOpen(false); }}
+                    className="w-full text-left px-4 py-2.5 hover:bg-rose-50 text-stone-800 transition-colors"
+                  >
+                    Contact Us
+                  </button>
+                  <button
+                    onClick={() => { onOpenLegal?.('privacy'); setMenuOpen(false); }}
+                    className="w-full text-left px-4 py-2.5 hover:bg-rose-50 text-stone-800 transition-colors"
+                  >
+                    Privacy Policy
+                  </button>
+                  <button
+                    onClick={() => { onOpenLegal?.('terms'); setMenuOpen(false); }}
+                    className="w-full text-left px-4 py-2.5 hover:bg-rose-50 text-stone-800 transition-colors"
+                  >
+                    Terms of Service
+                  </button>
+                  <button
+                    onClick={() => { onOpenLegal?.('disclaimer'); setMenuOpen(false); }}
+                    className="w-full text-left px-4 py-2.5 hover:bg-rose-50 text-stone-800 transition-colors"
+                  >
+                    Disclaimer & Moderation
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </div>
 
