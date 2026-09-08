@@ -1,0 +1,121 @@
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Loader2 } from 'lucide-react';
+import { Confession } from '../types';
+import { fetchInitialFeed, fetchNextPage, FeedPage } from '../lib/confessionService';
+import ConfessionCard from '../components/ConfessionCard';
+import PostDetailModal from '../components/PostDetailModal';
+import CreateConfessionModal from '../components/CreateConfessionModal';
+
+interface HomePageProps {
+  regionFilter: string | null;
+}
+
+export default function HomePage({ regionFilter }: HomePageProps) {
+  const [posts, setPosts] = useState<Confession[]>([]);
+  const [cursor, setCursor] = useState<FeedPage['cursor']>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [activePost, setActivePost] = useState<Confession | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const loadInitial = useCallback(async () => {
+    setLoading(true);
+    try {
+      const page = await fetchInitialFeed(regionFilter ?? undefined);
+      setPosts(page.posts);
+      setCursor(page.cursor);
+      setHasMore(page.hasMore);
+    } finally {
+      setLoading(false);
+    }
+  }, [regionFilter]);
+
+  useEffect(() => {
+    loadInitial();
+  }, [loadInitial]);
+
+  async function handleLoadMore() {
+    setLoadingMore(true);
+    try {
+      const page = await fetchNextPage(cursor, regionFilter ?? undefined);
+      setPosts((prev) => [...prev, ...page.posts]);
+      setCursor(page.cursor);
+      setHasMore(page.hasMore);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  function handleCreated(confession: Confession) {
+    setPosts((prev) => [confession, ...prev]);
+  }
+
+  return (
+    <div className="w-full min-h-screen overflow-x-hidden">
+      {/* Hero */}
+      <section className="max-w-3xl mx-auto px-4 pt-10 pb-8 text-center">
+        <h1 className="font-display text-3xl sm:text-4xl font-semibold text-gray-900 leading-tight">
+          Real stories. Zero identities.
+        </h1>
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="mt-5 inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blush-500 to-plum-500 text-white font-semibold text-sm shadow-lg shadow-blush-200/60 hover:shadow-blush-300/60 transition-shadow"
+        >
+          <Plus className="w-4 h-4" />
+          Share Your Confession
+        </button>
+      </section>
+
+      {/* Feed */}
+      <section className="max-w-md sm:max-w-lg mx-auto px-4 pb-16 space-y-4">
+        {regionFilter && (
+          <p className="text-sm text-gray-500 text-center">
+            Showing confessions from <span className="font-medium text-gray-700">{regionFilter}</span>
+          </p>
+        )}
+
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="w-6 h-6 text-blush-400 animate-spin" />
+          </div>
+        ) : posts.length === 0 ? (
+          <p className="text-center text-gray-400 py-16 text-sm">
+            No confessions here yet. Be the first to share one.
+          </p>
+        ) : (
+          posts.map((post) => (
+            <ConfessionCard key={post.id} confession={post} onOpen={() => setActivePost(post)} />
+          ))
+        )}
+
+        {!loading && hasMore && (
+          <div className="flex justify-center pt-4">
+            <button
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-full border border-blush-200 text-blush-600 text-sm font-medium hover:bg-blush-50 transition-colors disabled:opacity-50"
+            >
+              {loadingMore ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading…
+                </>
+              ) : (
+                'Load More Confessions'
+              )}
+            </button>
+          </div>
+        )}
+      </section>
+
+      {activePost && (
+        <PostDetailModal confession={activePost} onClose={() => setActivePost(null)} />
+      )}
+
+      {createOpen && (
+        <CreateConfessionModal onClose={() => setCreateOpen(false)} onCreated={handleCreated} />
+      )}
+    </div>
+  );
+}
