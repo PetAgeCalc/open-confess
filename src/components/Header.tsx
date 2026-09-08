@@ -53,7 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
         </div>
 
-        {/* Center: Chhota Compact Search Box */}
+        {/* Center: Search Box */}
         <div className="relative shrink min-w-0 max-w-[130px] sm:max-w-xs">
           {selectedRegion ? (
             <div className="flex items-center justify-between gap-1 px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-medium">
@@ -78,7 +78,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Search Input Popup */}
+          {/* Search Dropdown */}
           {searchOpen && (
             <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-stone-200 p-2 z-50">
               <div className="flex items-center gap-1 px-2 py-1 bg-stone-50 rounded-xl border border-stone-200">
@@ -127,7 +127,7 @@ export const Header: React.FC<HeaderProps> = ({
             <MoreVertical className="w-5 h-5" />
           </button>
 
-          {/* Dropdown Options */}
+          {/* Dropdown Options (Bada Text Size) */}
           {menuOpen && (
             <>
               <div 
@@ -135,37 +135,39 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={() => setMenuOpen(false)} 
               />
               
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-2xl border border-stone-200 py-1.5 z-50 text-xs font-medium">
-                <button
-                  onClick={() => { onOpenLegal?.('about'); setMenuOpen(false); }}
-                  className="w-full text-left px-4 py-2 hover:bg-rose-50 text-stone-800 transition-colors"
-                >
-                  About Us
-                </button>
-                <button
-                  onClick={() => { onOpenLegal?.('contact'); setMenuOpen(false); }}
-                  className="w-full text-left px-4 py-2 hover:bg-rose-50 text-stone-800 transition-colors"
-                >
-                  Contact Us
-                </button>
-                <button
-                  onClick={() => { onOpenLegal?.('privacy'); setMenuOpen(false); }}
-                  className="w-full text-left px-4 py-2 hover:bg-rose-50 text-stone-800 transition-colors"
-                >
-                  Privacy Policy
-                </button>
-                <button
-                  onClick={() => { onOpenLegal?.('terms'); setMenuOpen(false); }}
-                  className="w-full text-left px-4 py-2 hover:bg-rose-50 text-stone-800 transition-colors"
-                >
-                  Terms of Service
-                </button>
-                <button
-                  onClick={() => { onOpenLegal?.('disclaimer'); setMenuOpen(false); }}
-                  className="w-full text-left px-4 py-2 hover:bg-rose-50 text-stone-800 transition-colors"
-                >
-                  Disclaimer & Moderation
-                </button>
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-stone-200 py-2 z-50 divide-y divide-stone-100">
+                <div className="py-1">
+                  <button
+                    onClick={() => { onOpenLegal?.('about'); setMenuOpen(false); }}
+                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 font-medium text-[15px] transition-colors"
+                  >
+                    About Us
+                  </button>
+                  <button
+                    onClick={() => { onOpenLegal?.('contact'); setMenuOpen(false); }}
+                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 font-medium text-[15px] transition-colors"
+                  >
+                    Contact Us
+                  </button>
+                  <button
+                    onClick={() => { onOpenLegal?.('privacy'); setMenuOpen(false); }}
+                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 font-medium text-[15px] transition-colors"
+                  >
+                    Privacy Policy
+                  </button>
+                  <button
+                    onClick={() => { onOpenLegal?.('terms'); setMenuOpen(false); }}
+                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 font-medium text-[15px] transition-colors"
+                  >
+                    Terms of Service
+                  </button>
+                  <button
+                    onClick={() => { onOpenLegal?.('disclaimer'); setMenuOpen(false); }}
+                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 font-medium text-[15px] transition-colors"
+                  >
+                    Disclaimer & Moderation
+                  </button>
+                </div>
               </div>
             </>
           )}
@@ -177,4 +179,3 @@ export const Header: React.FC<HeaderProps> = ({
 };
 
 export default Header;
-     
