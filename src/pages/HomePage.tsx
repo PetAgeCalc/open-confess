@@ -52,17 +52,20 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   }
 
   return (
-    <div className="w-full min-h-screen overflow-x-hidden">
+    <div className="w-full min-h-screen overflow-x-hidden bg-[#1a1412] text-white">
       {/* Hero */}
       <section className="max-w-3xl mx-auto px-4 pt-10 pb-8 text-center">
-        <h1 className="font-display text-3xl sm:text-4xl font-semibold text-gray-900 leading-tight">
-          Real stories. Zero identities.
+        <h1 className="font-display text-4xl sm:text-5xl font-bold leading-tight tracking-tight">
+          <span className="text-white">Real stories. </span>
+          <span className="text-[#f26a63]">Zero identities.</span>
         </h1>
+        
+        {/* Chhota compact button */}
         <button
           onClick={() => setCreateOpen(true)}
-          className="mt-5 inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blush-500 to-plum-500 text-white font-semibold text-sm shadow-lg shadow-blush-200/60 hover:shadow-blush-300/60 transition-shadow"
+          className="mt-5 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-[#f95738] to-[#ee4266] text-white font-medium text-xs shadow-md shadow-[#ee4266]/25 hover:brightness-110 active:scale-95 transition-all"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5" />
           Share Your Confession
         </button>
       </section>
@@ -70,17 +73,17 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       {/* Feed */}
       <section className="max-w-md sm:max-w-lg mx-auto px-4 pb-16 space-y-4">
         {regionFilter && (
-          <p className="text-sm text-gray-500 text-center">
-            Showing confessions from <span className="font-medium text-gray-700">{regionFilter}</span>
+          <p className="text-sm text-[#b59f95] text-center">
+            Showing confessions from <span className="font-medium text-[#f26a63]">{regionFilter}</span>
           </p>
         )}
 
         {loading ? (
           <div className="flex justify-center py-16">
-            <Loader2 className="w-6 h-6 text-blush-400 animate-spin" />
+            <Loader2 className="w-6 h-6 text-[#f26a63] animate-spin" />
           </div>
         ) : posts.length === 0 ? (
-          <p className="text-center text-gray-400 py-16 text-sm">
+          <p className="text-center text-[#8e766c] py-16 text-sm">
             No confessions here yet. Be the first to share one.
           </p>
         ) : (
@@ -94,7 +97,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
             <button
               onClick={handleLoadMore}
               disabled={loadingMore}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-full border border-blush-200 text-blush-600 text-sm font-medium hover:bg-blush-50 transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-full border border-[#422e26] text-[#e0a899] text-sm font-medium hover:bg-[#2c1e19] transition-colors disabled:opacity-50"
             >
               {loadingMore ? (
                 <>
