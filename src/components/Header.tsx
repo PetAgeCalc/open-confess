@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MoreVertical, Heart } from 'lucide-react';
 
-export type LegalTopic = 'privacy' | 'terms' | 'rules' | 'about';
+export type LegalTopic = 'about' | 'contact' | 'privacy' | 'terms' | 'disclaimer';
 
 export interface HeaderProps {
   selectedRegion?: string | null;
@@ -19,7 +19,7 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-40 bg-[#fff8f5]/95 backdrop-blur-md border-b border-[#f3e3dd] px-4 py-3">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
         
-        {/* Left: Bada Heart Box + Bada Pure Red Open Confess */}
+        {/* Left: Red Heart Box + Bada Red Title */}
         <div 
           onClick={() => onRegionChange && onRegionChange(null)}
           className="flex items-center gap-2.5 cursor-pointer select-none active:scale-95 transition-transform"
@@ -60,13 +60,19 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={() => { onOpenLegal && onOpenLegal('about'); setMenuOpen(false); }}
                 className="w-full text-left px-4 py-2.5 hover:bg-stone-50 text-stone-700"
               >
-                About
+                About Us
               </button>
               <button
-                onClick={() => { onOpenLegal && onOpenLegal('rules'); setMenuOpen(false); }}
+                onClick={() => { onOpenLegal && onOpenLegal('contact'); setMenuOpen(false); }}
                 className="w-full text-left px-4 py-2.5 hover:bg-stone-50 text-stone-700"
               >
-                Community Rules
+                Contact Us
+              </button>
+              <button
+                onClick={() => { onOpenLegal && onOpenLegal('privacy'); setMenuOpen(false); }}
+                className="w-full text-left px-4 py-2.5 hover:bg-stone-50 text-stone-700"
+              >
+                Privacy Policy
               </button>
               <button
                 onClick={() => { onOpenLegal && onOpenLegal('terms'); setMenuOpen(false); }}
@@ -75,10 +81,10 @@ export const Header: React.FC<HeaderProps> = ({
                 Terms of Service
               </button>
               <button
-                onClick={() => { onOpenLegal && onOpenLegal('privacy'); setMenuOpen(false); }}
+                onClick={() => { onOpenLegal && onOpenLegal('disclaimer'); setMenuOpen(false); }}
                 className="w-full text-left px-4 py-2.5 hover:bg-stone-50 text-stone-700"
               >
-                Privacy Policy
+                Disclaimer
               </button>
             </div>
           )}
