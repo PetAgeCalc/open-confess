@@ -54,7 +54,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   return (
     <div className="w-full min-h-screen overflow-x-hidden">
       {/* Hero Section */}
-      <section className="max-w-4xl mx-auto px-4 pt-4 pb-3 text-center">
+      <section className="w-full px-4 pt-4 pb-3 text-center">
         <h1 
           className="font-display text-2xl sm:text-3xl md:text-4xl font-bold leading-tight"
           style={{ color: '#f26a63' }}
@@ -75,10 +75,10 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         </button>
       </section>
 
-      {/* Feed: Mobile me 1 column, Desktop/Tablet me 2 columns clean grid */}
-      <section className="max-w-4xl mx-auto px-3 sm:px-6 pt-1 pb-16">
+      {/* Feed: Mobile aur Desktop dono me Full-Width Single Column */}
+      <section className="w-full max-w-2xl mx-auto px-3 sm:px-4 pt-1 pb-16 space-y-4">
         {regionFilter && (
-          <p className="text-xs md:text-sm text-gray-500 text-center mb-4">
+          <p className="text-xs md:text-sm text-gray-500 text-center mb-3">
             Showing confessions from <span className="font-medium text-gray-700">{regionFilter}</span>
           </p>
         )}
@@ -92,7 +92,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
             No confessions here yet. Be the first to share one.
           </p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-4 w-full">
             {posts.map((post) => (
               <ConfessionCard key={post.id} confession={post} onOpen={() => setActivePost(post)} />
             ))}
@@ -104,7 +104,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
             <button
               onClick={handleLoadMore}
               disabled={loadingMore}
-              className="flex items-center gap-2 px-5 py-2 rounded-full border border-rose-200 text-rose-600 text-xs md:text-sm font-medium hover:bg-rose-50 transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-full border border-rose-200 text-rose-600 text-xs md:text-sm font-medium hover:bg-rose-50 transition-colors disabled:opacity-50"
             >
               {loadingMore ? (
                 <>
