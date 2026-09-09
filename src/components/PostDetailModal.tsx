@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { X, Heart, MessageCircle, MapPin, Send } from 'lucide-react';
 import { Confession } from '../types';
 
@@ -7,7 +7,7 @@ interface PostDetailModalProps {
   onClose: () => void;
 }
 
-export default function PostDetailModal({ confession, onClose }: PostDetailModalProps) {
+export const PostDetailModal: React.FC<PostDetailModalProps> = ({ confession, onClose }) => {
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -20,26 +20,27 @@ export default function PostDetailModal({ confession, onClose }: PostDetailModal
     };
   }, [onClose]);
 
-  // Type safe access
-  const post = confession as unknown as Record<string, any>;
-  const author = post.authorName || post.author || 'Anonymous';
-  const locationText = [post.city, post.country].filter(Boolean).join(', ') || post.location || '';
-  const likes = post.likesCount ?? post.likes ?? 0;
-  const comments = post.commentsCount ?? post.comments ?? 0;
-  const image = post.imageUrl || post.image || null;
-  const contentText = post.text || post.content || '';
+  if (!confession) return null;
+
+  const post = confession as Record<string, any>;
+  const author = String(post.authorName || post.author || 'Anonymous');
+  const location = [post.city, post.country].filter(Boolean).join(', ') || (post.location ? String(post.location) : '');
+  const likes = Number(post.likesCount ?? post.likes ?? 0);
+  const comments = Number(post.commentsCount ?? post.comments ?? 0);
+  const imageUrl = post.imageUrl || post.image || '';
+  const textContent = String(post.text || post.content || '');
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-      {/* Outside click to close */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm">
+      {/* Backdrop click to close */}
       <div className="fixed inset-0" onClick={onClose} />
 
-      {/* Symmetrical Modal Card */}
-      <div className="relative w-full max-w-md mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10 my-auto">
+      {/* Main Centered Modal Box */}
+      <div className="relative w-full max-w-md mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-stone-100 shrink-0 bg-white">
-          <h2 className="font-display text-lg font-bold text-stone-900">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-stone-100 bg-white shrink-0">
+          <h2 className="text-lg font-bold text-stone-900">
             Confession
           </h2>
           <button 
@@ -51,31 +52,31 @@ export default function PostDetailModal({ confession, onClose }: PostDetailModal
           </button>
         </div>
 
-        {/* Scrollable Body */}
+        {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
           
-          {/* Post Image */}
-          {image && (
-            <div className="w-full rounded-2xl overflow-hidden bg-stone-100 shadow-sm border border-stone-100">
+          {/* Post Image with balanced margins */}
+          {Boolean(imageUrl) && (
+            <div className="w-full rounded-2xl overflow-hidden bg-stone-100 border border-stone-100">
               <img 
-                src={image} 
+                src={imageUrl} 
                 alt="Confession" 
                 className="w-full h-auto max-h-72 object-cover block"
               />
             </div>
           )}
 
-          {/* Meta Info */}
+          {/* Metadata */}
           <div className="flex items-center gap-2 text-xs text-stone-500 flex-wrap">
             <span className="font-semibold text-stone-800">
               {author}
             </span>
-            {locationText && (
+            {Boolean(location) && (
               <>
                 <span>•</span>
                 <span className="inline-flex items-center gap-1 text-rose-600 font-medium">
                   <MapPin className="w-3.5 h-3.5 shrink-0" />
-                  {locationText}
+                  {location}
                 </span>
               </>
             )}
@@ -83,9 +84,9 @@ export default function PostDetailModal({ confession, onClose }: PostDetailModal
             <span>Recent</span>
           </div>
 
-          {/* Confession Text */}
-          <p className="text-stone-900 text-base sm:text-lg leading-relaxed whitespace-pre-wrap">
-            {contentText}
+          {/* Confession Body */}
+          <p className="text-stone-900 text-base leading-relaxed whitespace-pre-wrap">
+            {textContent}
           </p>
 
           {/* Reactions */}
@@ -100,7 +101,7 @@ export default function PostDetailModal({ confession, onClose }: PostDetailModal
             </div>
           </div>
 
-          {/* Comment Form */}
+          {/* Comment Box */}
           <div className="pt-2 space-y-2.5">
             <input
               type="text"
@@ -127,4 +128,6 @@ export default function PostDetailModal({ confession, onClose }: PostDetailModal
       </div>
     </div>
   );
-}
+};
+
+export default PostDetailModal;
