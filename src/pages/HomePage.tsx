@@ -75,8 +75,8 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         </button>
       </section>
 
-      {/* Feed Section: Mobile aur Desktop dono me Full-Width Single Column */}
-      <section className="w-full max-w-2xl mx-auto px-3 sm:px-4 pt-1 pb-16 space-y-4">
+      {/* Feed Section: Pure 100% Full Width Single Column */}
+      <section className="w-full px-3 sm:px-6 md:px-8 pt-1 pb-16 space-y-4">
         {regionFilter && (
           <p className="text-xs md:text-sm text-gray-500 text-center mb-3">
             Showing confessions from <span className="font-medium text-gray-700">{regionFilter}</span>
@@ -94,7 +94,9 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         ) : (
           <div className="flex flex-col gap-4 w-full">
             {posts.map((post) => (
-              <ConfessionCard key={post.id} confession={post} onOpen={() => setActivePost(post)} />
+              <div key={post.id} className="w-full">
+                <ConfessionCard confession={post} onOpen={() => setActivePost(post)} />
+              </div>
             ))}
           </div>
         )}
