@@ -5,6 +5,7 @@ import { Confession } from '../types';
 interface ConfessionCardProps {
   confession: Confession;
   onOpen: () => void;
+  onReactionChange?: (postId: string, emoji: string | null) => void;
 }
 
 const EMOJI_OPTIONS = [
@@ -20,23 +21,43 @@ const EMOJI_OPTIONS = [
   { label: '100', emoji: '💯' },
 ];
 
-export default function ConfessionCard({ confession, onOpen }: ConfessionCardProps) {
+export default function ConfessionCard({ confession, onOpen, onReactionChange }: ConfessionCardProps) {
   const post = confession as Record<string, any>;
+  const postId = String(post.id || post._id || '');
 
   const initialLikes = Number(post.likesCount ?? post.likes ?? 0) || 0;
   const initialComments = Number(post.commentsCount ?? post.comments ?? (post.commentsList?.length || 0)) || 0;
 
-  // Sync state whenever props change from HomePage
   const [likes, setLikes] = useState(initialLikes);
   const [commentsCount, setCommentsCount] = useState(initialComments);
-  const [userReaction, setUserReaction] = useState<string | null>(post.userReaction || null);
+  const [userReaction, setUserReaction] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
 
+  // Sync state and check local reaction storage per unique postId
   useEffect(() => {
     setLikes(Number(post.likesCount ?? post.likes ?? 0) || 0);
     setCommentsCount(Number(post.commentsCount ?? post.comments ?? (post.commentsList?.length || 0)) || 0);
-    setUserReaction(post.userReaction || null);
-  }, [post.likesCount, post.likes, post.commentsCount, post.comments, post.commentsList, post.userReaction]);
+
+    // Read stored reaction for this specific post
+    if (postId) {
+      try {
+        const stored = JSON.parse(localStorage.getItem('user_reactions') || '{}');
+        if (stored[postId]) {
+          setUserReaction(stored[postId]);
+          return;
+        }
+      } catch (err) {
+        console.error('Failed reading user_reactions', err);
+      }
+    }
+
+    // Fallback only if post explicitly provides a valid string emoji
+    if (typeof post.userReaction === 'string' && post.userReaction.trim() !== '') {
+      setUserReaction(post.userReaction);
+    } else {
+      setUserReaction(null);
+    }
+  }, [postId, post.likesCount, post.likes, post.commentsCount, post.comments, post.commentsList, post.userReaction]);
 
   const author = post.authorName || post.author || 'Anonymous';
   const location = [post.city, post.country].filter(Boolean).join(', ') || (post.location ? String(post.location) : '');
@@ -45,15 +66,41 @@ export default function ConfessionCard({ confession, onOpen }: ConfessionCardPro
 
   function handleReactionSelect(e: React.MouseEvent, emoji: string) {
     e.stopPropagation();
+    let updatedReaction: string | null = null;
+
     if (userReaction === emoji) {
+      // Toggle off
+      updatedReaction = null;
       setUserReaction(null);
       setLikes((prev) => Math.max(0, prev - 1));
     } else {
+      // Toggle new or change emoji
+      updatedReaction = emoji;
       if (!userReaction) {
         setLikes((prev) => prev + 1);
       }
       setUserReaction(emoji);
     }
+
+    // Persist per post ID in localStorage
+    if (postId) {
+      try {
+        const stored = JSON.parse(localStorage.getItem('user_reactions') || '{}');
+        if (updatedReaction) {
+          stored[postId] = updatedReaction;
+        } else {
+          delete stored[postId];
+        }
+        localStorage.setItem('user_reactions', JSON.stringify(stored));
+      } catch (err) {
+        console.error('Failed saving reaction to localStorage', err);
+      }
+    }
+
+    if (onReactionChange && postId) {
+      onReactionChange(postId, updatedReaction);
+    }
+
     setPickerOpen(false);
   }
 
@@ -89,6 +136,10 @@ export default function ConfessionCard({ confession, onOpen }: ConfessionCardPro
             src={imageUrl} 
             alt="Confession" 
             className="w-full h-full object-cover block"
+            onError={(e) => {
+              // Broken image handle: hide container if url fails
+              (e.target as HTMLElement).parentElement?.classList.add('hidden');
+            }}
           />
         </div>
       )}
