@@ -75,7 +75,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         </button>
       </section>
 
-      {/* Feed: Mobile aur Desktop dono me Full-Width Single Column */}
+      {/* Feed Section: Mobile aur Desktop dono me Full-Width Single Column */}
       <section className="w-full max-w-2xl mx-auto px-3 sm:px-4 pt-1 pb-16 space-y-4">
         {regionFilter && (
           <p className="text-xs md:text-sm text-gray-500 text-center mb-3">
