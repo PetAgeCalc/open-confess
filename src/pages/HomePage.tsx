@@ -4,6 +4,8 @@ import { Confession } from '../types';
 import { fetchInitialFeed, fetchNextPage, FeedPage } from '../lib/confessionService';
 import ConfessionCard from '../components/ConfessionCard';
 import CreateConfessionModal from '../components/CreateConfessionModal';
+// Simulation Engine Import
+import { syncSimulatedActivity, scheduleEngagementForNewPost } from '../lib/activitySimulator';
 
 interface HomePageProps {
   regionFilter: string | null;
@@ -31,77 +33,46 @@ const EMOJI_LIST = [
 
 const STORAGE_KEY = 'open_confess_user_activity_v1';
 
-// Timestamp to readable string convertor
 function parseTimeToHuman(rawTime: any): string {
   if (!rawTime) return 'Recent';
-  
-  // Agar already readable format hai
   const str = String(rawTime).trim();
   if (str.includes('ago') || str.includes('Just now')) return str;
 
   const num = Number(rawTime);
   if (!isNaN(num)) {
-    // Agar timestamp seconds mein hai
     const millis = num < 10000000000 ? num * 1000 : num;
     const diffMins = Math.floor((Date.now() - millis) / 60000);
-    
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
     const diffHours = Math.floor(diffMins / 60);
     if (diffHours < 24) return `${diffHours}h ago`;
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays}d ago`;
+    return `${Math.floor(diffHours / 24)}d ago`;
   }
-
   return 'Recent';
 }
 
-// Author sanitizer: numbers ko hatakar 'Anonymous' banayega
 function extractAuthorName(item: any): string {
   if (!item || typeof item !== 'object') return 'Anonymous';
-  
   const possible = item.authorName || item.author || item.name || item.userName || item.user;
   if (!possible) return 'Anonymous';
-  
   const str = String(possible).trim();
-  // Agar number ID jaisa hai (e.g. 17889...) toh Anonymous kar do
-  if (/^\d{8,}$/.test(str) || !isNaN(Number(str))) {
-    return 'Anonymous';
-  }
+  if (/^\d{8,}$/.test(str) || !isNaN(Number(str))) return 'Anonymous';
   return str;
 }
 
-// Har comment item ko clean format mein convert karna
 function normalizeComment(c: any, index: number): CommentItem {
   if (!c) {
-    return {
-      id: String(index),
-      author: 'Anonymous',
-      text: '',
-      createdAt: 'Recent',
-    };
+    return { id: String(index), author: 'Anonymous', text: '', createdAt: 'Recent' };
   }
-
-  // Agar simple string aa rahi ho
   if (typeof c === 'string') {
-    return {
-      id: String(index),
-      author: 'Anonymous',
-      text: c,
-      createdAt: 'Recent',
-    };
+    return { id: String(index), author: 'Anonymous', text: c, createdAt: 'Recent' };
   }
-
   const cleanAuthor = extractAuthorName(c);
   const cleanText = String(c.text || c.content || c.comment || c.message || '');
-  
-  // Time extract karein
   let rawTime = c.createdAt || c.timestamp || c.date || c.time;
-  // Agar author field mein number timestamp tha
   if (!rawTime && c.author && !isNaN(Number(c.author))) {
     rawTime = c.author;
   }
-
   return {
     id: String(c.id || index),
     author: cleanAuthor,
@@ -164,11 +135,14 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     }
   };
 
+  // Automated 50 Posts Load
   const loadInitial = useCallback(async () => {
     setLoading(true);
     try {
       const page = await fetchInitialFeed(regionFilter ?? undefined);
-      const merged = applySavedActivity(page.posts);
+      // Auto-injected 50 daily posts with compressed JPGs
+      const blended = await syncSimulatedActivity(page.posts);
+      const merged = applySavedActivity(blended);
       setPosts(merged);
       setCursor(page.cursor);
       setHasMore(page.hasMore);
@@ -205,8 +179,42 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     }
   }
 
+  // Real user post creation + Language-based auto comments
   function handleCreated(confession: Confession) {
     setPosts((prev) => [confession, ...prev]);
+
+    // Gradual comments and reaction scheduling
+    scheduleEngagementForNewPost(confession, ({ likesCountIncrement, reaction, newComment }) => {
+      setPosts((prev) =>
+        prev.map((p) => {
+          if (p.id !== confession.id) return p;
+          const currentLikes = Number((p as any).likesCount ?? (p as any).likes ?? 0);
+          const currentList = (p as any).commentsList || [];
+          const updatedList = newComment ? [...currentList, newComment] : currentList;
+          const updatedLikes = likesCountIncrement ? currentLikes + likesCountIncrement : currentLikes;
+
+          const updatedPost = {
+            ...p,
+            likesCount: updatedLikes,
+            likes: updatedLikes,
+            commentsCount: updatedList.length,
+            comments: updatedList.length,
+            commentsList: updatedList,
+            userReaction: reaction || (p as any).userReaction,
+          };
+
+          // Save simulated interactions so they persist
+          saveActivityToStorage(confession.id, {
+            likesCount: updatedLikes,
+            commentsCount: updatedList.length,
+            commentsList: updatedList,
+            userReaction: reaction || (p as any).userReaction,
+          });
+
+          return updatedPost as Confession;
+        })
+      );
+    });
   }
 
   function handleOpenPost(post: Confession) {
@@ -376,7 +384,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         )}
       </section>
 
-      {/* Synchronized Modal */}
+      {/* Modal */}
       {activePost && (
         <div 
           className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6"
@@ -386,7 +394,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
             className="relative w-full max-w-full md:max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] z-10 my-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
             <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-stone-100 bg-white shrink-0">
               <h2 className="text-xl sm:text-2xl font-bold text-stone-900 font-display">
                 Confession
@@ -400,10 +407,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
               </button>
             </div>
 
-            {/* Content Body */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 space-y-6">
-              
-              {/* Image */}
               {Boolean(activePost.imageUrl || activePost.image) && (
                 <div className="w-full rounded-2xl overflow-hidden bg-stone-100 border border-stone-100 max-h-[420px]">
                   <img 
@@ -414,7 +418,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                 </div>
               )}
 
-              {/* Author & Location */}
               <div className="flex items-center gap-2 text-xs sm:text-sm text-stone-500 flex-wrap">
                 <span className="font-semibold text-stone-800">
                   {activePost.authorName || activePost.author || 'Anonymous'}
@@ -432,7 +435,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                 <span>Recent</span>
               </div>
 
-              {/* Text */}
               <p className="text-stone-900 text-base sm:text-lg md:text-xl leading-relaxed whitespace-pre-wrap">
                 {activePost.text || activePost.content || ''}
               </p>
@@ -509,7 +511,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                   ))}
                 </div>
 
-                {/* Add Comment Input */}
+                {/* Add Comment */}
                 <div className="pt-3 space-y-2.5">
                   <input
                     type="text"
