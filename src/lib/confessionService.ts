@@ -23,13 +23,6 @@ const PAGE_SIZE = 8;
 const LOCAL_POSTS_KEY = 'openconfess_local_posts_v1';
 const LOCAL_INTERACTIONS_KEY = 'openconfess_local_post_stats_v1';
 
-// ---------------------------------------------------------------------------
-// Local (no-Firebase) persistence layer.
-// Used automatically whenever Firebase env vars are absent/incomplete, so the
-// whole app — including new confessions a visitor creates — works fully
-// offline/demo without any backend setup.
-// ---------------------------------------------------------------------------
-
 interface LocalPostStats {
   likesCount: number;
   reactions: ReactionMap;
@@ -49,7 +42,7 @@ function writeLocalPosts(posts: Confession[]): void {
   try {
     localStorage.setItem(LOCAL_POSTS_KEY, JSON.stringify(posts));
   } catch {
-    // Ignore quota errors — the confession still shows for this session.
+    // Ignore quota errors
   }
 }
 
@@ -66,20 +59,23 @@ function writeLocalStats(stats: Record<string, LocalPostStats>): void {
   try {
     localStorage.setItem(LOCAL_INTERACTIONS_KEY, JSON.stringify(stats));
   } catch {
-    // Ignore quota errors.
+    // Ignore quota errors
   }
 }
 
 function emptyReactions(): ReactionMap {
-  return { '❤️': 0, '🔥': 0, '😮': 0, '😢': 0, '👏': 0 };
+  return { '❤️': 0, '🫂': 0, '😢': 0, '👏': 0, '🔥': 0, '😂': 0, '😮': 0, '💔': 0, '🙏': 0, '💯': 0 };
 }
 
-/**
- * Merges seed data + any locally-created posts + any locally-recorded
- * interaction deltas (likes/comments added this session) into one feed,
- * freshest first. This is the fallback path used whenever Firebase isn't
- * configured.
- */
+function safeEpochMs(val: any): number {
+  if (!val) return Date.now();
+  if (typeof val === 'number') return val;
+  if (val?.toMillis) return val.toMillis();
+  if (val?.seconds) return val.seconds * 1000;
+  const parsed = toEpochMs(val);
+  return isNaN(parsed) ? Date.now() : parsed;
+}
+
 function getMergedLocalFeed(): Confession[] {
   const localPosts = readLocalPosts();
   const stats = readLocalStats();
@@ -91,20 +87,16 @@ function getMergedLocalFeed(): Confession[] {
       ...post,
       likesCount: override.likesCount,
       reactions: override.reactions,
-      comments: [...post.comments, ...override.comments],
+      comments: [...(post.comments || []), ...(override.comments || [])],
     };
   });
 
-  return all.sort((a, b) => b.createdAt - a.createdAt);
+  return all.sort((a, b) => safeEpochMs(b.createdAt) - safeEpochMs(a.createdAt));
 }
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
 
 export interface FeedPage {
   posts: Confession[];
-  cursor: QueryDocumentSnapshot | number | null; // Firestore cursor OR local page index
+  cursor: QueryDocumentSnapshot | number | null;
   hasMore: boolean;
 }
 
@@ -130,7 +122,8 @@ async function fetchFirestorePage(
   regionFilter?: string
 ): Promise<FeedPage> {
   const colRef = collection(postsDb!, 'confessions');
-  const constraints = [orderBy('createdAt', 'desc'), limit(PAGE_SIZE)];
+  const constraints: any[] = [orderBy('createdAt', 'desc'), limit(PAGE_SIZE)];
+
   const q = cursor
     ? query(colRef, ...constraints, startAfter(cursor))
     : query(colRef, ...constraints);
@@ -141,24 +134,37 @@ async function fetchFirestorePage(
   for (const docSnap of snap.docs) {
     const data = docSnap.data();
     if (regionFilter && data.region !== regionFilter) continue;
-    const interactionSnap = await getDoc(doc(interactionsDb!, 'post_interactions', docSnap.id));
-    const interaction = interactionSnap.exists() ? interactionSnap.data() : null;
+
+    let interactionData: any = null;
+    if (interactionsDb) {
+      try {
+        const interactionSnap = await getDoc(doc(interactionsDb, 'post_interactions', docSnap.id));
+        if (interactionSnap.exists()) {
+          interactionData = interactionSnap.data();
+        }
+      } catch (e) {
+        console.error('Error loading interaction doc:', e);
+      }
+    }
 
     posts.push({
       id: docSnap.id,
-      authorName: data.authorName,
-      text: data.text,
+      authorName: data.authorName || 'Anonymous',
+      text: data.text || '',
       imageUrl: data.imageUrl ?? null,
-      country: data.country,
-      city: data.city,
-      region: data.region,
-      createdAt: toEpochMs(data.createdAt),
+      country: data.country || '',
+      city: data.city || '',
+      region: data.region || '',
+      createdAt: safeEpochMs(data.createdAt),
       viewsCount: data.viewsCount ?? 0,
-      likesCount: interaction?.likesCount ?? 0,
-      reactions: interaction?.reactions ?? emptyReactions(),
-      comments: [], // loaded on-demand in PostDetailModal for cost efficiency
+      likesCount: Number(interactionData?.likesCount ?? data.likesCount ?? 0),
+      reactions: interactionData?.reactions ?? emptyReactions(),
+      comments: [],
     });
   }
+
+  // Double sort on client-side to enforce strict descending order
+  posts.sort((a, b) => safeEpochMs(b.createdAt) - safeEpochMs(a.createdAt));
 
   const lastDoc = snap.docs[snap.docs.length - 1] ?? null;
   return { posts, cursor: lastDoc, hasMore: snap.docs.length === PAGE_SIZE };
@@ -216,7 +222,7 @@ export async function createConfession(input: CreateConfessionInput): Promise<Co
     await setDoc(doc(interactionsDb, 'post_interactions', docRef.id), {
       likesCount: 0,
       reactions: emptyReactions(),
-    });
+    }, { merge: true });
 
     return {
       id: docRef.id,
@@ -234,7 +240,6 @@ export async function createConfession(input: CreateConfessionInput): Promise<Co
     };
   }
 
-  // Local fallback
   const newPost: Confession = {
     id: `local-${Date.now()}`,
     authorName: input.authorName || 'Anonymous',
@@ -263,15 +268,24 @@ export async function setReaction(
   if (isFirebaseConfigured && interactionsDb) {
     const ref = doc(interactionsDb, 'post_interactions', postId);
     const updates: Record<string, unknown> = {};
+
     if (previous) updates[`reactions.${previous}`] = increment(-1);
     if (next) updates[`reactions.${next}`] = increment(1);
     updates.likesCount = increment((next ? 1 : 0) - (previous ? 1 : 0));
-    await updateDoc(ref, updates);
+
+    try {
+      await updateDoc(ref, updates);
+    } catch {
+      // Document create fallback agar missing ho
+      const initial = emptyReactions();
+      if (next) initial[next] = 1;
+      await setDoc(ref, { likesCount: next ? 1 : 0, reactions: initial }, { merge: true });
+    }
+
     const snap = await getDoc(ref);
     return (snap.data()?.reactions as ReactionMap) ?? emptyReactions();
   }
 
-  // Local fallback
   const stats = readLocalStats();
   const base = stats[postId] ?? {
     likesCount: findPostAnywhere(postId)?.likesCount ?? 0,
@@ -279,9 +293,9 @@ export async function setReaction(
     comments: [],
   };
   const reactions = { ...base.reactions };
-  if (previous) reactions[previous] = Math.max(0, reactions[previous] - 1);
-  if (next) reactions[next] = reactions[next] + 1;
-  const likesCount = base.likesCount + (next ? 1 : 0) - (previous ? 1 : 0);
+  if (previous) reactions[previous] = Math.max(0, (reactions[previous] || 0) - 1);
+  if (next) reactions[next] = (reactions[next] || 0) + 1;
+  const likesCount = Math.max(0, base.likesCount + (next ? 1 : 0) - (previous ? 1 : 0));
   stats[postId] = { ...base, reactions, likesCount };
   writeLocalStats(stats);
   return reactions;
@@ -313,7 +327,6 @@ export async function addComment(
     return comment;
   }
 
-  // Local fallback
   const stats = readLocalStats();
   const base = stats[postId] ?? {
     likesCount: findPostAnywhere(postId)?.likesCount ?? 0,
@@ -338,7 +351,7 @@ export async function fetchComments(postId: string): Promise<Comment[]> {
       id: d.id,
       authorName: d.data().authorName,
       text: d.data().text,
-      createdAt: toEpochMs(d.data().createdAt),
+      createdAt: safeEpochMs(d.data().createdAt),
       parentId: d.data().parentId ?? null,
     }));
   }
@@ -346,7 +359,7 @@ export async function fetchComments(postId: string): Promise<Comment[]> {
   const post = findPostAnywhere(postId);
   const stats = readLocalStats()[postId];
   return [...(post?.comments ?? []), ...(stats?.comments ?? [])].sort(
-    (a, b) => a.createdAt - b.createdAt
+    (a, b) => safeEpochMs(a.createdAt) - safeEpochMs(b.createdAt)
   );
 }
 
