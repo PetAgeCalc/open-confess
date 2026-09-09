@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MoreVertical, Heart, Search, MapPin, X } from 'lucide-react';
 
 export type LegalTopic = 'about' | 'contact' | 'privacy' | 'terms' | 'disclaimer';
@@ -17,21 +17,35 @@ export const Header: React.FC<HeaderProps> = ({
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
+  const menuContainerRef = useRef<HTMLDivElement>(null);
 
-  // Scroll ya screen par touch karne par menu ko turant band karein
+  // Screen par kahin bhi touch ya scroll karne par popup ko force close karein
   useEffect(() => {
     if (!menuOpen) return;
 
-    const handleScrollOrTouch = () => {
+    const handleOutsideInteraction = (event: Event) => {
+      // Agar click menu button ya dropdown ke andar nahi hai, toh band kar dein
+      if (
+        menuContainerRef.current &&
+        !menuContainerRef.current.contains(event.target as Node)
+      ) {
+        setMenuOpen(false);
+      }
+    };
+
+    const handleScroll = () => {
       setMenuOpen(false);
     };
 
-    window.addEventListener('scroll', handleScrollOrTouch, { passive: true });
-    window.addEventListener('touchmove', handleScrollOrTouch, { passive: true });
+    // Capture phase true rakha hai taaki mobile browser event drop na kare
+    document.addEventListener('touchstart', handleOutsideInteraction, true);
+    document.addEventListener('mousedown', handleOutsideInteraction, true);
+    window.addEventListener('scroll', handleScroll, true);
 
     return () => {
-      window.removeEventListener('scroll', handleScrollOrTouch);
-      window.removeEventListener('touchmove', handleScrollOrTouch);
+      document.removeEventListener('touchstart', handleOutsideInteraction, true);
+      document.removeEventListener('mousedown', handleOutsideInteraction, true);
+      window.removeEventListener('scroll', handleScroll, true);
     };
   }, [menuOpen]);
 
@@ -134,10 +148,13 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Right: 3 Dots Menu */}
-        <div className="relative shrink-0">
+        {/* Right: 3 Dots Menu Container */}
+        <div ref={menuContainerRef} className="relative shrink-0">
           <button 
-            onClick={() => setMenuOpen(!menuOpen)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen(!menuOpen);
+            }}
             className="p-1.5 rounded-full hover:bg-stone-200/70 text-stone-700 transition-colors"
             aria-label="Menu"
           >
@@ -146,53 +163,45 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Dropdown Options */}
           {menuOpen && (
-            <>
-              {/* Screen overlay: Kahi bhi bahar tap karne par close */}
-              <div 
-                className="fixed inset-0 z-40 bg-black/5" 
-                onClick={() => setMenuOpen(false)} 
-              />
-              
-              <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-2xl border border-stone-200 py-2.5 z-50 divide-y divide-stone-100">
-                <div className="py-1">
-                  <button
-                    onClick={() => { onOpenLegal?.('about'); setMenuOpen(false); }}
-                    style={{ fontSize: '16.5px', fontWeight: 600 }}
-                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
-                  >
-                    About Us
-                  </button>
-                  <button
-                    onClick={() => { onOpenLegal?.('contact'); setMenuOpen(false); }}
-                    style={{ fontSize: '16.5px', fontWeight: 600 }}
-                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
-                  >
-                    Contact Us
-                  </button>
-                  <button
-                    onClick={() => { onOpenLegal?.('privacy'); setMenuOpen(false); }}
-                    style={{ fontSize: '16.5px', fontWeight: 600 }}
-                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
-                  >
-                    Privacy Policy
-                  </button>
-                  <button
-                    onClick={() => { onOpenLegal?.('terms'); setMenuOpen(false); }}
-                    style={{ fontSize: '16.5px', fontWeight: 600 }}
-                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
-                  >
-                    Terms of Service
-                  </button>
-                  <button
-                    onClick={() => { onOpenLegal?.('disclaimer'); setMenuOpen(false); }}
-                    style={{ fontSize: '16.5px', fontWeight: 600 }}
-                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
-                  >
-                    Disclaimer & Moderation
-                  </button>
-                </div>
+            <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-2xl border border-stone-200 py-2.5 z-50 divide-y divide-stone-100 animate-in fade-in zoom-in-95 duration-100">
+              <div className="py-1">
+                <button
+                  onClick={() => { onOpenLegal?.('about'); setMenuOpen(false); }}
+                  style={{ fontSize: '16.5px', fontWeight: 600 }}
+                  className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
+                >
+                  About Us
+                </button>
+                <button
+                  onClick={() => { onOpenLegal?.('contact'); setMenuOpen(false); }}
+                  style={{ fontSize: '16.5px', fontWeight: 600 }}
+                  className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
+                >
+                  Contact Us
+                </button>
+                <button
+                  onClick={() => { onOpenLegal?.('privacy'); setMenuOpen(false); }}
+                  style={{ fontSize: '16.5px', fontWeight: 600 }}
+                  className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
+                >
+                  Privacy Policy
+                </button>
+                <button
+                  onClick={() => { onOpenLegal?.('terms'); setMenuOpen(false); }}
+                  style={{ fontSize: '16.5px', fontWeight: 600 }}
+                  className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
+                >
+                  Terms of Service
+                </button>
+                <button
+                  onClick={() => { onOpenLegal?.('disclaimer'); setMenuOpen(false); }}
+                  style={{ fontSize: '16.5px', fontWeight: 600 }}
+                  className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
+                >
+                  Disclaimer & Moderation
+                </button>
               </div>
-            </>
+            </div>
           )}
         </div>
 
