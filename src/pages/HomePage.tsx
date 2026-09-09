@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Sparkles, MessageCircle, Plus, Search, X, Send, MapPin } from 'lucide-react';
+import { Sparkles, MessageCircle, Search, X, Send, MapPin } from 'lucide-react';
 
 export interface Confession {
   id: string;
@@ -13,7 +13,6 @@ export interface Confession {
   commentCount?: number;
 }
 
-// LocalStorage Persistence Keys
 const LOCAL_STORAGE_REACTIONS_KEY = 'oc_persistent_reactions_v1';
 const LOCAL_STORAGE_POSTS_KEY = 'oc_local_confessions_v1';
 
@@ -37,7 +36,6 @@ const saveReactionLocally = (postId: string, reactionType: string) => {
   }
 };
 
-// Initial Seed Confessions
 const INITIAL_SEEDS: Confession[] = [
   {
     id: 'seed-1',
@@ -132,7 +130,6 @@ const INITIAL_SEEDS: Confession[] = [
 const CATEGORIES = ['All', 'Love', 'Secret', 'Life', 'Family', 'Work', 'Funny'];
 const REACTION_LIST = ['❤️', '🫂', '🥺', '😂', '🔥', '👏'];
 
-// Inline Confession Card Component
 function InlineCard({
   confession,
   onReact,
@@ -182,7 +179,6 @@ function InlineCard({
   );
 }
 
-// Inline Confession Modal Component
 function InlineModal({
   isOpen,
   onClose,
@@ -222,7 +218,7 @@ function InlineModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95">
+      <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
           <h3 className="font-serif font-bold text-lg text-stone-900">Share Your Confession</h3>
           <button onClick={onClose} className="text-stone-400 hover:text-stone-700 p-1">
@@ -284,7 +280,6 @@ function InlineModal({
   );
 }
 
-// Main Page Component
 export default function HomePage() {
   const [confessions, setConfessions] = useState<Confession[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -346,24 +341,6 @@ export default function HomePage() {
     );
 
     saveReactionLocally(confessionId, reactionType);
-
-    try {
-      const cached = localStorage.getItem(LOCAL_STORAGE_POSTS_KEY);
-      if (cached) {
-        const parsed: Confession[] = JSON.parse(cached);
-        const updated = parsed.map((p) => {
-          if (p.id === confessionId) {
-            const rx = { ...(p.reactions || {}) };
-            rx[reactionType] = (rx[reactionType] || 0) + 1;
-            return { ...p, reactions: rx };
-          }
-          return p;
-        });
-        localStorage.setItem(LOCAL_STORAGE_POSTS_KEY, JSON.stringify(updated));
-      }
-    } catch {
-      // Ignore
-    }
   };
 
   const handleConfessionCreated = (newConfession: Confession) => {
@@ -391,28 +368,7 @@ export default function HomePage() {
 
   return (
     <div className="w-full min-h-screen bg-[#fff8f5] text-stone-900 selection:bg-rose-100 selection:text-rose-900 pb-20">
-      <header className="sticky top-0 z-30 bg-[#fff8f5]/90 backdrop-blur-md border-b border-stone-200/70 px-4 py-3 sm:px-8">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-full bg-rose-500 text-white flex items-center justify-center font-bold text-sm shadow-sm">
-              <Heart className="w-4 h-4 fill-white" />
-            </span>
-            <span className="font-serif font-bold text-xl tracking-tight text-stone-900">
-              Open Confess
-            </span>
-          </div>
-
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-1.5 bg-stone-900 hover:bg-stone-800 text-white text-xs sm:text-sm font-medium px-4 py-2 rounded-full transition-all active:scale-95 shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Share Confession</span>
-          </button>
-        </div>
-      </header>
-
-      <section className="px-4 pt-10 pb-6 text-center max-w-2xl mx-auto">
+      <section className="px-4 pt-6 pb-6 text-center max-w-2xl mx-auto">
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100/80 text-rose-700 text-xs font-semibold tracking-wide uppercase mb-4">
           <Sparkles className="w-3.5 h-3.5" /> 100% Anonymous & Safe
         </span>
