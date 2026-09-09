@@ -51,6 +51,14 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     setPosts((prev) => [confession, ...prev]);
   }
 
+  // Modal me emoji ya comment badhte hi feed list me bhi update hoga
+  function handleUpdatePost(updatedPost: Confession) {
+    setActivePost(updatedPost);
+    setPosts((prev) =>
+      prev.map((p) => (p.id === updatedPost.id ? { ...p, ...updatedPost } : p))
+    );
+  }
+
   return (
     <div className="w-full min-h-screen overflow-x-hidden">
       {/* Hero Section */}
@@ -75,7 +83,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         </button>
       </section>
 
-      {/* Feed Section: Pure 100% Full Width Single Column */}
+      {/* Feed Section: Full-Width Single Column */}
       <section className="w-full px-3 sm:px-6 md:px-8 pt-1 pb-16 space-y-4">
         {regionFilter && (
           <p className="text-xs md:text-sm text-gray-500 text-center mb-3">
@@ -122,7 +130,11 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       </section>
 
       {activePost && (
-        <PostDetailModal confession={activePost} onClose={() => setActivePost(null)} />
+        <PostDetailModal 
+          confession={activePost} 
+          onClose={() => setActivePost(null)} 
+          onUpdatePost={handleUpdatePost}
+        />
       )}
 
       {createOpen && (
