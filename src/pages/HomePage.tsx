@@ -53,34 +53,32 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
   return (
     <div className="w-full min-h-screen overflow-x-hidden">
-      {/* Hero: Padding drastically reduced to bring it up */}
-      <section className="max-w-3xl mx-auto px-4 pt-3 pb-3 text-center">
-        {/* Tagline */}
+      {/* Hero Section */}
+      <section className="max-w-4xl mx-auto px-4 pt-4 pb-3 text-center">
         <h1 
-          className="font-display text-2xl sm:text-3xl font-bold leading-tight"
+          className="font-display text-2xl sm:text-3xl md:text-4xl font-bold leading-tight"
           style={{ color: '#f26a63' }}
         >
           Real stories. Zero identities.
         </h1>
 
-        {/* Share Button: Sleek, compact and tightly spaced */}
         <button
           onClick={() => setCreateOpen(true)}
-          className="mt-2.5 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-white font-medium text-xs shadow-sm active:scale-95 transition-all"
+          className="mt-2.5 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-white font-medium text-xs md:text-sm shadow-sm active:scale-95 transition-all"
           style={{
             background: 'linear-gradient(90deg, #f95738 0%, #ee4266 100%)',
             boxShadow: '0 2px 8px rgba(238, 66, 102, 0.25)'
           }}
         >
-          <Plus className="w-3.5 h-3.5" />
+          <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" />
           <span>Share Your Confession</span>
         </button>
       </section>
 
-      {/* Feed: Top spacing tightened so card appears right below button */}
-      <section className="max-w-md sm:max-w-lg mx-auto px-4 pt-1 pb-16 space-y-4">
+      {/* Feed: Mobile me 1 column, Desktop/Tablet me 2 columns clean grid */}
+      <section className="max-w-4xl mx-auto px-3 sm:px-6 pt-1 pb-16">
         {regionFilter && (
-          <p className="text-xs text-gray-500 text-center mb-2">
+          <p className="text-xs md:text-sm text-gray-500 text-center mb-4">
             Showing confessions from <span className="font-medium text-gray-700">{regionFilter}</span>
           </p>
         )}
@@ -94,17 +92,19 @@ export default function HomePage({ regionFilter }: HomePageProps) {
             No confessions here yet. Be the first to share one.
           </p>
         ) : (
-          posts.map((post) => (
-            <ConfessionCard key={post.id} confession={post} onOpen={() => setActivePost(post)} />
-          ))
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {posts.map((post) => (
+              <ConfessionCard key={post.id} confession={post} onOpen={() => setActivePost(post)} />
+            ))}
+          </div>
         )}
 
         {!loading && hasMore && (
-          <div className="flex justify-center pt-3">
+          <div className="flex justify-center pt-6">
             <button
               onClick={handleLoadMore}
               disabled={loadingMore}
-              className="flex items-center gap-2 px-5 py-2 rounded-full border border-rose-200 text-rose-600 text-xs font-medium hover:bg-rose-50 transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-2 rounded-full border border-rose-200 text-rose-600 text-xs md:text-sm font-medium hover:bg-rose-50 transition-colors disabled:opacity-50"
             >
               {loadingMore ? (
                 <>
