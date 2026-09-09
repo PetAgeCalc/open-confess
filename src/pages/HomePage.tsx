@@ -342,20 +342,10 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     );
   }
 
-  // Multi-platform Share Trigger
+  // Multi-platform Share Trigger (Bypasses system sheet so custom WhatsApp/X/FB tray opens)
   const triggerShare = (post: any, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (navigator.share) {
-      navigator
-        .share({
-          title: 'Open Confess',
-          text: `"${post.text || (post as any).content || ''}"\nRead more confessions anonymously at:`,
-          url: window.location.origin,
-        })
-        .catch(() => {});
-    } else {
-      setSharePopupPost(post);
-    }
+    setSharePopupPost(post);
   };
 
   const handleCopyLink = () => {
@@ -499,10 +489,10 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         )}
       </section>
 
-      {/* Floating Share Tray for Web Browsers without Native Share */}
+      {/* Floating Share Tray (Direct Social Icons Popup) */}
       {sharePopupPost && (
         <div 
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setSharePopupPost(null)}
         >
           <div 
@@ -514,7 +504,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
               <h3 className="font-semibold text-stone-800 text-sm sm:text-base">Share Confession</h3>
               <button 
                 onClick={() => setSharePopupPost(null)}
-                className="p-1 rounded-full text-stone-400 hover:text-stone-700"
+                className="p-1 rounded-full text-stone-400 hover:text-stone-700 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -577,7 +567,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
             {/* Copy Link Button */}
             <button
               onClick={handleCopyLink}
-              className="w-full py-2.5 px-4 rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 flex items-center justify-center gap-2 text-xs font-semibold text-stone-700 transition-colors"
+              className="w-full py-2.5 px-4 rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 flex items-center justify-center gap-2 text-xs font-semibold text-stone-700 transition-colors cursor-pointer"
             >
               {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
               <span>{copiedLink ? 'Link Copied!' : 'Copy Link'}</span>
@@ -691,7 +681,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                 <button
                   type="button"
                   onClick={(e) => triggerShare(activePost, e)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-stone-200 hover:bg-stone-50 text-stone-600 text-xs sm:text-sm font-medium transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-stone-200 hover:bg-stone-50 text-stone-600 text-xs sm:text-sm font-medium transition-colors cursor-pointer"
                 >
                   <Share2 className="w-4 h-4 text-stone-500" />
                   <span>Share</span>
