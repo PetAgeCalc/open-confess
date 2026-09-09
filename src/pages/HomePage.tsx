@@ -1,20 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import {
-  collection,
-  query,
-  orderBy,
-  limit,
-  getDocs,
-  addDoc,
-  doc,
-  setDoc,
-  increment,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { postsDb, interactionsDb } from '../firebase';
 import ConfessionCard from '../components/ConfessionCard';
 import ConfessionModal from '../components/ConfessionModal';
-import { Heart, Sparkles, Flame, MessageCircle, Compass, Plus, Search } from 'lucide-react';
+import { Heart, Sparkles, MessageCircle, Plus, Search } from 'lucide-react';
 
 export interface Confession {
   id: string;
@@ -31,9 +18,7 @@ export interface Confession {
   views?: number;
 }
 
-// ==========================================
-// Reaction Storage Persistence Helpers
-// ==========================================
+// Reaction Persistence Helpers
 const LOCAL_STORAGE_REACTIONS_KEY = 'oc_persistent_reactions_v1';
 const LOCAL_STORAGE_POSTS_KEY = 'oc_local_confessions_v1';
 
@@ -57,9 +42,7 @@ const saveReactionLocally = (postId: string, reactionType: string) => {
   }
 };
 
-// ==========================================
-// Initial 50 Seed Worldwide Confessions
-// ==========================================
+// Initial Seed Confessions
 const INITIAL_SEEDS: Confession[] = [
   {
     id: 'seed-1',
@@ -192,9 +175,6 @@ export default function HomePage() {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // ==========================================
-  // Merge Persisted Reactions with Posts
-  // ==========================================
   const mergeWithSavedReactions = (posts: Confession[]): Confession[] => {
     const savedReactions = getSavedReactions();
     return posts.map((post) => {
@@ -212,54 +192,26 @@ export default function HomePage() {
     });
   };
 
-  // ==========================================
-  // Load Confessions on Mount
-  // ==========================================
   useEffect(() => {
-    const loadConfessions = async () => {
+    const loadConfessions = () => {
       try {
         let loadedPosts: Confession[] = [];
+        const cached = localStorage.getItem(LOCAL_STORAGE_POSTS_KEY);
 
-        // Check if postsDb is available
-        if (postsDb) {
+        if (cached) {
           try {
-            const q = query(
-              collection(postsDb, 'confessions'),
-              orderBy('createdAt', 'desc'),
-              limit(50)
-            );
-            const snapshot = await getDocs(q);
-            if (!snapshot.empty) {
-              loadedPosts = snapshot.docs.map((docSnap) => ({
-                id: docSnap.id,
-                ...docSnap.data(),
-              })) as Confession[];
-            }
-          } catch (dbErr) {
-            console.warn('Firestore fetch skipped or not configured, checking local storage:', dbErr);
-          }
-        }
-
-        // Fallback to local storage or Seed Data
-        if (loadedPosts.length === 0) {
-          const cached = localStorage.getItem(LOCAL_STORAGE_POSTS_KEY);
-          if (cached) {
-            try {
-              loadedPosts = JSON.parse(cached);
-            } catch {
-              loadedPosts = INITIAL_SEEDS;
-            }
-          } else {
+            loadedPosts = JSON.parse(cached);
+          } catch {
             loadedPosts = INITIAL_SEEDS;
-            localStorage.setItem(LOCAL_STORAGE_POSTS_KEY, JSON.stringify(INITIAL_SEEDS));
           }
+        } else {
+          loadedPosts = INITIAL_SEEDS;
+          localStorage.setItem(LOCAL_STORAGE_POSTS_KEY, JSON.stringify(INITIAL_SEEDS));
         }
 
-        // Apply saved reactions permanently
         const finalizedPosts = mergeWithSavedReactions(loadedPosts);
         setConfessions(finalizedPosts);
       } catch (err) {
-        console.error('Error loading confessions:', err);
         setConfessions(mergeWithSavedReactions(INITIAL_SEEDS));
       } finally {
         setLoading(false);
@@ -269,11 +221,7 @@ export default function HomePage() {
     loadConfessions();
   }, []);
 
-  // ==========================================
-  // Handle Reaction Click (Persistent & Safe)
-  // ==========================================
-  const handleReaction = async (confessionId: string, reactionType: string) => {
-    // 1. Instant UI update
+  const handleReaction = (confessionId: string, reactionType: string) => {
     setConfessions((prevList) =>
       prevList.map((post) => {
         if (post.id === confessionId) {
@@ -285,10 +233,8 @@ export default function HomePage() {
       })
     );
 
-    // 2. Persist locally (will never disappear on refresh)
     saveReactionLocally(confessionId, reactionType);
 
-    // Also update cached posts in local storage if present
     try {
       const cached = localStorage.getItem(LOCAL_STORAGE_POSTS_KEY);
       if (cached) {
@@ -306,29 +252,8 @@ export default function HomePage() {
     } catch {
       // Ignore
     }
-
-    // 3. Persist to interactionsDb Firestore (if connected)
-    try {
-      if (interactionsDb) {
-        const interactionDocRef = doc(interactionsDb, 'post_interactions', confessionId);
-        await setDoc(
-          interactionDocRef,
-          {
-            reactions: {
-              [reactionType]: increment(1),
-            },
-          },
-          { merge: true }
-        );
-      }
-    } catch (firebaseErr) {
-      console.warn('Interactions Firestore sync skipped:', firebaseErr);
-    }
   };
 
-  // ==========================================
-  // Handle New Confession Submission
-  // ==========================================
   const handleConfessionCreated = (newConfession: Confession) => {
     setConfessions((prev) => [newConfession, ...prev]);
 
@@ -337,11 +262,10 @@ export default function HomePage() {
       const parsed: Confession[] = cached ? JSON.parse(cached) : INITIAL_SEEDS;
       localStorage.setItem(LOCAL_STORAGE_POSTS_KEY, JSON.stringify([newConfession, ...parsed]));
     } catch {
-      // Ignore local storage error
+      // Ignore
     }
   };
 
-  // Filter confessions
   const filteredConfessions = confessions.filter((confession) => {
     const matchesCategory =
       selectedCategory === 'All' || confession.category?.toLowerCase() === selectedCategory.toLowerCase();
@@ -355,7 +279,6 @@ export default function HomePage() {
 
   return (
     <div className="w-full min-h-screen bg-[#fff8f5] text-stone-900 selection:bg-rose-100 selection:text-rose-900 pb-20">
-      {/* Top Header */}
       <header className="sticky top-0 z-30 bg-[#fff8f5]/90 backdrop-blur-md border-b border-stone-200/70 px-4 py-3 sm:px-8">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -377,7 +300,6 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Hero Section */}
       <section className="px-4 pt-10 pb-6 text-center max-w-2xl mx-auto">
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100/80 text-rose-700 text-xs font-semibold tracking-wide uppercase mb-4">
           <Sparkles className="w-3.5 h-3.5" /> 100% Anonymous & Safe
@@ -389,7 +311,6 @@ export default function HomePage() {
           A judgment-free space to speak the unspoken thoughts from across the globe. No account, no email, no tracking.
         </p>
 
-        {/* Search Bar */}
         <div className="mt-6 relative max-w-md mx-auto">
           <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
@@ -401,7 +322,6 @@ export default function HomePage() {
           />
         </div>
 
-        {/* Category Pills */}
         <div className="flex items-center justify-center gap-2 mt-5 overflow-x-auto pb-2 scrollbar-none">
           {CATEGORIES.map((cat) => (
             <button
@@ -419,7 +339,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Confessions Feed */}
       <main className="max-w-xl mx-auto px-4 space-y-4">
         {loading ? (
           <div className="py-20 text-center text-stone-400 text-sm">
@@ -442,7 +361,6 @@ export default function HomePage() {
         )}
       </main>
 
-      {/* New Confession Modal */}
       {isModalOpen && (
         <ConfessionModal
           isOpen={isModalOpen}
