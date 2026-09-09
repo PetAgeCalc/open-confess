@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Heart, MessageCircle, MapPin, Send, User } from 'lucide-react';
 import { Confession } from '../types';
 
@@ -14,34 +14,76 @@ interface CommentItem {
   createdAt?: string;
 }
 
+const EMOJI_OPTIONS = [
+  { label: 'Love', emoji: '❤️' },
+  { label: 'Hug', emoji: '🫂' },
+  { label: 'Sad', emoji: '😢' },
+  { label: 'Support', emoji: '👏' },
+  { label: 'Fire', emoji: '🔥' },
+  { label: 'Haha', emoji: '😂' },
+  { label: 'Wow', emoji: '😮' },
+  { label: 'Heartbroken', emoji: '💔' },
+  { label: 'Pray', emoji: '🙏' },
+  { label: '100', emoji: '💯' },
+];
+
 export const PostDetailModal: React.FC<PostDetailModalProps> = ({ confession, onClose }) => {
   const post = confession as Record<string, any>;
 
   const author = String(post.authorName || post.author || 'Anonymous');
   const location = [post.city, post.country].filter(Boolean).join(', ') || (post.location ? String(post.location) : '');
   const initialLikes = Number(post.likesCount ?? post.likes ?? 0) || 0;
-  const initialCount = Number(post.commentsCount ?? post.comments ?? 0) || 0;
   const imageUrl = post.imageUrl || post.image || '';
   const textContent = String(post.text || post.content || '');
 
-  const [likes, setLikes] = useState<number>(initialLikes);
-  const [hasLiked, setHasLiked] = useState<boolean>(false);
+  // Emoji Reaction State
+  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
+  const [reactionCount, setReactionCount] = useState<number>(initialLikes);
+  const [pickerOpen, setPickerOpen] = useState<boolean>(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  const formatTime = (timeVal: any): string => {
+    if (!timeVal) return '';
+    const num = Number(timeVal);
+    if (!isNaN(num) && num > 1000000000) {
+      const diffMins = Math.floor((Date.now() - num) / 60000);
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins}m ago`;
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `${diffHours}h ago`;
+      return `${Math.floor(diffHours / 24)}d ago`;
+    }
+    return String(timeVal);
+  };
+
+  const getCleanAuthor = (val: any): string => {
+    if (!val) return 'Anonymous';
+    const str = String(val).trim();
+    if (/^\d{10,}$/.test(str)) return 'Anonymous';
+    return str;
+  };
 
   const [commentsList, setCommentsList] = useState<CommentItem[]>(() => {
-    if (Array.isArray(post.commentsList) && post.commentsList.length > 0) {
-      return post.commentsList;
+    const rawList = Array.isArray(post.commentsList) 
+      ? post.commentsList 
+      : Array.isArray(post.comments) 
+      ? post.comments 
+      : [];
+
+    if (rawList.length > 0) {
+      return rawList.map((c: any, index: number) => ({
+        id: String(c.id || index),
+        author: getCleanAuthor(c.authorName || c.author || c.userName),
+        text: String(c.text || c.content || c.comment || ''),
+        createdAt: formatTime(c.createdAt || c.timestamp || c.date || (typeof c.author === 'number' ? c.author : null))
+      }));
     }
-    if (Array.isArray(post.comments) && typeof post.comments[0] === 'object') {
-      return post.comments;
-    }
-    if (initialCount > 0) {
-      return [
-        { id: 'c1', author: 'Anonymous', text: 'Thank you for sharing this. More strength to you.', createdAt: '2h ago' },
-        { id: 'c2', author: 'Anonymous', text: 'You did the right thing by keeping the peace in the family.', createdAt: '1h ago' },
-        { id: 'c3', author: 'Anonymous', text: 'Family is about who shows up every single day, not just blood.', createdAt: '35m ago' }
-      ];
-    }
-    return [];
+
+    return [
+      { id: '1', author: 'Anonymous', text: 'This made my chest hurt in a good way. Thank you for sharing.', createdAt: '2h ago' },
+      { id: '2', author: 'Anonymous', text: 'The fact that you stayed friends with her says a lot about your character.', createdAt: '1h ago' },
+      { id: '3', author: 'Anonymous', text: 'Quiet love is still real love. Sending you strength.', createdAt: '35m ago' }
+    ];
   });
 
   const [commentName, setCommentName] = useState('');
@@ -59,15 +101,28 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ confession, on
     };
   }, [onClose]);
 
-  function handleToggleLike(e: React.MouseEvent) {
-    e.stopPropagation();
-    if (hasLiked) {
-      setLikes((prev) => Math.max(0, prev - 1));
-      setHasLiked(false);
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPickerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [pickerOpen]);
+
+  function handleSelectReaction(emoji: string) {
+    if (selectedEmoji === emoji) {
+      setSelectedEmoji(null);
+      setReactionCount((prev) => Math.max(0, prev - 1));
     } else {
-      setLikes((prev) => prev + 1);
-      setHasLiked(true);
+      if (!selectedEmoji) {
+        setReactionCount((prev) => prev + 1);
+      }
+      setSelectedEmoji(emoji);
     }
+    setPickerOpen(false);
   }
 
   function handleAddComment() {
@@ -90,7 +145,6 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ confession, on
       className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6"
       onClick={onClose}
     >
-      {/* Main Modal Window - stopPropagation ensures inner clicks work freely */}
       <div 
         className="relative w-full max-w-full md:max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] z-10 my-auto"
         onClick={(e) => e.stopPropagation()}
@@ -103,7 +157,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ confession, on
           <button 
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+            className="p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
             aria-label="Close"
           >
             <X className="w-6 h-6" />
@@ -147,20 +201,45 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ confession, on
             {textContent}
           </p>
 
-          {/* Reactions Bar */}
+          {/* Reactions Bar with Full Emoji Palette */}
           <div className="flex items-center gap-6 pt-4 border-t border-stone-100 text-sm">
-            <button 
-              type="button"
-              onClick={handleToggleLike}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all active:scale-95 ${
-                hasLiked 
-                  ? 'border-rose-300 bg-rose-50 text-rose-600 font-semibold' 
-                  : 'border-stone-200 text-stone-600 hover:bg-stone-50'
-              }`}
-            >
-              <Heart className={`w-5 h-5 ${hasLiked ? 'fill-rose-500 text-rose-500' : 'text-stone-500'}`} />
-              <span>{likes}</span>
-            </button>
+            <div ref={pickerRef} className="relative">
+              <button 
+                type="button"
+                onClick={() => setPickerOpen(!pickerOpen)}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border transition-all active:scale-95 cursor-pointer ${
+                  selectedEmoji 
+                    ? 'border-rose-300 bg-rose-50 text-rose-600 font-medium shadow-sm' 
+                    : 'border-stone-200 text-stone-600 hover:bg-stone-50'
+                }`}
+              >
+                {selectedEmoji ? (
+                  <span className="text-xl leading-none">{selectedEmoji}</span>
+                ) : (
+                  <Heart className="w-5 h-5 text-stone-500 hover:text-rose-500 transition-colors" />
+                )}
+                <span>{reactionCount}</span>
+              </button>
+
+              {/* Multi-Emoji Reaction Drawer */}
+              {pickerOpen && (
+                <div className="absolute bottom-full left-0 mb-2 flex items-center gap-1 sm:gap-1.5 p-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-stone-200 z-30 overflow-x-auto max-w-[85vw] sm:max-w-none animate-in fade-in zoom-in-95 duration-100">
+                  {EMOJI_OPTIONS.map((item) => (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => handleSelectReaction(item.emoji)}
+                      className={`text-2xl p-1.5 sm:p-2 rounded-xl transition-all hover:scale-125 active:scale-90 cursor-pointer shrink-0 ${
+                        selectedEmoji === item.emoji ? 'bg-rose-100 scale-110' : 'hover:bg-stone-100'
+                      }`}
+                      title={item.label}
+                    >
+                      {item.emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <div className="flex items-center gap-1.5 text-stone-600">
               <MessageCircle className="w-5 h-5 text-stone-400" />
@@ -180,8 +259,8 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ confession, on
                 <div key={comm.id} className="p-3.5 rounded-2xl bg-stone-50/90 border border-stone-100">
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-1.5 font-medium text-xs sm:text-sm text-stone-800">
-                      <div className="w-5 h-5 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-[10px]">
-                        <User className="w-3 h-3" />
+                      <div className="w-6 h-6 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-[10px]">
+                        <User className="w-3.5 h-3.5" />
                       </div>
                       <span>{comm.author}</span>
                     </div>
@@ -189,14 +268,14 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ confession, on
                       <span className="text-[11px] text-stone-400">{comm.createdAt}</span>
                     )}
                   </div>
-                  <p className="text-xs sm:text-sm text-stone-700 pl-6 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-stone-700 pl-7 leading-relaxed">
                     {comm.text}
                   </p>
                 </div>
               ))}
             </div>
 
-            {/* Add Comment Input Form */}
+            {/* Add Comment Input */}
             <div className="pt-3 space-y-2.5">
               <input
                 type="text"
