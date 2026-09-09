@@ -13,7 +13,7 @@ interface CommentItem {
   id: string;
   author: string;
   text: string;
-  createdAt?: string;
+  createdAt: string;
 }
 
 const EMOJI_LIST = [
@@ -31,29 +31,83 @@ const EMOJI_LIST = [
 
 const STORAGE_KEY = 'open_confess_user_activity_v1';
 
-// Time formatting helper taaki 17889... code ki jagah readable time dikhe
-function formatRelativeTime(val: any): string {
-  if (!val) return 'Recently';
-  const num = Number(val);
-  if (!isNaN(num) && num > 1000000000) {
-    const diffMins = Math.floor((Date.now() - num) / 60000);
+// Timestamp to readable string convertor
+function parseTimeToHuman(rawTime: any): string {
+  if (!rawTime) return 'Recent';
+  
+  // Agar already readable format hai
+  const str = String(rawTime).trim();
+  if (str.includes('ago') || str.includes('Just now')) return str;
+
+  const num = Number(rawTime);
+  if (!isNaN(num)) {
+    // Agar timestamp seconds mein hai
+    const millis = num < 10000000000 ? num * 1000 : num;
+    const diffMins = Math.floor((Date.now() - millis) / 60000);
+    
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
     const diffHours = Math.floor(diffMins / 60);
     if (diffHours < 24) return `${diffHours}h ago`;
-    return `${Math.floor(diffHours / 24)}d ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
   }
-  return String(val);
+
+  return 'Recent';
 }
 
-// Author sanitizer: Number code aane par 'Anonymous' assign karega
-function sanitizeAuthor(val: any): string {
-  if (!val) return 'Anonymous';
-  const str = String(val).trim();
-  if (!str || /^\d{8,}$/.test(str)) {
+// Author sanitizer: numbers ko hatakar 'Anonymous' banayega
+function extractAuthorName(item: any): string {
+  if (!item || typeof item !== 'object') return 'Anonymous';
+  
+  const possible = item.authorName || item.author || item.name || item.userName || item.user;
+  if (!possible) return 'Anonymous';
+  
+  const str = String(possible).trim();
+  // Agar number ID jaisa hai (e.g. 17889...) toh Anonymous kar do
+  if (/^\d{8,}$/.test(str) || !isNaN(Number(str))) {
     return 'Anonymous';
   }
   return str;
+}
+
+// Har comment item ko clean format mein convert karna
+function normalizeComment(c: any, index: number): CommentItem {
+  if (!c) {
+    return {
+      id: String(index),
+      author: 'Anonymous',
+      text: '',
+      createdAt: 'Recent',
+    };
+  }
+
+  // Agar simple string aa rahi ho
+  if (typeof c === 'string') {
+    return {
+      id: String(index),
+      author: 'Anonymous',
+      text: c,
+      createdAt: 'Recent',
+    };
+  }
+
+  const cleanAuthor = extractAuthorName(c);
+  const cleanText = String(c.text || c.content || c.comment || c.message || '');
+  
+  // Time extract karein
+  let rawTime = c.createdAt || c.timestamp || c.date || c.time;
+  // Agar author field mein number timestamp tha
+  if (!rawTime && c.author && !isNaN(Number(c.author))) {
+    rawTime = c.author;
+  }
+
+  return {
+    id: String(c.id || index),
+    author: cleanAuthor,
+    text: cleanText,
+    createdAt: parseTimeToHuman(rawTime),
+  };
 }
 
 export default function HomePage({ regionFilter }: HomePageProps) {
@@ -166,12 +220,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     let list: CommentItem[] = [];
 
     if (rawComments.length > 0) {
-      list = rawComments.map((c: any, index: number) => ({
-        id: String(c.id || index),
-        author: sanitizeAuthor(c.authorName || c.author || c.userName),
-        text: String(c.text || c.content || c.comment || ''),
-        createdAt: formatRelativeTime(c.createdAt || c.timestamp || c.date || (typeof c.author === 'number' ? c.author : null))
-      }));
+      list = rawComments.map((c: any, index: number) => normalizeComment(c, index));
     } else {
       list = [
         { id: '1', author: 'Anonymous', text: 'Sobbing. This is what real fatherhood looks like.', createdAt: '2h ago' },
@@ -231,7 +280,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
     const newComment: CommentItem = {
       id: String(Date.now()),
-      author: sanitizeAuthor(commentName),
+      author: commentName.trim() || 'Anonymous',
       text: commentText.trim(),
       createdAt: 'Just now',
     };
@@ -281,7 +330,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         </button>
       </section>
 
-      {/* Feed Section: Mobile & Desktop Full-Width Single Column */}
+      {/* Feed Section */}
       <section className="w-full px-3 sm:px-6 md:px-8 pt-1 pb-16 space-y-4">
         {regionFilter && (
           <p className="text-xs md:text-sm text-gray-500 text-center mb-3">
