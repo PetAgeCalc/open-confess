@@ -1,579 +1,558 @@
-import React, { useState, useEffect } from 'react';
-import { MessageCircle, Share2, MapPin, X, Send, Plus } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Plus, Loader2, X, Heart, MessageCircle, MapPin, Send, User } from 'lucide-react';
+import { Confession } from '../types';
+import { fetchInitialFeed, fetchNextPage, FeedPage } from '../lib/confessionService';
+import ConfessionCard from '../components/ConfessionCard';
+import CreateConfessionModal from '../components/CreateConfessionModal';
+// Simulation Engine Import
+import { syncSimulatedActivity, scheduleEngagementForNewPost } from '../lib/activitySimulator';
 
-export interface CommentItem {
+interface HomePageProps {
+  regionFilter: string | null;
+}
+
+interface CommentItem {
   id: string;
   author: string;
   text: string;
-  timeAgo: string;
+  createdAt: string;
 }
 
-export interface Confession {
-  id: string;
-  authorName: string;
-  location: string;
-  timeAgo: string;
-  text: string;
-  imageUrl: string;
-  totalReactions: number;
-  commentsList: CommentItem[];
+const EMOJI_LIST = [
+  { label: 'Love', emoji: '❤️' },
+  { label: 'Hug', emoji: '🫂' },
+  { label: 'Sad', emoji: '😢' },
+  { label: 'Support', emoji: '👏' },
+  { label: 'Fire', emoji: '🔥' },
+  { label: 'Haha', emoji: '😂' },
+  { label: 'Wow', emoji: '😮' },
+  { label: 'Broken', emoji: '💔' },
+  { label: 'Pray', emoji: '🙏' },
+  { label: '100', emoji: '💯' },
+];
+
+const STORAGE_KEY = 'open_confess_user_activity_v1';
+
+function parseTimeToHuman(rawTime: any): string {
+  if (!rawTime) return 'Recent';
+  const str = String(rawTime).trim();
+  if (str.includes('ago') || str.includes('Just now')) return str;
+
+  const num = Number(rawTime);
+  if (!isNaN(num)) {
+    const millis = num < 10000000000 ? num * 1000 : num;
+    const diffMins = Math.floor((Date.now() - millis) / 60000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${Math.floor(diffHours / 24)}d ago`;
+  }
+  return 'Recent';
 }
 
-const LOCAL_STORAGE_POSTS_KEY = 'oc_posts_fb_style_v7';
-const LOCAL_STORAGE_USER_REACTION_KEY = 'oc_user_single_reaction_v7';
+function extractAuthorName(item: any): string {
+  if (!item || typeof item !== 'object') return 'Anonymous';
+  const possible = item.authorName || item.author || item.name || item.userName || item.user;
+  if (!possible) return 'Anonymous';
+  const str = String(possible).trim();
+  if (/^\d{8,}$/.test(str) || !isNaN(Number(str))) return 'Anonymous';
+  return str;
+}
 
-// Facebook style reactions palette
-const FB_REACTIONS = [
-  { emoji: '👍', label: 'Like' },
-  { emoji: '❤️', label: 'Love' },
-  { emoji: '🫂', label: 'Care' },
-  { emoji: '🥺', label: 'Sad' },
-  { emoji: '😂', label: 'Haha' },
-  { emoji: '🔥', label: 'Fire' },
-  { emoji: '👏', label: 'Clap' },
-  { emoji: '💔', label: 'Heartbroken' },
-];
+function normalizeComment(c: any, index: number): CommentItem {
+  if (!c) {
+    return { id: String(index), author: 'Anonymous', text: '', createdAt: 'Recent' };
+  }
+  if (typeof c === 'string') {
+    return { id: String(index), author: 'Anonymous', text: c, createdAt: 'Recent' };
+  }
+  const cleanAuthor = extractAuthorName(c);
+  const cleanText = String(c.text || c.content || c.comment || c.message || '');
+  let rawTime = c.createdAt || c.timestamp || c.date || c.time;
+  if (!rawTime && c.author && !isNaN(Number(c.author))) {
+    rawTime = c.author;
+  }
+  return {
+    id: String(c.id || index),
+    author: cleanAuthor,
+    text: cleanText,
+    createdAt: parseTimeToHuman(rawTime),
+  };
+}
 
-const INITIAL_POSTS: Confession[] = [
-  {
-    id: 'post-1',
-    authorName: 'Anonymous',
-    location: 'Los Angeles, USA',
-    timeAgo: '3h ago',
-    text: "I found out at 34 that the man I call Dad isn't my biological father. My mother told me on her deathbed, not to hurt him, but because she felt I deserved the truth before she left this world.",
-    imageUrl: 'https://images.unsplash.com/photo-1542037104857-ffbb0b9155fb?w=1400&auto=format&fit=crop&q=80',
-    totalReactions: 843,
-    commentsList: [
-      { id: 'c1', author: 'KindStranger', text: 'Blood doesn’t make a father, love and presence do. He is still your real dad.', timeAgo: '2h ago' },
-      { id: 'c2', author: 'SilentListener', text: 'Sending you so much strength. That is an enormous burden to carry.', timeAgo: '1h ago' },
-      { id: 'c3', author: 'Rohit_M', text: 'Stay strong brother. Respect him even more now.', timeAgo: '30m ago' }
-    ],
-  },
-  {
-    id: 'post-2',
-    authorName: 'Anonymous',
-    location: 'Zurich, Switzerland',
-    timeAgo: '5h ago',
-    text: "I booked a solo cabin in the Alps and told my colleagues I was on a high-stakes business tour. I spent 4 days staring at the clouds and eating cheese in total silence.",
-    imageUrl: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1400&auto=format&fit=crop&q=80',
-    totalReactions: 512,
-    commentsList: [
-      { id: 'c4', author: 'MountainBreeze', text: 'Honestly, this is peak self-care. Zero regrets!', timeAgo: '4h ago' },
-      { id: 'c5', author: 'Workaholic', text: 'I wish I had the guts to do this. You earned that peace.', timeAgo: '3h ago' }
-    ],
-  },
-  {
-    id: 'post-3',
-    authorName: 'Anonymous',
-    location: 'Tokyo, Japan',
-    timeAgo: '8h ago',
-    text: "Every Friday, I leave an extra prepaid bento box with the local convenience store clerk for whoever comes in looking like they haven't eaten all day.",
-    imageUrl: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=1400&auto=format&fit=crop&q=80',
-    totalReactions: 1204,
-    commentsList: [
-      { id: 'c6', author: 'KarmaIsReal', text: 'The world needs more souls like you.', timeAgo: '7h ago' },
-      { id: 'c7', author: 'Sakura_99', text: 'Such a subtle and respectful way to help someone in need.', timeAgo: '5h ago' }
-    ],
-  },
-  {
-    id: 'post-4',
-    authorName: 'Anonymous',
-    location: 'Mumbai, India',
-    timeAgo: '11h ago',
-    text: "I still drive past your lane every Friday evening pretending it's on my regular route home from work.",
-    imageUrl: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=1400&auto=format&fit=crop&q=80',
-    totalReactions: 928,
-    commentsList: [
-      { id: 'c8', author: 'DilSe', text: 'Purani yaadein kabhi peecha nahi chhodti...', timeAgo: '9h ago' },
-      { id: 'c9', author: 'Aniket_K', text: 'Ek baar baat kar ke dekh lo, regret se accha hai.', timeAgo: '6h ago' }
-    ],
-  },
-];
-
-export default function HomePage() {
+export default function HomePage({ regionFilter }: HomePageProps) {
   const [posts, setPosts] = useState<Confession[]>([]);
-  const [userReactions, setUserReactions] = useState<Record<string, string>>({}); // { postId: emoji }
-  const [activeReactionPickerPostId, setActiveReactionPickerPostId] = useState<string | null>(null);
+  const [cursor, setCursor] = useState<FeedPage['cursor']>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [activePost, setActivePost] = useState<any | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
-  const [activePost, setActivePost] = useState<Confession | null>(null);
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [commentInput, setCommentInput] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [commentName, setCommentName] = useState('');
+  const [commentText, setCommentText] = useState('');
+  const pickerRef = useRef<HTMLDivElement>(null);
 
-  // Share Modal inputs
-  const [newText, setNewText] = useState('');
-  const [newLocation, setNewLocation] = useState('');
-  const [newImageUrl, setNewImageUrl] = useState('');
+  const applySavedActivity = (rawPosts: Confession[]): Confession[] => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return rawPosts;
+      const parsed = JSON.parse(saved);
+
+      return rawPosts.map((post) => {
+        const customData = parsed[post.id];
+        if (customData) {
+          return {
+            ...post,
+            likesCount: customData.likesCount ?? (post as any).likesCount,
+            likes: customData.likesCount ?? (post as any).likes,
+            userReaction: customData.userReaction ?? (post as any).userReaction,
+            commentsCount: customData.commentsCount ?? (post as any).commentsCount,
+            comments: customData.commentsCount ?? (post as any).comments,
+            commentsList: customData.commentsList ?? (post as any).commentsList,
+          } as Confession;
+        }
+        return post;
+      });
+    } catch {
+      return rawPosts;
+    }
+  };
+
+  const saveActivityToStorage = (postId: string, updatedFields: Record<string, any>) => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      const parsed = saved ? JSON.parse(saved) : {};
+      parsed[postId] = {
+        ...(parsed[postId] || {}),
+        ...updatedFields,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+    } catch (e) {
+      console.error('Failed to save to localStorage', e);
+    }
+  };
+
+  // Automated 50 Posts Load
+  const loadInitial = useCallback(async () => {
+    setLoading(true);
+    try {
+      const page = await fetchInitialFeed(regionFilter ?? undefined);
+      // Auto-injected 50 daily posts with compressed JPGs
+      const blended = await syncSimulatedActivity(page.posts);
+      const merged = applySavedActivity(blended);
+      setPosts(merged);
+      setCursor(page.cursor);
+      setHasMore(page.hasMore);
+    } finally {
+      setLoading(false);
+    }
+  }, [regionFilter]);
 
   useEffect(() => {
-    try {
-      const storedPosts = localStorage.getItem(LOCAL_STORAGE_POSTS_KEY);
-      if (storedPosts) {
-        setPosts(JSON.parse(storedPosts));
-      } else {
-        setPosts(INITIAL_POSTS);
-        localStorage.setItem(LOCAL_STORAGE_POSTS_KEY, JSON.stringify(INITIAL_POSTS));
+    loadInitial();
+  }, [loadInitial]);
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPickerOpen(false);
       }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [pickerOpen]);
 
-      const storedUserReactions = localStorage.getItem(LOCAL_STORAGE_USER_REACTION_KEY);
-      if (storedUserReactions) {
-        setUserReactions(JSON.parse(storedUserReactions));
-      }
-    } catch {
-      setPosts(INITIAL_POSTS);
-    }
-  }, []);
-
-  const savePostsState = (updatedPosts: Confession[]) => {
-    setPosts(updatedPosts);
+  async function handleLoadMore() {
+    setLoadingMore(true);
     try {
-      localStorage.setItem(LOCAL_STORAGE_POSTS_KEY, JSON.stringify(updatedPosts));
-    } catch (e) {
-      console.error(e);
+      const page = await fetchNextPage(cursor, regionFilter ?? undefined);
+      const merged = applySavedActivity(page.posts);
+      setPosts((prev) => [...prev, ...merged]);
+      setCursor(page.cursor);
+      setHasMore(page.hasMore);
+    } finally {
+      setLoadingMore(false);
     }
-  };
+  }
 
-  // Facebook Style Single Reaction Selection (1 user = 1 reaction)
-  const handleSelectReaction = (postId: string, selectedEmoji: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
+  // Real user post creation + Language-based auto comments
+  function handleCreated(confession: Confession) {
+    setPosts((prev) => [confession, ...prev]);
 
-    const previousReaction = userReactions[postId];
-    const isSameReaction = previousReaction === selectedEmoji;
+    // Gradual comments and reaction scheduling
+    scheduleEngagementForNewPost(confession, ({ likesCountIncrement, reaction, newComment }) => {
+      setPosts((prev) =>
+        prev.map((p) => {
+          if (p.id !== confession.id) return p;
+          const currentLikes = Number((p as any).likesCount ?? (p as any).likes ?? 0);
+          const currentList = (p as any).commentsList || [];
+          const updatedList = newComment ? [...currentList, newComment] : currentList;
+          const updatedLikes = likesCountIncrement ? currentLikes + likesCountIncrement : currentLikes;
 
-    let updatedReactionsMap = { ...userReactions };
-    let countDifference = 0;
+          const updatedPost = {
+            ...p,
+            likesCount: updatedLikes,
+            likes: updatedLikes,
+            commentsCount: updatedList.length,
+            comments: updatedList.length,
+            commentsList: updatedList,
+            userReaction: reaction || (p as any).userReaction,
+          };
 
-    if (isSameReaction) {
-      // User tapped the same reaction again -> Remove it
-      delete updatedReactionsMap[postId];
-      countDifference = -1;
+          // Save simulated interactions so they persist
+          saveActivityToStorage(confession.id, {
+            likesCount: updatedLikes,
+            commentsCount: updatedList.length,
+            commentsList: updatedList,
+            userReaction: reaction || (p as any).userReaction,
+          });
+
+          return updatedPost as Confession;
+        })
+      );
+    });
+  }
+
+  function handleOpenPost(post: Confession) {
+    const raw = post as Record<string, any>;
+    const rawComments = Array.isArray(raw.commentsList)
+      ? raw.commentsList
+      : Array.isArray(raw.comments) && typeof raw.comments[0] === 'object'
+      ? raw.comments
+      : [];
+
+    let list: CommentItem[] = [];
+
+    if (rawComments.length > 0) {
+      list = rawComments.map((c: any, index: number) => normalizeComment(c, index));
     } else {
-      // User picked a reaction
-      updatedReactionsMap[postId] = selectedEmoji;
-      countDifference = previousReaction ? 0 : 1; // if already reacted before, count remains same; if new reaction, +1
+      list = [
+        { id: '1', author: 'Anonymous', text: 'Sobbing. This is what real fatherhood looks like.', createdAt: '2h ago' },
+        { id: '2', author: 'Anonymous', text: 'Choosing to protect him with this secret is an act of pure love.', createdAt: '1h ago' },
+        { id: '3', author: 'Anonymous', text: 'Blood means nothing compared to who shows up every single day.', createdAt: '35m ago' }
+      ];
     }
 
-    setUserReactions(updatedReactionsMap);
-    try {
-      localStorage.setItem(LOCAL_STORAGE_USER_REACTION_KEY, JSON.stringify(updatedReactionsMap));
-    } catch (err) {
-      console.error(err);
-    }
+    setActivePost({
+      ...raw,
+      likesCount: Number(raw.likesCount ?? raw.likes ?? 0) || 0,
+      commentsCount: Math.max(Number(raw.commentsCount ?? raw.comments ?? 0) || 0, list.length),
+      commentsList: list,
+      userReaction: raw.userReaction || null,
+    });
+  }
 
-    const updatedPosts = posts.map((p) => {
-      if (p.id === postId) {
-        const updated = {
-          ...p,
-          totalReactions: Math.max(0, p.totalReactions + countDifference),
-        };
-        if (activePost && activePost.id === postId) {
-          setActivePost(updated);
-        }
-        return updated;
+  function handleSelectReaction(emoji: string) {
+    if (!activePost) return;
+
+    const currentEmoji = activePost.userReaction;
+    let nextCount = activePost.likesCount;
+    let nextEmoji: string | null = null;
+
+    if (currentEmoji === emoji) {
+      nextEmoji = null;
+      nextCount = Math.max(0, nextCount - 1);
+    } else {
+      if (!currentEmoji) {
+        nextCount = nextCount + 1;
       }
-      return p;
+      nextEmoji = emoji;
+    }
+
+    const updated = {
+      ...activePost,
+      likesCount: nextCount,
+      likes: nextCount,
+      userReaction: nextEmoji,
+    };
+
+    setActivePost(updated);
+    setPickerOpen(false);
+
+    saveActivityToStorage(activePost.id, {
+      likesCount: nextCount,
+      userReaction: nextEmoji,
     });
 
-    savePostsState(updatedPosts);
-    setActiveReactionPickerPostId(null);
-  };
+    setPosts((prev) =>
+      prev.map((p) => (p.id === activePost.id ? { ...p, ...updated } : p))
+    );
+  }
 
-  // Default Quick Tap on Reaction Button (Defaults to ❤️ Love)
-  const handleQuickReactionTap = (postId: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    const current = userReactions[postId];
-    if (current) {
-      handleSelectReaction(postId, current, e);
-    } else {
-      handleSelectReaction(postId, '❤️', e);
-    }
-  };
-
-  const handleAddComment = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activePost || !commentInput.trim()) return;
+  function handleAddComment() {
+    if (!activePost || !commentText.trim()) return;
 
     const newComment: CommentItem = {
-      id: 'comm-' + Date.now(),
-      author: 'Anonymous',
-      text: commentInput.trim(),
-      timeAgo: 'Just now',
+      id: String(Date.now()),
+      author: commentName.trim() || 'Anonymous',
+      text: commentText.trim(),
+      createdAt: 'Just now',
     };
 
-    const updatedPosts = posts.map((post) => {
-      if (post.id === activePost.id) {
-        const updated = { ...post, commentsList: [newComment, ...post.commentsList] };
-        setActivePost(updated);
-        return updated;
-      }
-      return post;
+    const updatedComments = [...(activePost.commentsList || []), newComment];
+    const updated = {
+      ...activePost,
+      commentsCount: updatedComments.length,
+      comments: updatedComments.length,
+      commentsList: updatedComments,
+    };
+
+    setActivePost(updated);
+    setCommentText('');
+
+    saveActivityToStorage(activePost.id, {
+      commentsCount: updatedComments.length,
+      commentsList: updatedComments,
     });
 
-    savePostsState(updatedPosts);
-    setCommentInput('');
-  };
-
-  const handleCreateConfession = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newText.trim()) return;
-
-    const newConfession: Confession = {
-      id: 'post-' + Date.now(),
-      authorName: 'Anonymous',
-      location: newLocation.trim() || 'Worldwide',
-      timeAgo: 'Just now',
-      text: newText.trim(),
-      imageUrl:
-        newImageUrl.trim() ||
-        'https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=1400&auto=format&fit=crop&q=80',
-      totalReactions: 1,
-      commentsList: [],
-    };
-
-    const updated = [newConfession, ...posts];
-    savePostsState(updated);
-    setNewText('');
-    setNewLocation('');
-    setNewImageUrl('');
-    setIsShareModalOpen(false);
-  };
+    setPosts((prev) =>
+      prev.map((p) => (p.id === activePost.id ? { ...p, ...updated } : p))
+    );
+  }
 
   return (
-    <div className="w-full min-h-screen bg-[#f3e6d8] pb-28 font-sans text-stone-900 selection:bg-rose-200">
-      {/* Title & Share Button */}
-      <div className="pt-8 pb-6 px-4 text-center max-w-4xl mx-auto">
-        <h1 className="font-serif text-3xl sm:text-5xl md:text-6xl font-bold text-[#e15b50] tracking-tight">
+    <div className="w-full min-h-screen overflow-x-hidden">
+      {/* Hero Section */}
+      <section className="w-full px-4 pt-4 pb-3 text-center">
+        <h1 
+          className="font-display text-2xl sm:text-3xl md:text-4xl font-bold leading-tight"
+          style={{ color: '#f26a63' }}
+        >
           Real stories. Zero identities.
         </h1>
 
-        <div className="mt-5">
-          <button
-            onClick={() => setIsShareModalOpen(true)}
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-[#e85342] to-[#ec5b53] hover:opacity-95 text-white text-sm sm:text-base font-semibold px-8 py-3.5 rounded-full shadow-md active:scale-95 transition-all cursor-pointer"
-          >
-            <Plus className="w-5 h-5 stroke-[2.5]" />
-            <span>Share Your Confession</span>
-          </button>
-        </div>
-      </div>
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="mt-2.5 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-white font-medium text-xs md:text-sm shadow-sm active:scale-95 transition-all"
+          style={{
+            background: 'linear-gradient(90deg, #f95738 0%, #ee4266 100%)',
+            boxShadow: '0 2px 8px rgba(238, 66, 102, 0.25)'
+          }}
+        >
+          <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" />
+          <span>Share Your Confession</span>
+        </button>
+      </section>
 
-      {/* Main Desktop Full Column Feed */}
-      <main className="w-full max-w-3xl md:max-w-4xl mx-auto px-4 sm:px-6 space-y-8">
-        {posts.map((post) => {
-          const userSelectedEmoji = userReactions[post.id];
-          const isPickerOpen = activeReactionPickerPostId === post.id;
+      {/* Feed Section */}
+      <section className="w-full px-3 sm:px-6 md:px-8 pt-1 pb-16 space-y-4">
+        {regionFilter && (
+          <p className="text-xs md:text-sm text-gray-500 text-center mb-3">
+            Showing confessions from <span className="font-medium text-gray-700">{regionFilter}</span>
+          </p>
+        )}
 
-          return (
-            <div
-              key={post.id}
-              onClick={() => setActivePost(post)}
-              className="w-full rounded-[28px] sm:rounded-[36px] overflow-hidden bg-[#faefe6] shadow-[0_4px_24px_rgba(0,0,0,0.06)] border border-[#ebd8c8] cursor-pointer hover:shadow-xl transition-all duration-200"
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#ee4266' }} />
+          </div>
+        ) : posts.length === 0 ? (
+          <p className="text-center text-gray-400 py-12 text-sm">
+            No confessions here yet. Be the first to share one.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-4 w-full">
+            {posts.map((post) => (
+              <div key={post.id} className="w-full">
+                <ConfessionCard confession={post} onOpen={() => handleOpenPost(post)} />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!loading && hasMore && (
+          <div className="flex justify-center pt-6">
+            <button
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-full border border-rose-200 text-rose-600 text-xs md:text-sm font-medium hover:bg-rose-50 transition-colors disabled:opacity-50"
             >
-              {/* Desktop Full Height Banner */}
-              <div className="w-full h-64 sm:h-80 md:h-96 lg:h-[420px] overflow-hidden bg-stone-200">
-                <img
-                  src={post.imageUrl}
-                  alt="Confession banner"
-                  className="w-full h-full object-cover hover:scale-[1.01] transition-transform duration-500"
-                  loading="lazy"
-                />
-              </div>
+              {loadingMore ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Loading…
+                </>
+              ) : (
+                'Load More Confessions'
+              )}
+            </button>
+          </div>
+        )}
+      </section>
 
-              {/* Card Body */}
-              <div className="p-6 sm:p-8">
-                {/* Meta details */}
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-stone-500 font-medium mb-3">
-                  <span>{post.authorName}</span>
-                  <span>·</span>
-                  <span className="inline-flex items-center gap-1 text-[#e15b50]">
-                    <MapPin className="w-3.5 h-3.5 fill-[#e15b50]/20" />
-                    <span>{post.location}</span>
-                  </span>
-                  <span>·</span>
-                  <span>{post.timeAgo}</span>
-                </div>
-
-                {/* Excerpt text */}
-                <p className="text-stone-800 text-sm sm:text-lg md:text-xl leading-relaxed font-normal">
-                  {post.text}
-                </p>
-
-                {/* Facebook 2-Button Action Bar */}
-                <div className="mt-6 pt-4 border-t border-[#ebd8c8] flex items-center justify-between relative">
-                  <div className="flex items-center gap-3">
-                    {/* BUTTON 1: Reaction Button (FB Style with Emoji Picker) */}
-                    <div
-                      className="relative"
-                      onMouseEnter={() => setActiveReactionPickerPostId(post.id)}
-                    >
-                      <button
-                        onClick={(e) => handleQuickReactionTap(post.id, e)}
-                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all active:scale-95 ${
-                          userSelectedEmoji
-                            ? 'bg-rose-100 text-rose-700 border border-rose-300'
-                            : 'bg-[#eee0d2] text-stone-700 hover:bg-[#e6d6c6]'
-                        }`}
-                      >
-                        <span className="text-base sm:text-lg">
-                          {userSelectedEmoji || '❤️'}
-                        </span>
-                        <span>{post.totalReactions}</span>
-                      </button>
-
-                      {/* Floating FB-Style Reaction Bar Drawer */}
-                      {isPickerOpen && (
-                        <div
-                          onClick={(e) => e.stopPropagation()}
-                          onMouseLeave={() => setActiveReactionPickerPostId(null)}
-                          className="absolute left-0 bottom-full mb-3 z-30 bg-white/95 backdrop-blur-md border border-[#ebd8c8] shadow-2xl rounded-full px-3 py-1.5 flex items-center gap-2 animate-in fade-in zoom-in-90"
-                        >
-                          {FB_REACTIONS.map((item) => (
-                            <button
-                              key={item.label}
-                              title={item.label}
-                              onClick={(e) => handleSelectReaction(post.id, item.emoji, e)}
-                              className="text-xl sm:text-2xl hover:scale-135 active:scale-95 transition-transform p-1 rounded-full hover:bg-stone-100"
-                            >
-                              {item.emoji}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* BUTTON 2: Comment Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActivePost(post);
-                      }}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#eee0d2] text-stone-700 hover:bg-[#e6d6c6] text-xs sm:text-sm font-semibold transition-all active:scale-95"
-                    >
-                      <MessageCircle className="w-4 h-4 text-stone-600" />
-                      <span>{post.commentsList.length} Comments</span>
-                    </button>
-
-                    {/* Share icon */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (navigator.share) {
-                          navigator.share({
-                            title: 'Open Confess',
-                            text: post.text,
-                            url: window.location.href,
-                          }).catch(() => {});
-                        } else {
-                          navigator.clipboard.writeText(window.location.href);
-                          alert('Confession link copied!');
-                        }
-                      }}
-                      className="p-2.5 rounded-full bg-[#eee0d2] text-stone-700 text-xs hover:bg-[#e6d6c6] active:scale-95 transition-all"
-                    >
-                      <Share2 className="w-4 h-4 text-stone-600" />
-                    </button>
-                  </div>
-
-                  <span className="text-xs sm:text-sm font-semibold text-[#e15b50] hover:underline">
-                    Tap to view
-                  </span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </main>
-
-      {/* FULL POST DETAIL MODAL (Spacious Desktop + Mobile Full View) */}
+      {/* Modal */}
       {activePost && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-3 sm:p-6 overflow-y-auto">
-          <div className="bg-[#faefe6] w-full max-w-2xl md:max-w-3xl lg:max-w-4xl max-h-[92vh] rounded-[28px] sm:rounded-[36px] shadow-2xl flex flex-col overflow-hidden border border-[#ebd8c8] animate-in fade-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 sm:px-8 py-4 border-b border-[#ebd8c8] bg-[#f3e6d8]">
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-stone-600 font-medium">
-                <span>{activePost.authorName}</span>
-                <span>·</span>
-                <span className="text-[#e15b50] flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
-                  {activePost.location}
-                </span>
-                <span>·</span>
-                <span>{activePost.timeAgo}</span>
-              </div>
-              <button
+        <div 
+          className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6"
+          onClick={() => setActivePost(null)}
+        >
+          <div 
+            className="relative w-full max-w-full md:max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] z-10 my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-stone-100 bg-white shrink-0">
+              <h2 className="text-xl sm:text-2xl font-bold text-stone-900 font-display">
+                Confession
+              </h2>
+              <button 
+                type="button"
                 onClick={() => setActivePost(null)}
-                className="p-2 rounded-full hover:bg-stone-200 text-stone-500 hover:text-stone-800 transition-all cursor-pointer"
+                className="p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
 
-            {/* Modal Scrollable Body */}
-            <div className="overflow-y-auto flex-1 p-6 sm:p-8 space-y-6">
-              <div className="w-full h-64 sm:h-80 md:h-96 rounded-2xl sm:rounded-3xl overflow-hidden shadow-inner">
-                <img
-                  src={activePost.imageUrl}
-                  alt="Post banner"
-                  className="w-full h-full object-cover"
-                />
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 space-y-6">
+              {Boolean(activePost.imageUrl || activePost.image) && (
+                <div className="w-full rounded-2xl overflow-hidden bg-stone-100 border border-stone-100 max-h-[420px]">
+                  <img 
+                    src={activePost.imageUrl || activePost.image} 
+                    alt="Confession" 
+                    className="w-full h-full max-h-[420px] object-cover block"
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-stone-500 flex-wrap">
+                <span className="font-semibold text-stone-800">
+                  {activePost.authorName || activePost.author || 'Anonymous'}
+                </span>
+                {Boolean(activePost.city || activePost.country) && (
+                  <>
+                    <span>•</span>
+                    <span className="inline-flex items-center gap-1 text-rose-600 font-medium">
+                      <MapPin className="w-4 h-4 shrink-0" />
+                      {[activePost.city, activePost.country].filter(Boolean).join(', ')}
+                    </span>
+                  </>
+                )}
+                <span>•</span>
+                <span>Recent</span>
               </div>
 
-              <p className="text-stone-900 text-base sm:text-xl md:text-2xl leading-relaxed whitespace-pre-wrap font-serif">
-                "{activePost.text}"
+              <p className="text-stone-900 text-base sm:text-lg md:text-xl leading-relaxed whitespace-pre-wrap">
+                {activePost.text || activePost.content || ''}
               </p>
 
-              {/* FB Style 2 Buttons inside Modal */}
-              <div className="pt-4 border-t border-[#ebd8c8] flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  {/* Reaction Tray inside modal */}
-                  <div className="flex items-center gap-1.5 p-1.5 bg-[#ebd8c8]/50 rounded-full border border-[#dfccbc]">
-                    {FB_REACTIONS.map((item) => {
-                      const isChosen = userReactions[activePost.id] === item.emoji;
-                      return (
+              {/* Reactions Bar */}
+              <div className="flex items-center gap-6 pt-4 border-t border-stone-100 text-sm">
+                <div ref={pickerRef} className="relative">
+                  <button 
+                    type="button"
+                    onClick={() => setPickerOpen(!pickerOpen)}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border transition-all active:scale-95 cursor-pointer ${
+                      activePost.userReaction 
+                        ? 'border-rose-300 bg-rose-50 text-rose-600 font-medium shadow-sm' 
+                        : 'border-stone-200 text-stone-600 hover:bg-stone-50'
+                    }`}
+                  >
+                    {activePost.userReaction ? (
+                      <span className="text-xl leading-none">{activePost.userReaction}</span>
+                    ) : (
+                      <Heart className="w-5 h-5 text-stone-500 hover:text-rose-500 transition-colors" />
+                    )}
+                    <span>{activePost.likesCount}</span>
+                  </button>
+
+                  {pickerOpen && (
+                    <div className="absolute bottom-full left-0 mb-2 flex items-center gap-1 sm:gap-1.5 p-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-stone-200 z-30 overflow-x-auto max-w-[85vw] sm:max-w-none">
+                      {EMOJI_LIST.map((item) => (
                         <button
                           key={item.label}
-                          title={item.label}
-                          onClick={() => handleSelectReaction(activePost.id, item.emoji)}
-                          className={`text-xl sm:text-2xl p-1.5 rounded-full transition-all active:scale-90 ${
-                            isChosen
-                              ? 'bg-white shadow-md scale-125'
-                              : 'hover:scale-115 opacity-70 hover:opacity-100'
+                          type="button"
+                          onClick={() => handleSelectReaction(item.emoji)}
+                          className={`text-2xl p-1.5 sm:p-2 rounded-xl transition-all hover:scale-125 active:scale-90 cursor-pointer shrink-0 ${
+                            activePost.userReaction === item.emoji ? 'bg-rose-100 scale-110' : 'hover:bg-stone-100'
                           }`}
+                          title={item.label}
                         >
                           {item.emoji}
                         </button>
-                      );
-                    })}
-                  </div>
-                  <span className="text-xs sm:text-sm font-bold text-stone-600">
-                    {activePost.totalReactions} Reactions
-                  </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                <div className="text-xs sm:text-sm font-semibold text-stone-500">
-                  {activePost.commentsList.length} Comments
+                <div className="flex items-center gap-1.5 text-stone-600">
+                  <MessageCircle className="w-5 h-5 text-stone-400" />
+                  <span className="font-medium">{(activePost.commentsList || []).length} comments</span>
                 </div>
               </div>
 
               {/* Comments Section */}
-              <div className="space-y-3 pt-2">
-                <h4 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-stone-600">
-                  Comments ({activePost.commentsList.length})
-                </h4>
+              <div className="pt-2 border-t border-stone-100 space-y-4">
+                <h3 className="font-semibold text-stone-900 text-sm sm:text-base">
+                  Comments ({(activePost.commentsList || []).length})
+                </h3>
 
-                {activePost.commentsList.length === 0 ? (
-                  <p className="text-xs sm:text-sm text-stone-400 italic py-6 text-center">
-                    No comments yet. Be the first to reply empathetically.
-                  </p>
-                ) : (
-                  <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
-                    {activePost.commentsList.map((c) => (
-                      <div
-                        key={c.id}
-                        className="bg-[#f3e6d8] p-4 rounded-2xl text-xs sm:text-sm space-y-1 border border-[#e4d4c4]"
-                      >
-                        <div className="flex items-center justify-between text-stone-500 font-semibold text-xs">
-                          <span>{c.author}</span>
-                          <span className="font-normal text-[11px]">{c.timeAgo}</span>
+                <div className="space-y-3">
+                  {(activePost.commentsList || []).map((comm: CommentItem) => (
+                    <div key={comm.id} className="p-3.5 rounded-2xl bg-stone-50/90 border border-stone-100">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2 font-medium text-xs sm:text-sm text-stone-800">
+                          <div className="w-6 h-6 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-[10px]">
+                            <User className="w-3.5 h-3.5" />
+                          </div>
+                          <span>{comm.author}</span>
                         </div>
-                        <p className="text-stone-800 leading-relaxed text-sm sm:text-base">{c.text}</p>
+                        <span className="text-[11px] text-stone-400">
+                          {comm.createdAt}
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+                      <p className="text-xs sm:text-sm text-stone-700 pl-8 leading-relaxed">
+                        {comm.text}
+                      </p>
+                    </div>
+                  ))}
+                </div>
 
-            {/* Comment Form */}
-            <form
-              onSubmit={handleAddComment}
-              className="p-4 sm:p-5 border-t border-[#ebd8c8] bg-[#f3e6d8] flex items-center gap-3"
-            >
-              <input
-                type="text"
-                placeholder="Write an empathetic reply..."
-                value={commentInput}
-                onChange={(e) => setCommentInput(e.target.value)}
-                className="flex-1 bg-white border border-[#ebd8c8] rounded-full px-5 py-3 text-xs sm:text-base focus:outline-none focus:ring-2 focus:ring-[#e15b50]"
-              />
-              <button
-                type="submit"
-                disabled={!commentInput.trim()}
-                className="bg-[#e15b50] hover:bg-[#d04b40] disabled:opacity-40 text-white p-3 rounded-full transition-all active:scale-95 cursor-pointer"
-              >
-                <Send className="w-5 h-5" />
-              </button>
-            </form>
+                {/* Add Comment */}
+                <div className="pt-3 space-y-2.5">
+                  <input
+                    type="text"
+                    placeholder="Anonymous (leave blank to stay anonymous)"
+                    value={commentName}
+                    onChange={(e) => setCommentName(e.target.value)}
+                    className="w-full px-4 py-2 text-xs sm:text-sm rounded-xl bg-stone-50 border border-stone-200 focus:outline-none focus:border-rose-300 text-stone-800 placeholder:text-stone-400"
+                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Add a comment..."
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddComment();
+                        }
+                      }}
+                      className="flex-1 px-4 py-2.5 sm:py-3 text-xs sm:text-sm rounded-xl bg-stone-50 border border-stone-200 focus:outline-none focus:border-rose-300 text-stone-800 placeholder:text-stone-400"
+                    />
+                    <button 
+                      type="button"
+                      onClick={handleAddComment}
+                      className="p-2.5 sm:p-3 rounded-xl bg-rose-500 hover:bg-rose-600 active:scale-95 text-white transition-all shrink-0 shadow-sm cursor-pointer"
+                    >
+                      <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
           </div>
         </div>
       )}
 
-      {/* SHARE YOUR CONFESSION MODAL */}
-      {isShareModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-[#faefe6] w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden border border-[#ebd8c8] animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between px-7 py-5 border-b border-[#ebd8c8] bg-[#f3e6d8]">
-              <h3 className="font-serif font-bold text-xl text-stone-900">
-                Share Anonymous Confession
-              </h3>
-              <button
-                onClick={() => setIsShareModalOpen(false)}
-                className="p-1 rounded-full text-stone-400 hover:text-stone-800 cursor-pointer"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateConfession} className="p-7 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-stone-600 mb-1.5">
-                  Your Confession *
-                </label>
-                <textarea
-                  rows={4}
-                  required
-                  value={newText}
-                  onChange={(e) => setNewText(e.target.value)}
-                  placeholder="Spill your thoughts freely... 100% anonymous."
-                  className="w-full bg-white text-xs sm:text-sm p-4 border border-[#ebd8c8] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#e15b50]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-stone-600 mb-1">
-                  Location (City / Country)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Siliguri, India or Tokyo, Japan"
-                  value={newLocation}
-                  onChange={(e) => setNewLocation(e.target.value)}
-                  className="w-full bg-white text-xs sm:text-sm p-3.5 border border-[#ebd8c8] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e15b50]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-stone-600 mb-1">
-                  Image URL (Optional)
-                </label>
-                <input
-                  type="url"
-                  placeholder="https://images.unsplash.com/..."
-                  value={newImageUrl}
-                  onChange={(e) => setNewImageUrl(e.target.value)}
-                  className="w-full bg-white text-xs sm:text-sm p-3.5 border border-[#ebd8c8] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e15b50]"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-4 bg-gradient-to-r from-[#e85342] to-[#ec5b53] hover:opacity-95 text-white font-semibold text-sm rounded-xl flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all cursor-pointer"
-              >
-                <Send className="w-4 h-4" />
-                <span>Post Confession Anonymously</span>
-              </button>
-            </form>
-          </div>
-        </div>
+      {createOpen && (
+        <CreateConfessionModal onClose={() => setCreateOpen(false)} onCreated={handleCreated} />
       )}
     </div>
   );
