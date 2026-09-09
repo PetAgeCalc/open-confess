@@ -5,18 +5,10 @@ export function isCloudinaryConfigured(): boolean {
   return Boolean(CLOUD_NAME && UPLOAD_PRESET);
 }
 
-/**
- * Direct unsigned upload to Cloudinary. Returns the secure HTTPS URL of the
- * uploaded image. If Cloudinary isn't configured (no env vars set), falls
- * back to a local object URL so the app still works end-to-end in dev/demo
- * mode without any backend credentials.
- */
 export async function uploadImageToCloudinary(file: File): Promise<string> {
   if (!isCloudinaryConfigured()) {
-    // Demo fallback: keep the image in-memory as an object URL. This never
-    // persists across reloads, but lets the full create/preview flow work
-    // without requiring real Cloudinary credentials.
-    return URL.createObjectURL(file);
+    console.error('Cloudinary Environment variables missing:', { CLOUD_NAME, UPLOAD_PRESET });
+    throw new Error('Cloudinary not configured! Please add VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET.');
   }
 
   const formData = new FormData();
@@ -29,7 +21,9 @@ export async function uploadImageToCloudinary(file: File): Promise<string> {
   );
 
   if (!response.ok) {
-    throw new Error('Image upload failed. Please try again.');
+    const errorData = await response.json().catch(() => null);
+    console.error('Cloudinary upload error:', errorData);
+    throw new Error('Image upload failed. Please verify Cloudinary preset settings.');
   }
 
   const data = await response.json();
