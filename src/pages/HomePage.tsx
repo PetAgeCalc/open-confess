@@ -1,24 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import ConfessionCard from '../components/ConfessionCard';
-import ConfessionModal from '../components/ConfessionModal';
-import { Heart, Sparkles, MessageCircle, Plus, Search } from 'lucide-react';
+import { Heart, Sparkles, MessageCircle, Plus, Search, X, Send, MapPin } from 'lucide-react';
 
 export interface Confession {
   id: string;
   authorName?: string;
   text: string;
-  imageUrl?: string | null;
   country?: string;
   city?: string;
-  region?: string;
   category?: string;
-  createdAt: any;
+  createdAt: number;
   reactions?: Record<string, number>;
   commentCount?: number;
-  views?: number;
 }
 
-// Reaction Persistence Helpers
+// LocalStorage Persistence Keys
 const LOCAL_STORAGE_REACTIONS_KEY = 'oc_persistent_reactions_v1';
 const LOCAL_STORAGE_POSTS_KEY = 'oc_local_confessions_v1';
 
@@ -50,7 +45,6 @@ const INITIAL_SEEDS: Confession[] = [
     text: "I still drive past your house every Friday evening, pretending it's on my way home from work.",
     city: 'Mumbai',
     country: 'India',
-    region: 'Maharashtra',
     category: 'Love',
     createdAt: Date.now() - 1000 * 60 * 25,
     reactions: { '❤️': 38, '🥺': 19, '🫂': 12 },
@@ -62,7 +56,6 @@ const INITIAL_SEEDS: Confession[] = [
     text: "Everyone thinks I have my life completely sorted out. In reality, I haven't slept properly in 4 months and I cry in my car during lunch breaks.",
     city: 'London',
     country: 'United Kingdom',
-    region: 'England',
     category: 'Life',
     createdAt: Date.now() - 1000 * 60 * 75,
     reactions: { '🫂': 54, '🥺': 31, '💔': 15 },
@@ -74,7 +67,6 @@ const INITIAL_SEEDS: Confession[] = [
     text: "I secretly paid off my younger brother's college debt and told him the university gave him an anonymous merit grant.",
     city: 'Toronto',
     country: 'Canada',
-    region: 'Ontario',
     category: 'Family',
     createdAt: Date.now() - 1000 * 60 * 140,
     reactions: { '❤️': 89, '👏': 45, '✨': 22 },
@@ -86,7 +78,6 @@ const INITIAL_SEEDS: Confession[] = [
     text: "I pretended to lose my phone just to get an entire weekend without anyone asking me for anything.",
     city: 'Tokyo',
     country: 'Japan',
-    region: 'Kanto',
     category: 'Funny',
     createdAt: Date.now() - 1000 * 60 * 210,
     reactions: { '😂': 67, '🔥': 20, '🙌': 18 },
@@ -98,7 +89,6 @@ const INITIAL_SEEDS: Confession[] = [
     text: "I bought two coffee cups this morning and walked into office looking like someone cared enough to bring me one.",
     city: 'New York',
     country: 'United States',
-    region: 'NY',
     category: 'Secret',
     createdAt: Date.now() - 1000 * 60 * 300,
     reactions: { '🫂': 44, '💔': 27, '🥺': 19 },
@@ -110,7 +100,6 @@ const INITIAL_SEEDS: Confession[] = [
     text: 'Ami kokhono kauke bolini, kintu ami amar bondhur ex-ke bhalobashtam. Shey konodin janteo parbena.',
     city: 'Kolkata',
     country: 'India',
-    region: 'West Bengal',
     category: 'Love',
     createdAt: Date.now() - 1000 * 60 * 420,
     reactions: { '❤️': 51, '🥺': 24, '🤐': 16 },
@@ -122,7 +111,6 @@ const INITIAL_SEEDS: Confession[] = [
     text: 'I automated 90% of my remote software engineering job 6 months ago. I work 1 hour a day and spend the rest learning classical guitar.',
     city: 'Berlin',
     country: 'Germany',
-    region: 'Berlin',
     category: 'Work',
     createdAt: Date.now() - 1000 * 60 * 560,
     reactions: { '🔥': 112, '😂': 73, '👏': 49 },
@@ -134,40 +122,169 @@ const INITIAL_SEEDS: Confession[] = [
     text: 'Ghar wale shaadi ke liye rishte dekh rahe hain, aur mujhe unhe batane ki himmat nahi ho rahi ki mujhe kisi aur se beinteha mohabbat hai.',
     city: 'Delhi',
     country: 'India',
-    region: 'Delhi',
     category: 'Family',
     createdAt: Date.now() - 1000 * 60 * 700,
     reactions: { '🫂': 62, '🥺': 39, '💔': 21 },
     commentCount: 13,
   },
-  {
-    id: 'seed-9',
-    authorName: 'SilentEcho',
-    text: "I leave positive sticky notes inside random library books hoping someone having a bad day finds them.",
-    city: 'Sydney',
-    country: 'Australia',
-    region: 'NSW',
-    category: 'Life',
-    createdAt: Date.now() - 1000 * 60 * 850,
-    reactions: { '❤️': 95, '✨': 58, '👏': 34 },
-    commentCount: 5,
-  },
-  {
-    id: 'seed-10',
-    authorName: 'LostDreamer',
-    text: "Left medical school in the final semester because I realized saving lives when I didn't want my own made no sense. Now I bake bread and I have never been happier.",
-    city: 'Paris',
-    country: 'France',
-    region: 'Île-de-France',
-    category: 'Life',
-    createdAt: Date.now() - 1000 * 60 * 1020,
-    reactions: { '❤️': 140, '✨': 88, '👏': 62 },
-    commentCount: 22,
-  },
 ];
 
 const CATEGORIES = ['All', 'Love', 'Secret', 'Life', 'Family', 'Work', 'Funny'];
+const REACTION_LIST = ['❤️', '🫂', '🥺', '😂', '🔥', '👏'];
 
+// Inline Confession Card Component
+function InlineCard({
+  confession,
+  onReact,
+}: {
+  confession: Confession;
+  onReact: (emoji: string) => void;
+}) {
+  return (
+    <div className="bg-white rounded-2xl p-5 border border-stone-200/80 shadow-sm hover:shadow-md transition-all">
+      <div className="flex items-center justify-between text-xs text-stone-400 mb-3">
+        <div className="flex items-center gap-1.5 font-medium text-stone-600">
+          <MapPin className="w-3.5 h-3.5 text-rose-500" />
+          <span>{confession.city ? `${confession.city}, ${confession.country}` : 'Earth'}</span>
+        </div>
+        <span className="px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-600 font-medium text-[11px]">
+          {confession.category || 'Secret'}
+        </span>
+      </div>
+
+      <p className="text-stone-800 text-sm sm:text-base leading-relaxed font-normal whitespace-pre-wrap">
+        {confession.text}
+      </p>
+
+      <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {REACTION_LIST.map((emoji) => {
+            const count = confession.reactions?.[emoji] || 0;
+            return (
+              <button
+                key={emoji}
+                onClick={() => onReact(emoji)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-stone-50 hover:bg-rose-50 hover:border-rose-200 border border-stone-200 text-xs transition-transform active:scale-90"
+              >
+                <span>{emoji}</span>
+                {count > 0 && <span className="text-[11px] font-medium text-stone-600">{count}</span>}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center gap-1 text-stone-400 text-xs font-medium">
+          <MessageCircle className="w-3.5 h-3.5" />
+          <span>{confession.commentCount || 0}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Inline Confession Modal Component
+function InlineModal({
+  isOpen,
+  onClose,
+  onCreated,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onCreated: (item: Confession) => void;
+}) {
+  const [text, setText] = useState('');
+  const [category, setCategory] = useState('Secret');
+  const [city, setCity] = useState('');
+  const [country, setCountry] = useState('India');
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+
+    const newConfession: Confession = {
+      id: 'post-' + Date.now(),
+      authorName: 'Anonymous',
+      text: text.trim(),
+      city: city.trim() || 'Unknown',
+      country: country.trim() || 'World',
+      category: category,
+      createdAt: Date.now(),
+      reactions: { '❤️': 1 },
+      commentCount: 0,
+    };
+
+    onCreated(newConfession);
+    setText('');
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
+          <h3 className="font-serif font-bold text-lg text-stone-900">Share Your Confession</h3>
+          <button onClick={onClose} className="text-stone-400 hover:text-stone-700 p-1">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-stone-600 mb-1.5">What is on your mind?</label>
+            <textarea
+              rows={4}
+              required
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Spill your heart out anonymously... No one will know it is you."
+              className="w-full text-sm p-3 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-400"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-stone-600 mb-1">Category</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full text-xs p-2.5 bg-stone-50 border border-stone-200 rounded-lg focus:outline-none"
+              >
+                {CATEGORIES.filter((c) => c !== 'All').map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-stone-600 mb-1">City (Optional)</label>
+              <input
+                type="text"
+                placeholder="e.g. Siliguri, Delhi"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="w-full text-xs p-2.5 border border-stone-200 rounded-lg focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full py-3 bg-rose-500 hover:bg-rose-600 text-white font-medium text-sm rounded-xl flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all"
+          >
+            <Send className="w-4 h-4" />
+            <span>Post Anonymously</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Main Page Component
 export default function HomePage() {
   const [confessions, setConfessions] = useState<Confession[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -193,32 +310,27 @@ export default function HomePage() {
   };
 
   useEffect(() => {
-    const loadConfessions = () => {
-      try {
-        let loadedPosts: Confession[] = [];
-        const cached = localStorage.getItem(LOCAL_STORAGE_POSTS_KEY);
+    try {
+      let loadedPosts: Confession[] = [];
+      const cached = localStorage.getItem(LOCAL_STORAGE_POSTS_KEY);
 
-        if (cached) {
-          try {
-            loadedPosts = JSON.parse(cached);
-          } catch {
-            loadedPosts = INITIAL_SEEDS;
-          }
-        } else {
+      if (cached) {
+        try {
+          loadedPosts = JSON.parse(cached);
+        } catch {
           loadedPosts = INITIAL_SEEDS;
-          localStorage.setItem(LOCAL_STORAGE_POSTS_KEY, JSON.stringify(INITIAL_SEEDS));
         }
-
-        const finalizedPosts = mergeWithSavedReactions(loadedPosts);
-        setConfessions(finalizedPosts);
-      } catch (err) {
-        setConfessions(mergeWithSavedReactions(INITIAL_SEEDS));
-      } finally {
-        setLoading(false);
+      } else {
+        loadedPosts = INITIAL_SEEDS;
+        localStorage.setItem(LOCAL_STORAGE_POSTS_KEY, JSON.stringify(INITIAL_SEEDS));
       }
-    };
 
-    loadConfessions();
+      setConfessions(mergeWithSavedReactions(loadedPosts));
+    } catch {
+      setConfessions(mergeWithSavedReactions(INITIAL_SEEDS));
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const handleReaction = (confessionId: string, reactionType: string) => {
@@ -341,9 +453,7 @@ export default function HomePage() {
 
       <main className="max-w-xl mx-auto px-4 space-y-4">
         {loading ? (
-          <div className="py-20 text-center text-stone-400 text-sm">
-            Loading real stories...
-          </div>
+          <div className="py-20 text-center text-stone-400 text-sm">Loading real stories...</div>
         ) : filteredConfessions.length === 0 ? (
           <div className="py-16 text-center bg-white/70 rounded-2xl border border-stone-200 p-8">
             <MessageCircle className="w-8 h-8 text-stone-300 mx-auto mb-2" />
@@ -352,7 +462,7 @@ export default function HomePage() {
           </div>
         ) : (
           filteredConfessions.map((confession) => (
-            <ConfessionCard
+            <InlineCard
               key={confession.id}
               confession={confession}
               onReact={(emoji: string) => handleReaction(confession.id, emoji)}
@@ -361,13 +471,11 @@ export default function HomePage() {
         )}
       </main>
 
-      {isModalOpen && (
-        <ConfessionModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onCreated={handleConfessionCreated}
-        />
-      )}
+      <InlineModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onCreated={handleConfessionCreated}
+      />
     </div>
   );
 }
