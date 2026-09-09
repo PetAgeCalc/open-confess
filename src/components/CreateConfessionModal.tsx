@@ -1,9 +1,10 @@
-import { useState, useRef, ChangeEvent } from 'react';
+import { useState, useRef, ChangeEvent, useMemo } from 'react';
 import { X, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { compressImageToUnder50KB } from '../lib/imageCompressor';
 import { uploadImageToCloudinary } from '../lib/cloudinary';
 import { createConfession } from '../lib/confessionService';
 import { Confession } from '../types';
+import { WORLD_LOCATIONS } from '../data/locations';
 
 interface CreateConfessionModalProps {
   onClose: () => void;
@@ -17,6 +18,7 @@ export default function CreateConfessionModal({ onClose, onCreated }: CreateConf
   const [authorName, setAuthorName] = useState('');
   const [country, setCountry] = useState('');
   const [city, setCity] = useState('');
+  const [customCity, setCustomCity] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [compressing, setCompressing] = useState(false);
@@ -27,6 +29,33 @@ export default function CreateConfessionModal({ onClose, onCreated }: CreateConf
   const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
   const charCount = text.length;
   const overLimit = wordCount > WORD_LIMIT;
+
+  // Selected country ki cities list
+  const availableCities = useMemo(() => {
+    if (!country) return [];
+    const found = WORLD_LOCATIONS.find(
+      (c) => c.country.toLowerCase() === country.toLowerCase()
+    );
+    return found ? found.cities : [];
+  }, [country]);
+
+  function handleCountryChange(e: ChangeEvent<HTMLSelectElement>) {
+    const selected = e.target.value;
+    setCountry(selected);
+    setCity('');
+    setCustomCity(false);
+  }
+
+  function handleCityChange(e: ChangeEvent<HTMLSelectElement>) {
+    const val = e.target.value;
+    if (val === '__custom__') {
+      setCustomCity(true);
+      setCity('');
+    } else {
+      setCustomCity(false);
+      setCity(val);
+    }
+  }
 
   async function handleImageSelect(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -57,7 +86,7 @@ export default function CreateConfessionModal({ onClose, onCreated }: CreateConf
   async function handleSubmit() {
     setError(null);
     if (!text.trim()) {
-      setError('Your confession can\'t be empty.');
+      setError("Your confession can't be empty.");
       return;
     }
     if (overLimit) {
@@ -65,7 +94,7 @@ export default function CreateConfessionModal({ onClose, onCreated }: CreateConf
       return;
     }
     if (!country.trim() || !city.trim()) {
-      setError('Please tell us your country/region and city.');
+      setError('Please select your country and city.');
       return;
     }
 
@@ -131,19 +160,64 @@ export default function CreateConfessionModal({ onClose, onCreated }: CreateConf
             className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-blush-300"
           />
 
-          <div className="grid grid-cols-2 gap-3">
-            <input
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              placeholder="Country / Region"
-              className="text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-blush-300"
-            />
-            <input
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder="City"
-              className="text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-blush-300"
-            />
+          {/* Dynamic Global Location Selection */}
+          <div className="space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Country Select */}
+              <select
+                value={country}
+                onChange={handleCountryChange}
+                className="text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-blush-300 bg-white text-gray-800"
+              >
+                <option value="">Select Country</option>
+                {WORLD_LOCATIONS.map((loc) => (
+                  <option key={loc.code} value={loc.country}>
+                    {loc.country}
+                  </option>
+                ))}
+              </select>
+
+              {/* City Select */}
+              {!customCity ? (
+                <select
+                  value={city}
+                  onChange={handleCityChange}
+                  disabled={!country}
+                  className="text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-blush-300 bg-white text-gray-800 disabled:bg-gray-50 disabled:text-gray-400"
+                >
+                  <option value="">
+                    {country ? 'Select City / State' : 'Select Country First'}
+                  </option>
+                  {availableCities.map((item) => (
+                    <option key={item.city} value={item.city}>
+                      {item.city} {item.state ? `(${item.state})` : ''}
+                    </option>
+                  ))}
+                  {country && <option value="__custom__">+ Other / Type City</option>}
+                </select>
+              ) : (
+                <div className="relative">
+                  <input
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="Type city name"
+                    autoFocus
+                    className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-blush-300 pr-8"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomCity(false);
+                      setCity('');
+                    }}
+                    className="absolute right-2.5 top-3 text-xs text-gray-400 hover:text-gray-600"
+                    title="Back to list"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
