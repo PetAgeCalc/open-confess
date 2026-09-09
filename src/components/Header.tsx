@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MoreVertical, Heart, Search, MapPin, X } from 'lucide-react';
 
 export type LegalTopic = 'about' | 'contact' | 'privacy' | 'terms' | 'disclaimer';
@@ -17,6 +17,23 @@ export const Header: React.FC<HeaderProps> = ({
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
+
+  // Scroll ya screen par touch karne par menu ko turant band karein
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const handleScrollOrTouch = () => {
+      setMenuOpen(false);
+    };
+
+    window.addEventListener('scroll', handleScrollOrTouch, { passive: true });
+    window.addEventListener('touchmove', handleScrollOrTouch, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScrollOrTouch);
+      window.removeEventListener('touchmove', handleScrollOrTouch);
+    };
+  }, [menuOpen]);
 
   function handleSelectRegion(region: string | null) {
     if (onRegionChange) {
@@ -117,7 +134,7 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Right: 3 Dots Menu Button */}
+        {/* Right: 3 Dots Menu */}
         <div className="relative shrink-0">
           <button 
             onClick={() => setMenuOpen(!menuOpen)}
@@ -127,43 +144,49 @@ export const Header: React.FC<HeaderProps> = ({
             <MoreVertical className="w-5 h-5" />
           </button>
 
-          {/* Dropdown Options (Bada Text Size) */}
+          {/* Dropdown Options */}
           {menuOpen && (
             <>
+              {/* Screen overlay: Kahi bhi bahar tap karne par close */}
               <div 
-                className="fixed inset-0 z-40" 
+                className="fixed inset-0 z-40 bg-black/5" 
                 onClick={() => setMenuOpen(false)} 
               />
               
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-stone-200 py-2 z-50 divide-y divide-stone-100">
+              <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-2xl border border-stone-200 py-2.5 z-50 divide-y divide-stone-100">
                 <div className="py-1">
                   <button
                     onClick={() => { onOpenLegal?.('about'); setMenuOpen(false); }}
-                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 font-medium text-[15px] transition-colors"
+                    style={{ fontSize: '16.5px', fontWeight: 600 }}
+                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
                   >
                     About Us
                   </button>
                   <button
                     onClick={() => { onOpenLegal?.('contact'); setMenuOpen(false); }}
-                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 font-medium text-[15px] transition-colors"
+                    style={{ fontSize: '16.5px', fontWeight: 600 }}
+                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
                   >
                     Contact Us
                   </button>
                   <button
                     onClick={() => { onOpenLegal?.('privacy'); setMenuOpen(false); }}
-                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 font-medium text-[15px] transition-colors"
+                    style={{ fontSize: '16.5px', fontWeight: 600 }}
+                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
                   >
                     Privacy Policy
                   </button>
                   <button
                     onClick={() => { onOpenLegal?.('terms'); setMenuOpen(false); }}
-                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 font-medium text-[15px] transition-colors"
+                    style={{ fontSize: '16.5px', fontWeight: 600 }}
+                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
                   >
                     Terms of Service
                   </button>
                   <button
                     onClick={() => { onOpenLegal?.('disclaimer'); setMenuOpen(false); }}
-                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 font-medium text-[15px] transition-colors"
+                    style={{ fontSize: '16.5px', fontWeight: 600 }}
+                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
                   >
                     Disclaimer & Moderation
                   </button>
