@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Loader2, X, Heart, MessageCircle, MapPin, Send, User } from 'lucide-react';
+import { Plus, Loader2, X, Heart, MessageCircle, MapPin, Send, User, Share2, Copy, Check } from 'lucide-react';
 import { Confession } from '../types';
 import { fetchInitialFeed, fetchNextPage, FeedPage } from '../lib/confessionService';
 import ConfessionCard from '../components/ConfessionCard';
@@ -32,23 +32,33 @@ const EMOJI_LIST = [
 ];
 
 const STORAGE_KEY = 'open_confess_user_activity_v1';
+const POSTS_PER_PAGE = 8;
 
 function parseTimeToHuman(rawTime: any): string {
-  if (!rawTime) return 'Recent';
-  const str = String(rawTime).trim();
-  if (str.includes('ago') || str.includes('Just now')) return str;
+  if (!rawTime) return 'Just now';
+  if (typeof rawTime === 'string') {
+    const s = rawTime.trim();
+    if (s.includes('ago') || s.toLowerCase() === 'just now') return s;
+    const parsedDate = Date.parse(s);
+    if (!isNaN(parsedDate)) {
+      rawTime = parsedDate;
+    }
+  }
 
   const num = Number(rawTime);
-  if (!isNaN(num)) {
+  if (!isNaN(num) && num > 0) {
     const millis = num < 10000000000 ? num * 1000 : num;
-    const diffMins = Math.floor((Date.now() - millis) / 60000);
+    const diffSecs = Math.max(0, Math.floor((Date.now() - millis) / 1000));
+    const diffMins = Math.floor(diffSecs / 60);
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
     const diffHours = Math.floor(diffMins / 60);
     if (diffHours < 24) return `${diffHours}h ago`;
-    return `${Math.floor(diffHours / 24)}d ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 30) return `${diffDays}d ago`;
+    return `${Math.floor(diffDays / 30)}mo ago`;
   }
-  return 'Recent';
+  return 'Just now';
 }
 
 function extractAuthorName(item: any): string {
@@ -62,10 +72,10 @@ function extractAuthorName(item: any): string {
 
 function normalizeComment(c: any, index: number): CommentItem {
   if (!c) {
-    return { id: String(index), author: 'Anonymous', text: '', createdAt: 'Recent' };
+    return { id: String(index), author: 'Anonymous', text: '', createdAt: 'Just now' };
   }
   if (typeof c === 'string') {
-    return { id: String(index), author: 'Anonymous', text: c, createdAt: 'Recent' };
+    return { id: String(index), author: 'Anonymous', text: c, createdAt: 'Just now' };
   }
   const cleanAuthor = extractAuthorName(c);
   const cleanText = String(c.text || c.content || c.comment || c.message || '');
@@ -90,10 +100,18 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   const [activePost, setActivePost] = useState<any | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
+  // Pagination state: Limits items in increments of 8
+  const [visibleCount, setVisibleCount] = useState<number>(POSTS_PER_PAGE);
+
+  // Sharing states
+  const [sharePopupPost, setSharePopupPost] = useState<Confession | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+
   const [pickerOpen, setPickerOpen] = useState(false);
   const [commentName, setCommentName] = useState('');
   const [commentText, setCommentText] = useState('');
   const pickerRef = useRef<HTMLDivElement>(null);
+  const shareRef = useRef<HTMLDivElement>(null);
 
   const applySavedActivity = (rawPosts: Confession[]): Confession[] => {
     try {
@@ -135,17 +153,16 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     }
   };
 
-  // Automated 50 Posts Load
   const loadInitial = useCallback(async () => {
     setLoading(true);
     try {
       const page = await fetchInitialFeed(regionFilter ?? undefined);
-      // Auto-injected 50 daily posts with compressed JPGs
       const blended = await syncSimulatedActivity(page.posts);
       const merged = applySavedActivity(blended);
       setPosts(merged);
       setCursor(page.cursor);
       setHasMore(page.hasMore);
+      setVisibleCount(POSTS_PER_PAGE);
     } finally {
       setLoading(false);
     }
@@ -156,17 +173,28 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   }, [loadInitial]);
 
   useEffect(() => {
-    if (!pickerOpen) return;
+    if (!pickerOpen && !sharePopupPost) return;
     const handleOutside = (e: MouseEvent) => {
       if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
         setPickerOpen(false);
       }
+      if (shareRef.current && !shareRef.current.contains(e.target as Node)) {
+        setSharePopupPost(null);
+      }
     };
     document.addEventListener('mousedown', handleOutside);
     return () => document.removeEventListener('mousedown', handleOutside);
-  }, [pickerOpen]);
+  }, [pickerOpen, sharePopupPost]);
 
+  // Load 8 More Posts
   async function handleLoadMore() {
+    if (visibleCount < posts.length) {
+      setVisibleCount((prev) => prev + POSTS_PER_PAGE);
+      return;
+    }
+
+    if (!hasMore || loadingMore) return;
+
     setLoadingMore(true);
     try {
       const page = await fetchNextPage(cursor, regionFilter ?? undefined);
@@ -174,6 +202,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       setPosts((prev) => [...prev, ...merged]);
       setCursor(page.cursor);
       setHasMore(page.hasMore);
+      setVisibleCount((prev) => prev + POSTS_PER_PAGE);
     } finally {
       setLoadingMore(false);
     }
@@ -183,7 +212,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   function handleCreated(confession: Confession) {
     setPosts((prev) => [confession, ...prev]);
 
-    // Gradual comments and reaction scheduling
     scheduleEngagementForNewPost(confession, ({ likesCountIncrement, reaction, newComment }) => {
       setPosts((prev) =>
         prev.map((p) => {
@@ -203,7 +231,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
             userReaction: reaction || (p as any).userReaction,
           };
 
-          // Save simulated interactions so they persist
           saveActivityToStorage(confession.id, {
             likesCount: updatedLikes,
             commentsCount: updatedList.length,
@@ -231,8 +258,8 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       list = rawComments.map((c: any, index: number) => normalizeComment(c, index));
     } else {
       list = [
-        { id: '1', author: 'Anonymous', text: 'Sobbing. This is what real fatherhood looks like.', createdAt: '2h ago' },
-        { id: '2', author: 'Anonymous', text: 'Choosing to protect him with this secret is an act of pure love.', createdAt: '1h ago' },
+        { id: '1', author: 'Anonymous', text: 'Sobbing. This is what real empathy and strength look like.', createdAt: '2h ago' },
+        { id: '2', author: 'Anonymous', text: 'Choosing to carry this requires immense courage. Much love.', createdAt: '1h ago' },
         { id: '3', author: 'Anonymous', text: 'Blood means nothing compared to who shows up every single day.', createdAt: '35m ago' }
       ];
     }
@@ -243,6 +270,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       commentsCount: Math.max(Number(raw.commentsCount ?? raw.comments ?? 0) || 0, list.length),
       commentsList: list,
       userReaction: raw.userReaction || null,
+      formattedTime: parseTimeToHuman(raw.createdAt || raw.timestamp || raw.time),
     });
   }
 
@@ -314,84 +342,258 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     );
   }
 
+  // Multi-platform Share Trigger
+  const triggerShare = (post: any, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (navigator.share) {
+      navigator
+        .share({
+          title: 'Open Confess',
+          text: `"${post.text || (post as any).content || ''}"\nRead more confessions anonymously at:`,
+          url: window.location.origin,
+        })
+        .catch(() => {});
+    } else {
+      setSharePopupPost(post);
+    }
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.origin);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const visiblePosts = posts.slice(0, visibleCount);
+  const canLoadMore = visibleCount < posts.length || hasMore;
+
   return (
-    <div className="w-full min-h-screen overflow-x-hidden">
+    <div className="w-full min-h-screen overflow-x-hidden bg-[#f3e6d8]">
       {/* Hero Section */}
-      <section className="w-full px-4 pt-4 pb-3 text-center">
+      <section className="w-full px-4 pt-6 pb-4 text-center">
         <h1 
-          className="font-display text-2xl sm:text-3xl md:text-4xl font-bold leading-tight"
-          style={{ color: '#f26a63' }}
+          className="font-display text-3xl sm:text-4xl md:text-5xl font-bold leading-tight"
+          style={{ color: '#e15b50' }}
         >
           Real stories. Zero identities.
         </h1>
 
         <button
           onClick={() => setCreateOpen(true)}
-          className="mt-2.5 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-white font-medium text-xs md:text-sm shadow-sm active:scale-95 transition-all"
+          className="mt-3.5 inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-white font-semibold text-xs md:text-sm shadow-md active:scale-95 transition-all cursor-pointer"
           style={{
             background: 'linear-gradient(90deg, #f95738 0%, #ee4266 100%)',
-            boxShadow: '0 2px 8px rgba(238, 66, 102, 0.25)'
+            boxShadow: '0 4px 14px rgba(238, 66, 102, 0.3)'
           }}
         >
-          <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" />
+          <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>Share Your Confession</span>
         </button>
       </section>
 
-      {/* Feed Section */}
-      <section className="w-full px-3 sm:px-6 md:px-8 pt-1 pb-16 space-y-4">
+      {/* Feed Section - Single Column Responsive Layout */}
+      <section className="w-full max-w-xl md:max-w-2xl mx-auto px-3 sm:px-4 pt-1 pb-20 space-y-6">
         {regionFilter && (
-          <p className="text-xs md:text-sm text-gray-500 text-center mb-3">
-            Showing confessions from <span className="font-medium text-gray-700">{regionFilter}</span>
+          <p className="text-xs md:text-sm text-stone-600 text-center mb-2">
+            Showing confessions from <span className="font-semibold text-stone-800">{regionFilter}</span>
           </p>
         )}
 
         {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#ee4266' }} />
+          <div className="flex justify-center py-16">
+            <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#ee4266' }} />
           </div>
         ) : posts.length === 0 ? (
-          <p className="text-center text-gray-400 py-12 text-sm">
+          <p className="text-center text-stone-500 py-16 text-sm">
             No confessions here yet. Be the first to share one.
           </p>
         ) : (
-          <div className="flex flex-col gap-4 w-full">
-            {posts.map((post) => (
-              <div key={post.id} className="w-full">
-                <ConfessionCard confession={post} onOpen={() => handleOpenPost(post)} />
+          <div className="flex flex-col gap-6 w-full">
+            {visiblePosts.map((post) => (
+              <div
+                key={post.id}
+                onClick={() => handleOpenPost(post)}
+                className="w-full rounded-[26px] sm:rounded-[30px] overflow-hidden bg-[#faefe6] shadow-[0_4px_16px_rgba(0,0,0,0.05)] border border-[#ebd8c8] cursor-pointer hover:shadow-lg transition-all"
+              >
+                {/* Image Banner */}
+                {Boolean((post as any).imageUrl || (post as any).image) && (
+                  <div className="w-full h-56 sm:h-64 overflow-hidden bg-stone-200">
+                    <img
+                      src={(post as any).imageUrl || (post as any).image}
+                      alt="Confession story"
+                      className="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-500"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+
+                {/* Card Body */}
+                <div className="p-5">
+                  <div className="flex items-center gap-1.5 text-xs text-stone-500 font-medium mb-3">
+                    <span>{extractAuthorName(post)}</span>
+                    <span>·</span>
+                    <span className="inline-flex items-center gap-1 text-[#e15b50]">
+                      <MapPin className="w-3.5 h-3.5 fill-[#e15b50]/20" />
+                      <span>{[(post as any).city, (post as any).country].filter(Boolean).join(', ') || 'Worldwide'}</span>
+                    </span>
+                    <span>·</span>
+                    <span>{parseTimeToHuman((post as any).createdAt || (post as any).timestamp || (post as any).time)}</span>
+                  </div>
+
+                  <p className="text-stone-800 text-sm sm:text-base leading-relaxed line-clamp-3 font-normal">
+                    {(post as any).text || (post as any).content || ''}
+                  </p>
+
+                  <div className="mt-5 flex items-center justify-between pt-1 border-t border-[#ebd8c8]/60">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#eee0d2] text-stone-700 text-xs font-medium">
+                        <Heart className="w-3.5 h-3.5 fill-stone-400 text-stone-400" />
+                        <span>{Number((post as any).likesCount ?? (post as any).likes ?? 0)}</span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#eee0d2] text-stone-700 text-xs font-medium">
+                        <MessageCircle className="w-3.5 h-3.5 text-stone-500" />
+                        <span>{Number((post as any).commentsCount ?? (post as any).comments ?? ((post as any).commentsList?.length || 0))}</span>
+                      </div>
+
+                      {/* Working Share Logo Trigger */}
+                      <button
+                        type="button"
+                        onClick={(e) => triggerShare(post, e)}
+                        className="p-1.5 rounded-full bg-[#eee0d2] text-stone-700 hover:bg-[#e6d6c6] active:scale-90 transition-all cursor-pointer"
+                        title="Share confession"
+                      >
+                        <Share2 className="w-3.5 h-3.5 text-stone-600" />
+                      </button>
+                    </div>
+
+                    {/* Exact Tap to View */}
+                    <span className="text-xs font-medium text-[#e15b50] hover:underline cursor-pointer">
+                      Tap to view
+                    </span>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         )}
 
-        {!loading && hasMore && (
+        {/* Load More 8 Confessions Button */}
+        {!loading && canLoadMore && (
           <div className="flex justify-center pt-6">
             <button
               onClick={handleLoadMore}
               disabled={loadingMore}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-full border border-rose-200 text-rose-600 text-xs md:text-sm font-medium hover:bg-rose-50 transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-7 py-3 rounded-full bg-[#faefe6] border border-[#ebd8c8] text-[#e15b50] text-xs sm:text-sm font-semibold hover:bg-[#f3e6d8] active:scale-95 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
             >
               {loadingMore ? (
                 <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Loading…
+                  <Loader2 className="w-4 h-4 animate-spin text-[#e15b50]" />
+                  <span>Loading...</span>
                 </>
               ) : (
-                'Load More Confessions'
+                <span>Load More Confessions</span>
               )}
             </button>
           </div>
         )}
       </section>
 
-      {/* Modal */}
+      {/* Floating Share Tray for Web Browsers without Native Share */}
+      {sharePopupPost && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setSharePopupPost(null)}
+        >
+          <div 
+            ref={shareRef}
+            className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-stone-200 animate-in fade-in zoom-in-95 space-y-4 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-stone-100">
+              <h3 className="font-semibold text-stone-800 text-sm sm:text-base">Share Confession</h3>
+              <button 
+                onClick={() => setSharePopupPost(null)}
+                className="p-1 rounded-full text-stone-400 hover:text-stone-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-4 gap-3 pt-2">
+              {/* WhatsApp */}
+              <a
+                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`"${(sharePopupPost as any).text || ''}"\n\nRead more anonymously at: ${window.location.origin}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-col items-center gap-1 text-xs text-stone-700 hover:opacity-80"
+              >
+                <div className="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xl font-bold shadow-sm">
+                  💬
+                </div>
+                <span>WhatsApp</span>
+              </a>
+
+              {/* X / Twitter */}
+              <a
+                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`"${(sharePopupPost as any).text || ''}" via @OpenConfess`)}&url=${encodeURIComponent(window.location.origin)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-col items-center gap-1 text-xs text-stone-700 hover:opacity-80"
+              >
+                <div className="w-12 h-12 rounded-full bg-black text-white flex items-center justify-center text-lg font-bold shadow-sm">
+                  𝕏
+                </div>
+                <span>X</span>
+              </a>
+
+              {/* Facebook */}
+              <a
+                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.origin)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-col items-center gap-1 text-xs text-stone-700 hover:opacity-80"
+              >
+                <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-bold shadow-sm">
+                  f
+                </div>
+                <span>Facebook</span>
+              </a>
+
+              {/* Telegram */}
+              <a
+                href={`https://t.me/share/url?url=${encodeURIComponent(window.location.origin)}&text=${encodeURIComponent(`"${(sharePopupPost as any).text || ''}"`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-col items-center gap-1 text-xs text-stone-700 hover:opacity-80"
+              >
+                <div className="w-12 h-12 rounded-full bg-sky-500 text-white flex items-center justify-center text-xl font-bold shadow-sm">
+                  ✈️
+                </div>
+                <span>Telegram</span>
+              </a>
+            </div>
+
+            {/* Copy Link Button */}
+            <button
+              onClick={handleCopyLink}
+              className="w-full py-2.5 px-4 rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 flex items-center justify-center gap-2 text-xs font-semibold text-stone-700 transition-colors"
+            >
+              {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+              <span>{copiedLink ? 'Link Copied!' : 'Copy Link'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Post Modal Detail */}
       {activePost && (
         <div 
           className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6"
           onClick={() => setActivePost(null)}
         >
           <div 
-            className="relative w-full max-w-full md:max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] z-10 my-auto"
+            className="relative w-full max-w-full md:max-w-3xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] z-10 my-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-stone-100 bg-white shrink-0">
@@ -432,56 +634,68 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                   </>
                 )}
                 <span>•</span>
-                <span>Recent</span>
+                <span>{activePost.formattedTime}</span>
               </div>
 
               <p className="text-stone-900 text-base sm:text-lg md:text-xl leading-relaxed whitespace-pre-wrap">
                 {activePost.text || activePost.content || ''}
               </p>
 
-              {/* Reactions Bar */}
-              <div className="flex items-center gap-6 pt-4 border-t border-stone-100 text-sm">
-                <div ref={pickerRef} className="relative">
-                  <button 
-                    type="button"
-                    onClick={() => setPickerOpen(!pickerOpen)}
-                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border transition-all active:scale-95 cursor-pointer ${
-                      activePost.userReaction 
-                        ? 'border-rose-300 bg-rose-50 text-rose-600 font-medium shadow-sm' 
-                        : 'border-stone-200 text-stone-600 hover:bg-stone-50'
-                    }`}
-                  >
-                    {activePost.userReaction ? (
-                      <span className="text-xl leading-none">{activePost.userReaction}</span>
-                    ) : (
-                      <Heart className="w-5 h-5 text-stone-500 hover:text-rose-500 transition-colors" />
+              {/* Reactions & Social Share Bar */}
+              <div className="flex items-center justify-between pt-4 border-t border-stone-100 text-sm">
+                <div className="flex items-center gap-4">
+                  <div ref={pickerRef} className="relative">
+                    <button 
+                      type="button"
+                      onClick={() => setPickerOpen(!pickerOpen)}
+                      className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border transition-all active:scale-95 cursor-pointer ${
+                        activePost.userReaction 
+                          ? 'border-rose-300 bg-rose-50 text-rose-600 font-medium shadow-sm' 
+                          : 'border-stone-200 text-stone-600 hover:bg-stone-50'
+                      }`}
+                    >
+                      {activePost.userReaction ? (
+                        <span className="text-xl leading-none">{activePost.userReaction}</span>
+                      ) : (
+                        <Heart className="w-5 h-5 text-stone-500 hover:text-rose-500 transition-colors" />
+                      )}
+                      <span>{activePost.likesCount}</span>
+                    </button>
+
+                    {pickerOpen && (
+                      <div className="absolute bottom-full left-0 mb-2 flex items-center gap-1 sm:gap-1.5 p-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-stone-200 z-30 overflow-x-auto max-w-[85vw] sm:max-w-none">
+                        {EMOJI_LIST.map((item) => (
+                          <button
+                            key={item.label}
+                            type="button"
+                            onClick={() => handleSelectReaction(item.emoji)}
+                            className={`text-2xl p-1.5 sm:p-2 rounded-xl transition-all hover:scale-125 active:scale-90 cursor-pointer shrink-0 ${
+                              activePost.userReaction === item.emoji ? 'bg-rose-100 scale-110' : 'hover:bg-stone-100'
+                            }`}
+                            title={item.label}
+                          >
+                            {item.emoji}
+                          </button>
+                        ))}
+                      </div>
                     )}
-                    <span>{activePost.likesCount}</span>
-                  </button>
+                  </div>
 
-                  {pickerOpen && (
-                    <div className="absolute bottom-full left-0 mb-2 flex items-center gap-1 sm:gap-1.5 p-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-stone-200 z-30 overflow-x-auto max-w-[85vw] sm:max-w-none">
-                      {EMOJI_LIST.map((item) => (
-                        <button
-                          key={item.label}
-                          type="button"
-                          onClick={() => handleSelectReaction(item.emoji)}
-                          className={`text-2xl p-1.5 sm:p-2 rounded-xl transition-all hover:scale-125 active:scale-90 cursor-pointer shrink-0 ${
-                            activePost.userReaction === item.emoji ? 'bg-rose-100 scale-110' : 'hover:bg-stone-100'
-                          }`}
-                          title={item.label}
-                        >
-                          {item.emoji}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <div className="flex items-center gap-1.5 text-stone-600">
+                    <MessageCircle className="w-5 h-5 text-stone-400" />
+                    <span className="font-medium">{(activePost.commentsList || []).length} comments</span>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 text-stone-600">
-                  <MessageCircle className="w-5 h-5 text-stone-400" />
-                  <span className="font-medium">{(activePost.commentsList || []).length} comments</span>
-                </div>
+                {/* Inside Modal Share Button */}
+                <button
+                  type="button"
+                  onClick={(e) => triggerShare(activePost, e)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-stone-200 hover:bg-stone-50 text-stone-600 text-xs sm:text-sm font-medium transition-colors"
+                >
+                  <Share2 className="w-4 h-4 text-stone-500" />
+                  <span>Share</span>
+                </button>
               </div>
 
               {/* Comments Section */}
@@ -511,7 +725,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                   ))}
                 </div>
 
-                {/* Add Comment */}
+                {/* Add Comment Field */}
                 <div className="pt-3 space-y-2.5">
                   <input
                     type="text"
