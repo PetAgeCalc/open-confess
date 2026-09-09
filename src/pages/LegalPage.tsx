@@ -6,13 +6,8 @@ import {
   ShieldCheck, 
   FileText, 
   AlertTriangle, 
-  HeartHandshake, 
-  EyeOff, 
   Copy, 
-  Check, 
-  HeartPulse, 
-  Ban,
-  ShieldAlert
+  Check 
 } from 'lucide-react';
 
 export type LegalTopic = 'about' | 'contact' | 'privacy' | 'terms' | 'disclaimer';
@@ -63,29 +58,27 @@ export default function LegalModal({ topic = 'about', onClose }: LegalModalProps
     { id: 'contact', label: 'Contact Us', icon: <Mail className="w-4 h-4" /> },
     { id: 'privacy', label: 'Privacy Policy', icon: <ShieldCheck className="w-4 h-4" /> },
     { id: 'terms', label: 'Terms of Service', icon: <FileText className="w-4 h-4" /> },
-    { id: 'disclaimer', label: 'Disclaimer & Moderation', icon: <AlertTriangle className="w-4 h-4" /> },
+    { id: 'disclaimer', label: 'Disclaimer', icon: <AlertTriangle className="w-4 h-4" /> },
   ];
 
   return (
     <div 
-      className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6"
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 md:p-6"
       onClick={() => onClose && onClose()}
     >
+      {/* Strictly Single Column Container for Both Mobile & Desktop */}
       <div 
-        className="relative w-full max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] z-10 my-auto border border-stone-100"
+        className="relative w-full max-w-3xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] z-10 my-auto border border-stone-100"
         onClick={(e) => e.stopPropagation()}
       >
         
-        {/* Top Header */}
+        {/* Header */}
         <header className="flex items-center justify-between px-6 py-4 border-b border-stone-100 bg-white shrink-0">
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[11px] font-semibold uppercase tracking-wider mb-1">
-              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-              <span>OpenConfess Legal & Support</span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-bold font-display text-stone-900">
-              Platform Policies & Information
-            </h1>
+            <h2 className="text-xl sm:text-2xl font-bold font-display text-stone-900">
+              Open Confess
+            </h2>
+            <p className="text-xs text-stone-500">Real stories. Zero identities.</p>
           </div>
           {onClose && (
             <button 
@@ -99,7 +92,7 @@ export default function LegalModal({ topic = 'about', onClose }: LegalModalProps
           )}
         </header>
 
-        {/* Tab Navigation Menu */}
+        {/* Tab Navigation */}
         <nav className="flex items-center gap-1.5 px-4 sm:px-6 py-2.5 bg-stone-50/80 border-b border-stone-200 overflow-x-auto scrollbar-none shrink-0">
           {tabs.map((tab) => (
             <button
@@ -118,47 +111,37 @@ export default function LegalModal({ topic = 'about', onClose }: LegalModalProps
           ))}
         </nav>
 
-        {/* Scrollable Content */}
+        {/* Single-Column Body */}
         <div className="flex-1 overflow-y-auto p-6 sm:p-8 text-stone-700 leading-relaxed space-y-6">
           
           {/* 1. ABOUT US */}
           {activeTab === 'about' && (
             <section className="space-y-6 animate-in fade-in duration-150">
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-stone-900 font-display mb-2">
-                  Real Stories. Zero Identities.
-                </h2>
-                <p className="text-sm sm:text-base text-stone-600">
-                  OpenConfess is dedicated to offering a sanctuary for genuine human emotion. In today’s digital era, self-expression is often restrained by social expectations, follower counts, and public scrutiny. People carry silent heartbreaks, quiet regrets, unspoken victories, and deeply personal thoughts that they cannot share on identity-linked social networks.
+                <h3 className="text-xl font-bold text-stone-900 font-display mb-2">Our Mission</h3>
+                <p className="text-sm sm:text-base text-stone-600 leading-relaxed">
+                  Open Confess was created to give people across the world a safe, anonymous space to share their real stories — without fear of judgment, without revealing their identity, and without any login required. We believe everyone deserves to be heard.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                <div className="p-5 rounded-2xl bg-rose-50/40 border border-rose-100">
-                  <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center mb-3">
-                    <EyeOff className="w-5 h-5" />
-                  </div>
-                  <h3 className="font-bold text-stone-900 text-sm mb-1">True Anonymity</h3>
-                  <p className="text-xs sm:text-sm text-stone-600">
-                    No profiles, no public identities, and no names required. You are defined only by the honesty of what you choose to express.
-                  </p>
-                </div>
-
-                <div className="p-5 rounded-2xl bg-stone-50 border border-stone-200">
-                  <div className="w-9 h-9 rounded-xl bg-stone-200 text-stone-700 flex items-center justify-center mb-3">
-                    <HeartHandshake className="w-5 h-5" />
-                  </div>
-                  <h3 className="font-bold text-stone-900 text-sm mb-1">Empathy First</h3>
-                  <p className="text-xs sm:text-sm text-stone-600">
-                    An open community where vulnerability meets constructive perspectives, shared reassurance, and mutual understanding.
-                  </p>
-                </div>
+              <div>
+                <h3 className="text-lg font-bold text-stone-900 mb-1.5">Global by Design</h3>
+                <p className="text-sm sm:text-base text-stone-600 leading-relaxed">
+                  From the USA to Europe, Australia to India, Open Confess serves a global audience. Our city-based filtering lets you connect with confessions from your part of the world or explore stories from entirely different cultures.
+                </p>
               </div>
 
-              <div className="p-5 rounded-2xl bg-stone-50 border border-stone-100 flex items-start gap-3">
-                <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                <p className="text-xs sm:text-sm text-stone-600">
-                  Every confession published here exists independently. We believe that when people read raw, unfiltered thoughts from others, they realize they are never truly alone in what they feel.
+              <div>
+                <h3 className="text-lg font-bold text-stone-900 mb-1.5">Zero Identities</h3>
+                <p className="text-sm sm:text-base text-stone-600 leading-relaxed">
+                  We collect zero personal data. No accounts, no email addresses, no tracking. Every confession is published as "Anonymous" unless you choose to add a pen name. Even then, no data links that name to you.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-bold text-stone-900 mb-1.5">How It Works</h3>
+                <p className="text-sm sm:text-base text-stone-600 leading-relaxed">
+                  Upload a photo, write your story, pick your city, and publish. Your confession appears directly in the real-time community feed.
                 </p>
               </div>
             </section>
@@ -168,52 +151,47 @@ export default function LegalModal({ topic = 'about', onClose }: LegalModalProps
           {activeTab === 'contact' && (
             <section className="space-y-6 animate-in fade-in duration-150">
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-stone-900 font-display mb-2">
-                  Official Support & Direct Communication
-                </h2>
-                <p className="text-sm sm:text-base text-stone-600">
-                  Have a suggestion, an inquiry, or a critical moderation concern regarding a submission? Our team is dedicated to keeping this platform safe and respectful.
+                <h3 className="text-xl font-bold text-stone-900 font-display mb-2">Get In Touch</h3>
+                <p className="text-sm sm:text-base text-stone-600 leading-relaxed">
+                  We welcome feedback, questions, partnership inquiries, and reports of inappropriate content. Since we do not collect personal data, please reach out using the direct email below.
                 </p>
               </div>
 
-              <div className="p-6 rounded-3xl bg-stone-50 border border-stone-200 space-y-4">
-                <p className="text-xs text-stone-500 font-bold uppercase tracking-wider">
-                  Official Contact Email
-                </p>
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-stone-200">
+              <div className="p-5 rounded-2xl bg-stone-50 border border-stone-200 space-y-3">
+                <p className="text-xs text-stone-500 font-bold uppercase tracking-wider">Official Email</p>
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-stone-200">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-                      <Mail className="w-5 h-5" />
-                    </div>
-                    <span className="font-mono text-base sm:text-lg font-bold text-stone-900 select-all">
+                    <Mail className="w-5 h-5 text-rose-500 shrink-0" />
+                    <span className="font-mono text-sm sm:text-base font-semibold text-stone-900 select-all">
                       {contactEmail}
                     </span>
                   </div>
                   <button
                     type="button"
                     onClick={handleCopyEmail}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs sm:text-sm font-medium transition-all active:scale-95 cursor-pointer"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-medium transition-all active:scale-95 cursor-pointer"
                   >
                     {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                     <span>{copied ? 'Copied' : 'Copy Email'}</span>
                   </button>
                 </div>
+                <p className="text-xs text-stone-500">
+                  For all inquiries, including feedback, content reports, and partnership proposals, please write to us directly.
+                </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                <div className="p-4 rounded-2xl border border-stone-100 bg-white space-y-1">
-                  <h3 className="font-bold text-stone-900 text-sm">Content Removal Requests</h3>
-                  <p className="text-xs text-stone-600">
-                    If an anonymous submission mentions identifying elements, email us the excerpt for immediate review and removal.
-                  </p>
-                </div>
+              <div>
+                <h4 className="text-base font-bold text-stone-900 mb-1">Response Time</h4>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                  We aim to respond to all legitimate inquiries within 48 hours. Content reports are prioritized and reviewed within 24 hours.
+                </p>
+              </div>
 
-                <div className="p-4 rounded-2xl border border-stone-100 bg-white space-y-1">
-                  <h3 className="font-bold text-stone-900 text-sm">Response Timeline</h3>
-                  <p className="text-xs text-stone-600">
-                    Our platform administrators address authentic reports and inquiries within 24 to 48 hours.
-                  </p>
-                </div>
+              <div>
+                <h4 className="text-base font-bold text-stone-900 mb-1">Reporting Content</h4>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                  If you encounter a confession that violates our zero-tolerance policy against spam, hate speech, or harassment, please email us with the text excerpt for swift moderation.
+                </p>
               </div>
             </section>
           )}
@@ -222,40 +200,43 @@ export default function LegalModal({ topic = 'about', onClose }: LegalModalProps
           {activeTab === 'privacy' && (
             <section className="space-y-6 animate-in fade-in duration-150">
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-stone-900 font-display mb-2">
-                  Privacy Policy & Non-Tracking Commitment
-                </h2>
-                <p className="text-xs text-stone-400">Effective Date: January 2026</p>
+                <h3 className="text-xl font-bold text-stone-900 font-display mb-2">Privacy Policy</h3>
+                <p className="text-xs text-stone-500 mb-4">Effective Date: January 2026</p>
               </div>
 
-              <div className="space-y-4 text-xs sm:text-sm text-stone-600">
-                <div className="p-4 rounded-2xl bg-stone-50 border border-stone-100 space-y-1">
-                  <h3 className="font-bold text-stone-900 text-sm">1. Zero Personal Data Collection</h3>
-                  <p>
-                    OpenConfess operates without mandatory accounts, passwords, email verification, or phone numbers. We do not build digital profiles or map IP addresses to private identities.
-                  </p>
-                </div>
+              <div>
+                <h4 className="text-base font-bold text-stone-900 mb-1">Zero Personal Data Collected</h4>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                  Open Confess does not collect any personal data. We do not require accounts, email addresses, names, phone numbers, or any other personally identifiable information. You can use the platform fully without ever identifying yourself.
+                </p>
+              </div>
 
-                <div className="p-4 rounded-2xl bg-stone-50 border border-stone-100 space-y-1">
-                  <h3 className="font-bold text-stone-900 text-sm">2. Absolute No Data Monetization</h3>
-                  <p>
-                    We strictly do not sell, license, rent, or trade your activity to advertising networks, third-party data brokers, or marketing corporations.
-                  </p>
-                </div>
+              <div>
+                <h4 className="text-base font-bold text-stone-900 mb-1">What We Store</h4>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                  We store only the content you voluntarily publish: your confession story text, the uploaded image, the city/region you select, and an optional pen name if you choose to provide one. No data links this content to your identity.
+                </p>
+              </div>
 
-                <div className="p-4 rounded-2xl bg-stone-50 border border-stone-100 space-y-1">
-                  <h3 className="font-bold text-stone-900 text-sm">3. Local Device Preferences</h3>
-                  <p>
-                    Your interactive preferences—such as reactions or newly submitted comments—are handled locally on your own personal device browser. This ensures continuity without tracking you across the web.
-                  </p>
-                </div>
+              <div>
+                <h4 className="text-base font-bold text-stone-900 mb-1">Data Retention</h4>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                  Confessions remain available in the real-time feed. Comments associated with confessions are also retained. We do not maintain long-term archives of user content beyond what is visible in the feed.
+                </p>
+              </div>
 
-                <div className="p-4 rounded-2xl bg-stone-50 border border-stone-100 space-y-1">
-                  <h3 className="font-bold text-stone-900 text-sm">4. Public Submissions Warning</h3>
-                  <p>
-                    Confessions and comments are published publicly. For your own protection and privacy, never write personal identifying details (real names, addresses, phone numbers) in the confession text.
-                  </p>
-                </div>
+              <div>
+                <h4 className="text-base font-bold text-stone-900 mb-1">Cookies</h4>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                  Open Confess does not use tracking cookies. Essential browser storage may be used for basic functionality, but no tracking or advertising cookies are deployed.
+                </p>
+              </div>
+
+              <div>
+                <h4 className="text-base font-bold text-stone-900 mb-1">Children's Privacy</h4>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                  Open Confess is intended for users aged 18 and above. We do not knowingly collect data from minors. If you believe a minor has posted content, please contact us immediately.
+                </p>
               </div>
             </section>
           )}
@@ -264,126 +245,95 @@ export default function LegalModal({ topic = 'about', onClose }: LegalModalProps
           {activeTab === 'terms' && (
             <section className="space-y-6 animate-in fade-in duration-150">
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-stone-900 font-display mb-2">
-                  Terms of Service
-                </h2>
-                <p className="text-xs text-stone-400">Standard User Agreement</p>
+                <h3 className="text-xl font-bold text-stone-900 font-display mb-2">Terms of Service</h3>
+                <p className="text-xs text-stone-500 mb-4">Standard User Terms</p>
               </div>
 
-              <div className="space-y-4 text-xs sm:text-sm text-stone-600">
-                <div>
-                  <h3 className="font-bold text-stone-900 mb-1 text-sm">1. Agreement to Terms</h3>
-                  <p>
-                    By accessing OpenConfess, you acknowledge and agree to comply with these terms and all relevant laws. If you disagree with any part of these rules, you must discontinue using the platform.
-                  </p>
-                </div>
+              <div>
+                <h4 className="text-base font-bold text-stone-900 mb-1">Acceptance of Terms</h4>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                  By using Open Confess, you agree to these Terms of Service. If you do not agree, please do not use the platform.
+                </p>
+              </div>
 
-                <div>
-                  <h3 className="font-bold text-stone-900 mb-1 text-sm">2. Minimum Age</h3>
-                  <p>
-                    You must be at least 13 years of age (or the minimum legal age required in your region to access public digital communication platforms) to interact with or submit confessions.
-                  </p>
-                </div>
+              <div>
+                <h4 className="text-base font-bold text-stone-900 mb-1">User Conduct</h4>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                  You agree not to post content that constitutes spam, hate speech, trolling, harassment, threats, or illegal material. Open Confess maintains a strict zero-tolerance policy against such content. Violations will result in immediate content removal.
+                </p>
+              </div>
 
-                <div>
-                  <h3 className="font-bold text-stone-900 mb-1 text-sm">3. Permitted Platform Use</h3>
-                  <p>
-                    The platform exists for personal narrative sharing, reading, and empathetic support. Any malicious activity—including automated web scraping, DDoS attempts, flood spamming, or tampering with site services—is strictly prohibited.
-                  </p>
-                </div>
+              <div>
+                <h4 className="text-base font-bold text-stone-900 mb-1">Content Ownership</h4>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                  You retain ownership of the content you publish. By posting, you grant Open Confess a non-exclusive license to display your content on the platform.
+                </p>
+              </div>
 
-                <div>
-                  <h3 className="font-bold text-stone-900 mb-1 text-sm">4. Submission License</h3>
-                  <p>
-                    You retain ownership of the thoughts you express. By posting publicly on OpenConfess, you grant us a royalty-free, worldwide license to display, distribute, and format your text on the website.
-                  </p>
-                </div>
+              <div>
+                <h4 className="text-base font-bold text-stone-900 mb-1">No Warranties</h4>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                  Open Confess is provided "as is" without warranties of any kind. We do not guarantee the accuracy, reliability, or appropriateness of any user-generated content.
+                </p>
+              </div>
 
-                <div>
-                  <h3 className="font-bold text-stone-900 mb-1 text-sm">5. Removal Authority</h3>
-                  <p>
-                    Administrators retain the absolute right to delete any post, reaction, or comment at any time without prior notice if it endangers safety or violates community guidelines.
-                  </p>
-                </div>
+              <div>
+                <h4 className="text-base font-bold text-stone-900 mb-1">Limitation of Liability</h4>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                  Open Confess is not liable for any damages arising from the use of the platform or from user-generated content. The platform is provided as a free service with no guarantees of uptime or availability.
+                </p>
+              </div>
+
+              <div>
+                <h4 className="text-base font-bold text-stone-900 mb-1">Modifications</h4>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                  We reserve the right to modify these terms at any time. Continued use of the platform after changes constitutes acceptance of the updated terms.
+                </p>
               </div>
             </section>
           )}
 
-          {/* 5. DISCLAIMER & MODERATION */}
+          {/* 5. DISCLAIMER */}
           {activeTab === 'disclaimer' && (
             <section className="space-y-6 animate-in fade-in duration-150">
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-stone-900 font-display mb-2">
-                  Disclaimer & Zero-Tolerance Moderation
-                </h2>
-                <p className="text-xs text-stone-400">Safeguarding Platform Integrity</p>
+                <h3 className="text-xl font-bold text-stone-900 font-display mb-2">Disclaimer</h3>
+                <p className="text-xs text-stone-500 mb-4">Content & Advisory Boundaries</p>
               </div>
 
-              {/* Emergency Crisis Advisory */}
-              <div className="p-5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-900 space-y-1.5">
-                <div className="flex items-center gap-2 font-bold text-sm">
-                  <HeartPulse className="w-5 h-5 text-amber-600 shrink-0" />
-                  <span>Emergency Crisis Notice</span>
-                </div>
-                <p className="text-xs sm:text-sm leading-relaxed">
-                  OpenConfess is a public narrative board; <strong>it is not a crisis helpline or mental health emergency service</strong>. If you or someone you know is in acute emotional distress, self-harm crisis, or physical danger, please immediately contact verified medical professionals, your local emergency helpline, or a certified crisis hotline.
+              <div>
+                <h4 className="text-base font-bold text-stone-900 mb-1">User-Generated Content</h4>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                  All confessions and comments on Open Confess are submitted by anonymous users. The views, opinions, and statements expressed in user-generated content do not reflect the views of Open Confess, its team, or its affiliates.
                 </p>
               </div>
 
-              {/* UGC Disclaimer */}
-              <div className="space-y-1">
-                <h3 className="font-bold text-stone-900 text-sm flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4 text-stone-600" />
-                  User-Generated Content Disclaimer
-                </h3>
-                <p className="text-xs sm:text-sm text-stone-600">
-                  All submissions and comments belong entirely to their respective anonymous authors. They do not represent the opinions, advice, or endorsements of OpenConfess. We accept no liability for statements made by third-party contributors.
+              <div>
+                <h4 className="text-base font-bold text-stone-900 mb-1">Not Professional Advice</h4>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                  Content on Open Confess is for entertainment and community purposes only. It is not intended as professional, medical, legal, or psychological advice. If you need professional help, please consult a qualified professional.
                 </p>
               </div>
 
-              {/* Zero-Tolerance Policies */}
-              <div className="space-y-3 pt-2 border-t border-stone-100">
-                <div className="flex items-center gap-2 text-rose-600 font-bold text-sm">
-                  <Ban className="w-4 h-4" />
-                  <span>Strict Zero-Tolerance Standards</span>
-                </div>
-                <p className="text-xs text-stone-500">
-                  Any confession or comment containing the following violations will be deleted immediately upon discovery:
+              <div>
+                <h4 className="text-base font-bold text-stone-900 mb-1">Accuracy of Information</h4>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                  We do not verify the accuracy or truthfulness of any confession. User-generated content may be fictional, exaggerated, or inaccurate. Readers should not rely on confessions as factual statements.
                 </p>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <div className="p-3.5 rounded-xl bg-stone-50 border border-stone-200">
-                    <strong className="text-rose-600 text-xs sm:text-sm block mb-1">No Hate Speech & Slurs</strong>
-                    <p className="text-xs text-stone-600">
-                      Attacks, discrimination, or slurs based on religion, race, gender, ethnicity, disability, or orientation.
-                    </p>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-stone-50 border border-stone-200">
-                    <strong className="text-rose-600 text-xs sm:text-sm block mb-1">No Doxxing & Names</strong>
-                    <p className="text-xs text-stone-600">
-                      Disclosing real names, residential addresses, phone numbers, social handles, or workplaces of any person.
-                    </p>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-stone-50 border border-stone-200">
-                    <strong className="text-rose-600 text-xs sm:text-sm block mb-1">No Trolling & Harassment</strong>
-                    <p className="text-xs text-stone-600">
-                      Hostile mockery, gaslighting, targeted insults, or persistent bullying directed at authors.
-                    </p>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-stone-50 border border-stone-200">
-                    <strong className="text-rose-600 text-xs sm:text-sm block mb-1">No Spam & Promotions</strong>
-                    <p className="text-xs text-stone-600">
-                      Affiliate links, commercial advertisements, automated solicitations, or fraudulent schemes.
-                    </p>
-                  </div>
-                </div>
               </div>
 
-              <div className="text-xs text-stone-500 pt-2 border-t border-stone-100">
-                To report any post violating these guidelines, email <span className="font-semibold text-stone-800">{contactEmail}</span>.
+              <div>
+                <h4 className="text-base font-bold text-stone-900 mb-1">Image Content</h4>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                  Uploaded images are user-submitted. We are not responsible for the content of uploaded images. If you believe an image violates your rights, please contact us for immediate removal.
+                </p>
+              </div>
+
+              <div>
+                <h4 className="text-base font-bold text-stone-900 mb-1">External Links</h4>
+                <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                  Open Confess may contain links to third-party websites (e.g., social media sharing). We are not responsible for the content or practices of external sites.
+                </p>
               </div>
             </section>
           )}
@@ -392,7 +342,7 @@ export default function LegalModal({ topic = 'about', onClose }: LegalModalProps
 
         {/* Footer */}
         <footer className="p-4 border-t border-stone-100 bg-stone-50 flex items-center justify-between text-xs text-stone-400 shrink-0">
-          <span>OpenConfess Platform</span>
+          <span>Open Confess Platform</span>
           <span>contact@openconfess.com</span>
         </footer>
 
