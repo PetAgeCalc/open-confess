@@ -29,6 +29,8 @@ const EMOJI_LIST = [
   { label: '100', emoji: '💯' },
 ];
 
+const STORAGE_KEY = 'open_confess_user_activity_v1';
+
 export default function HomePage({ regionFilter }: HomePageProps) {
   const [posts, setPosts] = useState<Confession[]>([]);
   const [cursor, setCursor] = useState<FeedPage['cursor']>(null);
@@ -38,17 +40,58 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   const [activePost, setActivePost] = useState<any | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
-  // Modal Interactive States
   const [pickerOpen, setPickerOpen] = useState(false);
   const [commentName, setCommentName] = useState('');
   const [commentText, setCommentText] = useState('');
   const pickerRef = useRef<HTMLDivElement>(null);
 
+  // LocalStorage se saved interactions merge karne ka function
+  const applySavedActivity = (rawPosts: Confession[]): Confession[] => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return rawPosts;
+      const parsed = JSON.parse(saved);
+
+      return rawPosts.map((post) => {
+        const customData = parsed[post.id];
+        if (customData) {
+          return {
+            ...post,
+            likesCount: customData.likesCount ?? (post as any).likesCount,
+            likes: customData.likesCount ?? (post as any).likes,
+            userReaction: customData.userReaction ?? (post as any).userReaction,
+            commentsCount: customData.commentsCount ?? (post as any).commentsCount,
+            comments: customData.commentsCount ?? (post as any).comments,
+            commentsList: customData.commentsList ?? (post as any).commentsList,
+          } as Confession;
+        }
+        return post;
+      });
+    } catch {
+      return rawPosts;
+    }
+  };
+
+  const saveActivityToStorage = (postId: string, updatedFields: Record<string, any>) => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      const parsed = saved ? JSON.parse(saved) : {};
+      parsed[postId] = {
+        ...(parsed[postId] || {}),
+        ...updatedFields,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+    } catch (e) {
+      console.error('Failed to save to localStorage', e);
+    }
+  };
+
   const loadInitial = useCallback(async () => {
     setLoading(true);
     try {
       const page = await fetchInitialFeed(regionFilter ?? undefined);
-      setPosts(page.posts);
+      const merged = applySavedActivity(page.posts);
+      setPosts(merged);
       setCursor(page.cursor);
       setHasMore(page.hasMore);
     } finally {
@@ -60,7 +103,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     loadInitial();
   }, [loadInitial]);
 
-  // Click outside listener for emoji tray
   useEffect(() => {
     if (!pickerOpen) return;
     const handleOutside = (e: MouseEvent) => {
@@ -76,7 +118,8 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     setLoadingMore(true);
     try {
       const page = await fetchNextPage(cursor, regionFilter ?? undefined);
-      setPosts((prev) => [...prev, ...page.posts]);
+      const merged = applySavedActivity(page.posts);
+      setPosts((prev) => [...prev, ...merged]);
       setCursor(page.cursor);
       setHasMore(page.hasMore);
     } finally {
@@ -88,7 +131,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     setPosts((prev) => [confession, ...prev]);
   }
 
-  // Active Post open helper with proper safe fields
   function handleOpenPost(post: Confession) {
     const raw = post as Record<string, any>;
     const cCount = Number(raw.commentsCount ?? raw.comments ?? 0) || 0;
@@ -109,13 +151,12 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     setActivePost({
       ...raw,
       likesCount: Number(raw.likesCount ?? raw.likes ?? 0) || 0,
-      commentsCount: cCount,
+      commentsCount: Math.max(cCount, list.length),
       commentsList: list,
       userReaction: raw.userReaction || null,
     });
   }
 
-  // Handle Emoji Selection directly in HomePage State
   function handleSelectReaction(emoji: string) {
     if (!activePost) return;
 
@@ -143,13 +184,17 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     setActivePost(updated);
     setPickerOpen(false);
 
-    // Synchronize feed immediately
+    // Save to LocalStorage permanently
+    saveActivityToStorage(activePost.id, {
+      likesCount: nextCount,
+      userReaction: nextEmoji,
+    });
+
     setPosts((prev) =>
       prev.map((p) => (p.id === activePost.id ? { ...p, ...updated } : p))
     );
   }
 
-  // Handle Add Comment directly in HomePage State
   function handleAddComment() {
     if (!activePost || !commentText.trim()) return;
 
@@ -171,7 +216,12 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     setActivePost(updated);
     setCommentText('');
 
-    // Synchronize feed immediately
+    // Save to LocalStorage permanently
+    saveActivityToStorage(activePost.id, {
+      commentsCount: updatedComments.length,
+      commentsList: updatedComments,
+    });
+
     setPosts((prev) =>
       prev.map((p) => (p.id === activePost.id ? { ...p, ...updated } : p))
     );
@@ -201,7 +251,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         </button>
       </section>
 
-      {/* Feed Section: Mobile aur Desktop dono me Full-Width Single Column */}
+      {/* Feed Section */}
       <section className="w-full px-3 sm:px-6 md:px-8 pt-1 pb-16 space-y-4">
         {regionFilter && (
           <p className="text-xs md:text-sm text-gray-500 text-center mb-3">
@@ -247,7 +297,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         )}
       </section>
 
-      {/* Self-Contained Modal to Guarantee Direct Feed Sync */}
+      {/* Synchronized Modal */}
       {activePost && (
         <div 
           className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6"
@@ -257,7 +307,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
             className="relative w-full max-w-full md:max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] z-10 my-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
             <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-stone-100 bg-white shrink-0">
               <h2 className="text-xl sm:text-2xl font-bold text-stone-900 font-display">
                 Confession
@@ -271,10 +320,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
               </button>
             </div>
 
-            {/* Scrollable Body */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 space-y-6">
-              
-              {/* Image */}
               {Boolean(activePost.imageUrl || activePost.image) && (
                 <div className="w-full rounded-2xl overflow-hidden bg-stone-100 border border-stone-100 max-h-[420px]">
                   <img 
@@ -285,7 +331,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                 </div>
               )}
 
-              {/* Author & City */}
               <div className="flex items-center gap-2 text-xs sm:text-sm text-stone-500 flex-wrap">
                 <span className="font-semibold text-stone-800">
                   {activePost.authorName || activePost.author || 'Anonymous'}
@@ -303,7 +348,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                 <span>Recent</span>
               </div>
 
-              {/* Text */}
               <p className="text-stone-900 text-base sm:text-lg md:text-xl leading-relaxed whitespace-pre-wrap">
                 {activePost.text || activePost.content || ''}
               </p>
@@ -380,7 +424,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                   ))}
                 </div>
 
-                {/* Add Comment Input */}
+                {/* Comment Input */}
                 <div className="pt-3 space-y-2.5">
                   <input
                     type="text"
