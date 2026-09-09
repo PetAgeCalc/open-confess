@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { X, Heart, MessageCircle, MapPin, Send } from 'lucide-react';
 import { Confession } from '../types';
 
@@ -7,7 +7,7 @@ interface PostDetailModalProps {
   onClose: () => void;
 }
 
-export const PostDetailModal: React.FC<PostDetailModalProps> = ({ confession, onClose }) => {
+export default function PostDetailModal({ confession, onClose }: PostDetailModalProps) {
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -20,9 +20,18 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ confession, on
     };
   }, [onClose]);
 
+  // Type safe access
+  const post = confession as unknown as Record<string, any>;
+  const author = post.authorName || post.author || 'Anonymous';
+  const locationText = [post.city, post.country].filter(Boolean).join(', ') || post.location || '';
+  const likes = post.likesCount ?? post.likes ?? 0;
+  const comments = post.commentsCount ?? post.comments ?? 0;
+  const image = post.imageUrl || post.image || null;
+  const contentText = post.text || post.content || '';
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-      {/* Outside Click Close */}
+      {/* Outside click to close */}
       <div className="fixed inset-0" onClick={onClose} />
 
       {/* Symmetrical Modal Card */}
@@ -45,28 +54,28 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ confession, on
         {/* Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
           
-          {/* Post Image: Ab andar balanced padding aur rounded corners ke sath fit rahegi */}
-          {confession.imageUrl && (
+          {/* Post Image */}
+          {image && (
             <div className="w-full rounded-2xl overflow-hidden bg-stone-100 shadow-sm border border-stone-100">
               <img 
-                src={confession.imageUrl} 
+                src={image} 
                 alt="Confession" 
                 className="w-full h-auto max-h-72 object-cover block"
               />
             </div>
           )}
 
-          {/* Meta Information */}
+          {/* Meta Info */}
           <div className="flex items-center gap-2 text-xs text-stone-500 flex-wrap">
             <span className="font-semibold text-stone-800">
-              {confession.authorName || 'Anonymous'}
+              {author}
             </span>
-            {(confession.city || confession.country) && (
+            {locationText && (
               <>
                 <span>•</span>
                 <span className="inline-flex items-center gap-1 text-rose-600 font-medium">
                   <MapPin className="w-3.5 h-3.5 shrink-0" />
-                  {[confession.city, confession.country].filter(Boolean).join(', ')}
+                  {locationText}
                 </span>
               </>
             )}
@@ -76,18 +85,18 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ confession, on
 
           {/* Confession Text */}
           <p className="text-stone-900 text-base sm:text-lg leading-relaxed whitespace-pre-wrap">
-            {confession.text}
+            {contentText}
           </p>
 
           {/* Reactions */}
           <div className="flex items-center gap-5 pt-3 border-t border-stone-100 text-xs text-stone-500">
             <div className="flex items-center gap-1.5 hover:text-rose-600 transition-colors cursor-pointer">
               <Heart className="w-4 h-4" />
-              <span>{confession.likesCount || 0}</span>
+              <span>{likes}</span>
             </div>
             <div className="flex items-center gap-1.5 hover:text-stone-800 transition-colors cursor-pointer">
               <MessageCircle className="w-4 h-4" />
-              <span>{confession.commentsCount || 0} comments</span>
+              <span>{comments} comments</span>
             </div>
           </div>
 
@@ -118,6 +127,4 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ confession, on
       </div>
     </div>
   );
-};
-
-export default PostDetailModal;
+}
