@@ -5,6 +5,7 @@ import { Confession } from '../types';
 interface PostDetailModalProps {
   confession: Confession;
   onClose: () => void;
+  onUpdatePost?: (updatedPost: Confession) => void;
 }
 
 interface CommentItem {
@@ -27,7 +28,11 @@ const EMOJI_OPTIONS = [
   { label: '100', emoji: '💯' },
 ];
 
-export const PostDetailModal: React.FC<PostDetailModalProps> = ({ confession, onClose }) => {
+export const PostDetailModal: React.FC<PostDetailModalProps> = ({ 
+  confession, 
+  onClose,
+  onUpdatePost 
+}) => {
   const post = confession as Record<string, any>;
 
   const author = String(post.authorName || post.author || 'Anonymous');
@@ -37,7 +42,7 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ confession, on
   const textContent = String(post.text || post.content || '');
 
   // Emoji Reaction State
-  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
+  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(post.userReaction || null);
   const [reactionCount, setReactionCount] = useState<number>(initialLikes);
   const [pickerOpen, setPickerOpen] = useState<boolean>(false);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -113,16 +118,32 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ confession, on
   }, [pickerOpen]);
 
   function handleSelectReaction(emoji: string) {
+    let nextCount = reactionCount;
+    let nextEmoji: string | null = null;
+
     if (selectedEmoji === emoji) {
-      setSelectedEmoji(null);
-      setReactionCount((prev) => Math.max(0, prev - 1));
+      nextEmoji = null;
+      nextCount = Math.max(0, reactionCount - 1);
     } else {
       if (!selectedEmoji) {
-        setReactionCount((prev) => prev + 1);
+        nextCount = reactionCount + 1;
       }
-      setSelectedEmoji(emoji);
+      nextEmoji = emoji;
     }
+
+    setSelectedEmoji(nextEmoji);
+    setReactionCount(nextCount);
     setPickerOpen(false);
+
+    // Feed ko turant update karein
+    if (onUpdatePost) {
+      onUpdatePost({
+        ...confession,
+        likesCount: nextCount,
+        likes: nextCount,
+        userReaction: nextEmoji,
+      } as unknown as Confession);
+    }
   }
 
   function handleAddComment() {
@@ -136,8 +157,19 @@ export const PostDetailModal: React.FC<PostDetailModalProps> = ({ confession, on
       createdAt: 'Just now',
     };
 
-    setCommentsList((prev) => [...prev, newEntry]);
+    const updatedList = [...commentsList, newEntry];
+    setCommentsList(updatedList);
     setCommentText('');
+
+    // Feed ko turant update karein
+    if (onUpdatePost) {
+      onUpdatePost({
+        ...confession,
+        commentsCount: updatedList.length,
+        comments: updatedList.length,
+        commentsList: updatedList,
+      } as unknown as Confession);
+    }
   }
 
   return (
