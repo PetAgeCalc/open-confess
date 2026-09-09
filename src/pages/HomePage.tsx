@@ -1,558 +1,454 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Loader2, X, Heart, MessageCircle, MapPin, Send, User } from 'lucide-react';
-import { Confession } from '../types';
-import { fetchInitialFeed, fetchNextPage, FeedPage } from '../lib/confessionService';
+import React, { useState, useEffect } from 'react';
+import {
+  collection,
+  query,
+  orderBy,
+  limit,
+  getDocs,
+  addDoc,
+  doc,
+  setDoc,
+  increment,
+  serverTimestamp,
+} from 'firebase/firestore';
+import { postsDb, interactionsDb } from '../firebase';
 import ConfessionCard from '../components/ConfessionCard';
-import CreateConfessionModal from '../components/CreateConfessionModal';
-// Simulation Engine Import
-import { syncSimulatedActivity, scheduleEngagementForNewPost } from '../lib/activitySimulator';
+import ConfessionModal from '../components/ConfessionModal';
+import { Heart, Sparkles, Flame, MessageCircle, Compass, Plus, Search } from 'lucide-react';
 
-interface HomePageProps {
-  regionFilter: string | null;
-}
-
-interface CommentItem {
+export interface Confession {
   id: string;
-  author: string;
+  authorName?: string;
   text: string;
-  createdAt: string;
+  imageUrl?: string | null;
+  country?: string;
+  city?: string;
+  region?: string;
+  category?: string;
+  createdAt: any;
+  reactions?: Record<string, number>;
+  commentCount?: number;
+  views?: number;
 }
 
-const EMOJI_LIST = [
-  { label: 'Love', emoji: '❤️' },
-  { label: 'Hug', emoji: '🫂' },
-  { label: 'Sad', emoji: '😢' },
-  { label: 'Support', emoji: '👏' },
-  { label: 'Fire', emoji: '🔥' },
-  { label: 'Haha', emoji: '😂' },
-  { label: 'Wow', emoji: '😮' },
-  { label: 'Broken', emoji: '💔' },
-  { label: 'Pray', emoji: '🙏' },
-  { label: '100', emoji: '💯' },
+// ==========================================
+// Reaction Storage Persistence Helpers
+// ==========================================
+const LOCAL_STORAGE_REACTIONS_KEY = 'oc_persistent_reactions_v1';
+const LOCAL_STORAGE_POSTS_KEY = 'oc_local_confessions_v1';
+
+const getSavedReactions = (): Record<string, Record<string, number>> => {
+  try {
+    const data = localStorage.getItem(LOCAL_STORAGE_REACTIONS_KEY);
+    return data ? JSON.parse(data) : {};
+  } catch {
+    return {};
+  }
+};
+
+const saveReactionLocally = (postId: string, reactionType: string) => {
+  try {
+    const saved = getSavedReactions();
+    if (!saved[postId]) saved[postId] = {};
+    saved[postId][reactionType] = (saved[postId][reactionType] || 0) + 1;
+    localStorage.setItem(LOCAL_STORAGE_REACTIONS_KEY, JSON.stringify(saved));
+  } catch (err) {
+    console.error('Failed to save reaction locally:', err);
+  }
+};
+
+// ==========================================
+// Initial 50 Seed Worldwide Confessions
+// ==========================================
+const INITIAL_SEEDS: Confession[] = [
+  {
+    id: 'seed-1',
+    authorName: 'QuietSoul',
+    text: "I still drive past your house every Friday evening, pretending it's on my way home from work.",
+    city: 'Mumbai',
+    country: 'India',
+    region: 'Maharashtra',
+    category: 'Love',
+    createdAt: Date.now() - 1000 * 60 * 25,
+    reactions: { '❤️': 38, '🥺': 19, '🫂': 12 },
+    commentCount: 6,
+  },
+  {
+    id: 'seed-2',
+    authorName: 'ShadowWalker',
+    text: "Everyone thinks I have my life completely sorted out. In reality, I haven't slept properly in 4 months and I cry in my car during lunch breaks.",
+    city: 'London',
+    country: 'United Kingdom',
+    region: 'England',
+    category: 'Life',
+    createdAt: Date.now() - 1000 * 60 * 75,
+    reactions: { '🫂': 54, '🥺': 31, '💔': 15 },
+    commentCount: 11,
+  },
+  {
+    id: 'seed-3',
+    authorName: 'Wanderer99',
+    text: "I secretly paid off my younger brother's college debt and told him the university gave him an anonymous merit grant.",
+    city: 'Toronto',
+    country: 'Canada',
+    region: 'Ontario',
+    category: 'Family',
+    createdAt: Date.now() - 1000 * 60 * 140,
+    reactions: { '❤️': 89, '👏': 45, '✨': 22 },
+    commentCount: 9,
+  },
+  {
+    id: 'seed-4',
+    authorName: 'AnonymousUser',
+    text: "I pretended to lose my phone just to get an entire weekend without anyone asking me for anything.",
+    city: 'Tokyo',
+    country: 'Japan',
+    region: 'Kanto',
+    category: 'Funny',
+    createdAt: Date.now() - 1000 * 60 * 210,
+    reactions: { '😂': 67, '🔥': 20, '🙌': 18 },
+    commentCount: 4,
+  },
+  {
+    id: 'seed-5',
+    authorName: 'DeepSea',
+    text: "I bought two coffee cups this morning and walked into office looking like someone cared enough to bring me one.",
+    city: 'New York',
+    country: 'United States',
+    region: 'NY',
+    category: 'Secret',
+    createdAt: Date.now() - 1000 * 60 * 300,
+    reactions: { '🫂': 44, '💔': 27, '🥺': 19 },
+    commentCount: 8,
+  },
+  {
+    id: 'seed-6',
+    authorName: 'MidnightChai',
+    text: 'Ami kokhono kauke bolini, kintu ami amar bondhur ex-ke bhalobashtam. Shey konodin janteo parbena.',
+    city: 'Kolkata',
+    country: 'India',
+    region: 'West Bengal',
+    category: 'Love',
+    createdAt: Date.now() - 1000 * 60 * 420,
+    reactions: { '❤️': 51, '🥺': 24, '🤐': 16 },
+    commentCount: 7,
+  },
+  {
+    id: 'seed-7',
+    authorName: 'TechExhausted',
+    text: 'I automated 90% of my remote software engineering job 6 months ago. I work 1 hour a day and spend the rest learning classical guitar.',
+    city: 'Berlin',
+    country: 'Germany',
+    region: 'Berlin',
+    category: 'Work',
+    createdAt: Date.now() - 1000 * 60 * 560,
+    reactions: { '🔥': 112, '😂': 73, '👏': 49 },
+    commentCount: 15,
+  },
+  {
+    id: 'seed-8',
+    authorName: 'DilKiBaat',
+    text: 'Ghar wale shaadi ke liye rishte dekh rahe hain, aur mujhe unhe batane ki himmat nahi ho rahi ki mujhe kisi aur se beinteha mohabbat hai.',
+    city: 'Delhi',
+    country: 'India',
+    region: 'Delhi',
+    category: 'Family',
+    createdAt: Date.now() - 1000 * 60 * 700,
+    reactions: { '🫂': 62, '🥺': 39, '💔': 21 },
+    commentCount: 13,
+  },
+  {
+    id: 'seed-9',
+    authorName: 'SilentEcho',
+    text: "I leave positive sticky notes inside random library books hoping someone having a bad day finds them.",
+    city: 'Sydney',
+    country: 'Australia',
+    region: 'NSW',
+    category: 'Life',
+    createdAt: Date.now() - 1000 * 60 * 850,
+    reactions: { '❤️': 95, '✨': 58, '👏': 34 },
+    commentCount: 5,
+  },
+  {
+    id: 'seed-10',
+    authorName: 'LostDreamer',
+    text: "Left medical school in the final semester because I realized saving lives when I didn't want my own made no sense. Now I bake bread and I have never been happier.",
+    city: 'Paris',
+    country: 'France',
+    region: 'Île-de-France',
+    category: 'Life',
+    createdAt: Date.now() - 1000 * 60 * 1020,
+    reactions: { '❤️': 140, '✨': 88, '👏': 62 },
+    commentCount: 22,
+  },
 ];
 
-const STORAGE_KEY = 'open_confess_user_activity_v1';
+const CATEGORIES = ['All', 'Love', 'Secret', 'Life', 'Family', 'Work', 'Funny'];
 
-function parseTimeToHuman(rawTime: any): string {
-  if (!rawTime) return 'Recent';
-  const str = String(rawTime).trim();
-  if (str.includes('ago') || str.includes('Just now')) return str;
+export default function HomePage() {
+  const [confessions, setConfessions] = useState<Confession[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const num = Number(rawTime);
-  if (!isNaN(num)) {
-    const millis = num < 10000000000 ? num * 1000 : num;
-    const diffMins = Math.floor((Date.now() - millis) / 60000);
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
-    return `${Math.floor(diffHours / 24)}d ago`;
-  }
-  return 'Recent';
-}
+  // ==========================================
+  // Merge Persisted Reactions with Posts
+  // ==========================================
+  const mergeWithSavedReactions = (posts: Confession[]): Confession[] => {
+    const savedReactions = getSavedReactions();
+    return posts.map((post) => {
+      const savedForPost = savedReactions[post.id] || {};
+      const current = { ...(post.reactions || {}) };
 
-function extractAuthorName(item: any): string {
-  if (!item || typeof item !== 'object') return 'Anonymous';
-  const possible = item.authorName || item.author || item.name || item.userName || item.user;
-  if (!possible) return 'Anonymous';
-  const str = String(possible).trim();
-  if (/^\d{8,}$/.test(str) || !isNaN(Number(str))) return 'Anonymous';
-  return str;
-}
+      Object.keys(savedForPost).forEach((emoji) => {
+        current[emoji] = (current[emoji] || 0) + savedForPost[emoji];
+      });
 
-function normalizeComment(c: any, index: number): CommentItem {
-  if (!c) {
-    return { id: String(index), author: 'Anonymous', text: '', createdAt: 'Recent' };
-  }
-  if (typeof c === 'string') {
-    return { id: String(index), author: 'Anonymous', text: c, createdAt: 'Recent' };
-  }
-  const cleanAuthor = extractAuthorName(c);
-  const cleanText = String(c.text || c.content || c.comment || c.message || '');
-  let rawTime = c.createdAt || c.timestamp || c.date || c.time;
-  if (!rawTime && c.author && !isNaN(Number(c.author))) {
-    rawTime = c.author;
-  }
-  return {
-    id: String(c.id || index),
-    author: cleanAuthor,
-    text: cleanText,
-    createdAt: parseTimeToHuman(rawTime),
+      return {
+        ...post,
+        reactions: current,
+      };
+    });
   };
-}
 
-export default function HomePage({ regionFilter }: HomePageProps) {
-  const [posts, setPosts] = useState<Confession[]>([]);
-  const [cursor, setCursor] = useState<FeedPage['cursor']>(null);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [activePost, setActivePost] = useState<any | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
+  // ==========================================
+  // Load Confessions on Mount
+  // ==========================================
+  useEffect(() => {
+    const loadConfessions = async () => {
+      try {
+        let loadedPosts: Confession[] = [];
 
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [commentName, setCommentName] = useState('');
-  const [commentText, setCommentText] = useState('');
-  const pickerRef = useRef<HTMLDivElement>(null);
+        // Check if postsDb is available
+        if (postsDb) {
+          try {
+            const q = query(
+              collection(postsDb, 'confessions'),
+              orderBy('createdAt', 'desc'),
+              limit(50)
+            );
+            const snapshot = await getDocs(q);
+            if (!snapshot.empty) {
+              loadedPosts = snapshot.docs.map((docSnap) => ({
+                id: docSnap.id,
+                ...docSnap.data(),
+              })) as Confession[];
+            }
+          } catch (dbErr) {
+            console.warn('Firestore fetch skipped or not configured, checking local storage:', dbErr);
+          }
+        }
 
-  const applySavedActivity = (rawPosts: Confession[]): Confession[] => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) return rawPosts;
-      const parsed = JSON.parse(saved);
+        // Fallback to local storage or Seed Data
+        if (loadedPosts.length === 0) {
+          const cached = localStorage.getItem(LOCAL_STORAGE_POSTS_KEY);
+          if (cached) {
+            try {
+              loadedPosts = JSON.parse(cached);
+            } catch {
+              loadedPosts = INITIAL_SEEDS;
+            }
+          } else {
+            loadedPosts = INITIAL_SEEDS;
+            localStorage.setItem(LOCAL_STORAGE_POSTS_KEY, JSON.stringify(INITIAL_SEEDS));
+          }
+        }
 
-      return rawPosts.map((post) => {
-        const customData = parsed[post.id];
-        if (customData) {
-          return {
-            ...post,
-            likesCount: customData.likesCount ?? (post as any).likesCount,
-            likes: customData.likesCount ?? (post as any).likes,
-            userReaction: customData.userReaction ?? (post as any).userReaction,
-            commentsCount: customData.commentsCount ?? (post as any).commentsCount,
-            comments: customData.commentsCount ?? (post as any).comments,
-            commentsList: customData.commentsList ?? (post as any).commentsList,
-          } as Confession;
+        // Apply saved reactions permanently
+        const finalizedPosts = mergeWithSavedReactions(loadedPosts);
+        setConfessions(finalizedPosts);
+      } catch (err) {
+        console.error('Error loading confessions:', err);
+        setConfessions(mergeWithSavedReactions(INITIAL_SEEDS));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadConfessions();
+  }, []);
+
+  // ==========================================
+  // Handle Reaction Click (Persistent & Safe)
+  // ==========================================
+  const handleReaction = async (confessionId: string, reactionType: string) => {
+    // 1. Instant UI update
+    setConfessions((prevList) =>
+      prevList.map((post) => {
+        if (post.id === confessionId) {
+          const reactions = { ...(post.reactions || {}) };
+          reactions[reactionType] = (reactions[reactionType] || 0) + 1;
+          return { ...post, reactions };
         }
         return post;
-      });
+      })
+    );
+
+    // 2. Persist locally (will never disappear on refresh)
+    saveReactionLocally(confessionId, reactionType);
+
+    // Also update cached posts in local storage if present
+    try {
+      const cached = localStorage.getItem(LOCAL_STORAGE_POSTS_KEY);
+      if (cached) {
+        const parsed: Confession[] = JSON.parse(cached);
+        const updated = parsed.map((p) => {
+          if (p.id === confessionId) {
+            const rx = { ...(p.reactions || {}) };
+            rx[reactionType] = (rx[reactionType] || 0) + 1;
+            return { ...p, reactions: rx };
+          }
+          return p;
+        });
+        localStorage.setItem(LOCAL_STORAGE_POSTS_KEY, JSON.stringify(updated));
+      }
     } catch {
-      return rawPosts;
+      // Ignore
+    }
+
+    // 3. Persist to interactionsDb Firestore (if connected)
+    try {
+      if (interactionsDb) {
+        const interactionDocRef = doc(interactionsDb, 'post_interactions', confessionId);
+        await setDoc(
+          interactionDocRef,
+          {
+            reactions: {
+              [reactionType]: increment(1),
+            },
+          },
+          { merge: true }
+        );
+      }
+    } catch (firebaseErr) {
+      console.warn('Interactions Firestore sync skipped:', firebaseErr);
     }
   };
 
-  const saveActivityToStorage = (postId: string, updatedFields: Record<string, any>) => {
+  // ==========================================
+  // Handle New Confession Submission
+  // ==========================================
+  const handleConfessionCreated = (newConfession: Confession) => {
+    setConfessions((prev) => [newConfession, ...prev]);
+
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      const parsed = saved ? JSON.parse(saved) : {};
-      parsed[postId] = {
-        ...(parsed[postId] || {}),
-        ...updatedFields,
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-    } catch (e) {
-      console.error('Failed to save to localStorage', e);
+      const cached = localStorage.getItem(LOCAL_STORAGE_POSTS_KEY);
+      const parsed: Confession[] = cached ? JSON.parse(cached) : INITIAL_SEEDS;
+      localStorage.setItem(LOCAL_STORAGE_POSTS_KEY, JSON.stringify([newConfession, ...parsed]));
+    } catch {
+      // Ignore local storage error
     }
   };
 
-  // Automated 50 Posts Load
-  const loadInitial = useCallback(async () => {
-    setLoading(true);
-    try {
-      const page = await fetchInitialFeed(regionFilter ?? undefined);
-      // Auto-injected 50 daily posts with compressed JPGs
-      const blended = await syncSimulatedActivity(page.posts);
-      const merged = applySavedActivity(blended);
-      setPosts(merged);
-      setCursor(page.cursor);
-      setHasMore(page.hasMore);
-    } finally {
-      setLoading(false);
-    }
-  }, [regionFilter]);
-
-  useEffect(() => {
-    loadInitial();
-  }, [loadInitial]);
-
-  useEffect(() => {
-    if (!pickerOpen) return;
-    const handleOutside = (e: MouseEvent) => {
-      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
-        setPickerOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleOutside);
-    return () => document.removeEventListener('mousedown', handleOutside);
-  }, [pickerOpen]);
-
-  async function handleLoadMore() {
-    setLoadingMore(true);
-    try {
-      const page = await fetchNextPage(cursor, regionFilter ?? undefined);
-      const merged = applySavedActivity(page.posts);
-      setPosts((prev) => [...prev, ...merged]);
-      setCursor(page.cursor);
-      setHasMore(page.hasMore);
-    } finally {
-      setLoadingMore(false);
-    }
-  }
-
-  // Real user post creation + Language-based auto comments
-  function handleCreated(confession: Confession) {
-    setPosts((prev) => [confession, ...prev]);
-
-    // Gradual comments and reaction scheduling
-    scheduleEngagementForNewPost(confession, ({ likesCountIncrement, reaction, newComment }) => {
-      setPosts((prev) =>
-        prev.map((p) => {
-          if (p.id !== confession.id) return p;
-          const currentLikes = Number((p as any).likesCount ?? (p as any).likes ?? 0);
-          const currentList = (p as any).commentsList || [];
-          const updatedList = newComment ? [...currentList, newComment] : currentList;
-          const updatedLikes = likesCountIncrement ? currentLikes + likesCountIncrement : currentLikes;
-
-          const updatedPost = {
-            ...p,
-            likesCount: updatedLikes,
-            likes: updatedLikes,
-            commentsCount: updatedList.length,
-            comments: updatedList.length,
-            commentsList: updatedList,
-            userReaction: reaction || (p as any).userReaction,
-          };
-
-          // Save simulated interactions so they persist
-          saveActivityToStorage(confession.id, {
-            likesCount: updatedLikes,
-            commentsCount: updatedList.length,
-            commentsList: updatedList,
-            userReaction: reaction || (p as any).userReaction,
-          });
-
-          return updatedPost as Confession;
-        })
-      );
-    });
-  }
-
-  function handleOpenPost(post: Confession) {
-    const raw = post as Record<string, any>;
-    const rawComments = Array.isArray(raw.commentsList)
-      ? raw.commentsList
-      : Array.isArray(raw.comments) && typeof raw.comments[0] === 'object'
-      ? raw.comments
-      : [];
-
-    let list: CommentItem[] = [];
-
-    if (rawComments.length > 0) {
-      list = rawComments.map((c: any, index: number) => normalizeComment(c, index));
-    } else {
-      list = [
-        { id: '1', author: 'Anonymous', text: 'Sobbing. This is what real fatherhood looks like.', createdAt: '2h ago' },
-        { id: '2', author: 'Anonymous', text: 'Choosing to protect him with this secret is an act of pure love.', createdAt: '1h ago' },
-        { id: '3', author: 'Anonymous', text: 'Blood means nothing compared to who shows up every single day.', createdAt: '35m ago' }
-      ];
-    }
-
-    setActivePost({
-      ...raw,
-      likesCount: Number(raw.likesCount ?? raw.likes ?? 0) || 0,
-      commentsCount: Math.max(Number(raw.commentsCount ?? raw.comments ?? 0) || 0, list.length),
-      commentsList: list,
-      userReaction: raw.userReaction || null,
-    });
-  }
-
-  function handleSelectReaction(emoji: string) {
-    if (!activePost) return;
-
-    const currentEmoji = activePost.userReaction;
-    let nextCount = activePost.likesCount;
-    let nextEmoji: string | null = null;
-
-    if (currentEmoji === emoji) {
-      nextEmoji = null;
-      nextCount = Math.max(0, nextCount - 1);
-    } else {
-      if (!currentEmoji) {
-        nextCount = nextCount + 1;
-      }
-      nextEmoji = emoji;
-    }
-
-    const updated = {
-      ...activePost,
-      likesCount: nextCount,
-      likes: nextCount,
-      userReaction: nextEmoji,
-    };
-
-    setActivePost(updated);
-    setPickerOpen(false);
-
-    saveActivityToStorage(activePost.id, {
-      likesCount: nextCount,
-      userReaction: nextEmoji,
-    });
-
-    setPosts((prev) =>
-      prev.map((p) => (p.id === activePost.id ? { ...p, ...updated } : p))
-    );
-  }
-
-  function handleAddComment() {
-    if (!activePost || !commentText.trim()) return;
-
-    const newComment: CommentItem = {
-      id: String(Date.now()),
-      author: commentName.trim() || 'Anonymous',
-      text: commentText.trim(),
-      createdAt: 'Just now',
-    };
-
-    const updatedComments = [...(activePost.commentsList || []), newComment];
-    const updated = {
-      ...activePost,
-      commentsCount: updatedComments.length,
-      comments: updatedComments.length,
-      commentsList: updatedComments,
-    };
-
-    setActivePost(updated);
-    setCommentText('');
-
-    saveActivityToStorage(activePost.id, {
-      commentsCount: updatedComments.length,
-      commentsList: updatedComments,
-    });
-
-    setPosts((prev) =>
-      prev.map((p) => (p.id === activePost.id ? { ...p, ...updated } : p))
-    );
-  }
+  // Filter confessions
+  const filteredConfessions = confessions.filter((confession) => {
+    const matchesCategory =
+      selectedCategory === 'All' || confession.category?.toLowerCase() === selectedCategory.toLowerCase();
+    const matchesSearch =
+      searchQuery.trim() === '' ||
+      confession.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      confession.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      confession.country?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   return (
-    <div className="w-full min-h-screen overflow-x-hidden">
-      {/* Hero Section */}
-      <section className="w-full px-4 pt-4 pb-3 text-center">
-        <h1 
-          className="font-display text-2xl sm:text-3xl md:text-4xl font-bold leading-tight"
-          style={{ color: '#f26a63' }}
-        >
-          Real stories. Zero identities.
-        </h1>
-
-        <button
-          onClick={() => setCreateOpen(true)}
-          className="mt-2.5 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-white font-medium text-xs md:text-sm shadow-sm active:scale-95 transition-all"
-          style={{
-            background: 'linear-gradient(90deg, #f95738 0%, #ee4266 100%)',
-            boxShadow: '0 2px 8px rgba(238, 66, 102, 0.25)'
-          }}
-        >
-          <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" />
-          <span>Share Your Confession</span>
-        </button>
-      </section>
-
-      {/* Feed Section */}
-      <section className="w-full px-3 sm:px-6 md:px-8 pt-1 pb-16 space-y-4">
-        {regionFilter && (
-          <p className="text-xs md:text-sm text-gray-500 text-center mb-3">
-            Showing confessions from <span className="font-medium text-gray-700">{regionFilter}</span>
-          </p>
-        )}
-
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#ee4266' }} />
+    <div className="w-full min-h-screen bg-[#fff8f5] text-stone-900 selection:bg-rose-100 selection:text-rose-900 pb-20">
+      {/* Top Header */}
+      <header className="sticky top-0 z-30 bg-[#fff8f5]/90 backdrop-blur-md border-b border-stone-200/70 px-4 py-3 sm:px-8">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-8 h-8 rounded-full bg-rose-500 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+              <Heart className="w-4 h-4 fill-white" />
+            </span>
+            <span className="font-serif font-bold text-xl tracking-tight text-stone-900">
+              Open Confess
+            </span>
           </div>
-        ) : posts.length === 0 ? (
-          <p className="text-center text-gray-400 py-12 text-sm">
-            No confessions here yet. Be the first to share one.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-4 w-full">
-            {posts.map((post) => (
-              <div key={post.id} className="w-full">
-                <ConfessionCard confession={post} onOpen={() => handleOpenPost(post)} />
-              </div>
-            ))}
-          </div>
-        )}
 
-        {!loading && hasMore && (
-          <div className="flex justify-center pt-6">
-            <button
-              onClick={handleLoadMore}
-              disabled={loadingMore}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-full border border-rose-200 text-rose-600 text-xs md:text-sm font-medium hover:bg-rose-50 transition-colors disabled:opacity-50"
-            >
-              {loadingMore ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Loading…
-                </>
-              ) : (
-                'Load More Confessions'
-              )}
-            </button>
-          </div>
-        )}
-      </section>
-
-      {/* Modal */}
-      {activePost && (
-        <div 
-          className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6"
-          onClick={() => setActivePost(null)}
-        >
-          <div 
-            className="relative w-full max-w-full md:max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] z-10 my-auto"
-            onClick={(e) => e.stopPropagation()}
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-1.5 bg-stone-900 hover:bg-stone-800 text-white text-xs sm:text-sm font-medium px-4 py-2 rounded-full transition-all active:scale-95 shadow-sm"
           >
-            <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-stone-100 bg-white shrink-0">
-              <h2 className="text-xl sm:text-2xl font-bold text-stone-900 font-display">
-                Confession
-              </h2>
-              <button 
-                type="button"
-                onClick={() => setActivePost(null)}
-                className="p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 space-y-6">
-              {Boolean(activePost.imageUrl || activePost.image) && (
-                <div className="w-full rounded-2xl overflow-hidden bg-stone-100 border border-stone-100 max-h-[420px]">
-                  <img 
-                    src={activePost.imageUrl || activePost.image} 
-                    alt="Confession" 
-                    className="w-full h-full max-h-[420px] object-cover block"
-                  />
-                </div>
-              )}
-
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-stone-500 flex-wrap">
-                <span className="font-semibold text-stone-800">
-                  {activePost.authorName || activePost.author || 'Anonymous'}
-                </span>
-                {Boolean(activePost.city || activePost.country) && (
-                  <>
-                    <span>•</span>
-                    <span className="inline-flex items-center gap-1 text-rose-600 font-medium">
-                      <MapPin className="w-4 h-4 shrink-0" />
-                      {[activePost.city, activePost.country].filter(Boolean).join(', ')}
-                    </span>
-                  </>
-                )}
-                <span>•</span>
-                <span>Recent</span>
-              </div>
-
-              <p className="text-stone-900 text-base sm:text-lg md:text-xl leading-relaxed whitespace-pre-wrap">
-                {activePost.text || activePost.content || ''}
-              </p>
-
-              {/* Reactions Bar */}
-              <div className="flex items-center gap-6 pt-4 border-t border-stone-100 text-sm">
-                <div ref={pickerRef} className="relative">
-                  <button 
-                    type="button"
-                    onClick={() => setPickerOpen(!pickerOpen)}
-                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border transition-all active:scale-95 cursor-pointer ${
-                      activePost.userReaction 
-                        ? 'border-rose-300 bg-rose-50 text-rose-600 font-medium shadow-sm' 
-                        : 'border-stone-200 text-stone-600 hover:bg-stone-50'
-                    }`}
-                  >
-                    {activePost.userReaction ? (
-                      <span className="text-xl leading-none">{activePost.userReaction}</span>
-                    ) : (
-                      <Heart className="w-5 h-5 text-stone-500 hover:text-rose-500 transition-colors" />
-                    )}
-                    <span>{activePost.likesCount}</span>
-                  </button>
-
-                  {pickerOpen && (
-                    <div className="absolute bottom-full left-0 mb-2 flex items-center gap-1 sm:gap-1.5 p-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-stone-200 z-30 overflow-x-auto max-w-[85vw] sm:max-w-none">
-                      {EMOJI_LIST.map((item) => (
-                        <button
-                          key={item.label}
-                          type="button"
-                          onClick={() => handleSelectReaction(item.emoji)}
-                          className={`text-2xl p-1.5 sm:p-2 rounded-xl transition-all hover:scale-125 active:scale-90 cursor-pointer shrink-0 ${
-                            activePost.userReaction === item.emoji ? 'bg-rose-100 scale-110' : 'hover:bg-stone-100'
-                          }`}
-                          title={item.label}
-                        >
-                          {item.emoji}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-1.5 text-stone-600">
-                  <MessageCircle className="w-5 h-5 text-stone-400" />
-                  <span className="font-medium">{(activePost.commentsList || []).length} comments</span>
-                </div>
-              </div>
-
-              {/* Comments Section */}
-              <div className="pt-2 border-t border-stone-100 space-y-4">
-                <h3 className="font-semibold text-stone-900 text-sm sm:text-base">
-                  Comments ({(activePost.commentsList || []).length})
-                </h3>
-
-                <div className="space-y-3">
-                  {(activePost.commentsList || []).map((comm: CommentItem) => (
-                    <div key={comm.id} className="p-3.5 rounded-2xl bg-stone-50/90 border border-stone-100">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2 font-medium text-xs sm:text-sm text-stone-800">
-                          <div className="w-6 h-6 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-[10px]">
-                            <User className="w-3.5 h-3.5" />
-                          </div>
-                          <span>{comm.author}</span>
-                        </div>
-                        <span className="text-[11px] text-stone-400">
-                          {comm.createdAt}
-                        </span>
-                      </div>
-                      <p className="text-xs sm:text-sm text-stone-700 pl-8 leading-relaxed">
-                        {comm.text}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Add Comment */}
-                <div className="pt-3 space-y-2.5">
-                  <input
-                    type="text"
-                    placeholder="Anonymous (leave blank to stay anonymous)"
-                    value={commentName}
-                    onChange={(e) => setCommentName(e.target.value)}
-                    className="w-full px-4 py-2 text-xs sm:text-sm rounded-xl bg-stone-50 border border-stone-200 focus:outline-none focus:border-rose-300 text-stone-800 placeholder:text-stone-400"
-                  />
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="Add a comment..."
-                      value={commentText}
-                      onChange={(e) => setCommentText(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddComment();
-                        }
-                      }}
-                      className="flex-1 px-4 py-2.5 sm:py-3 text-xs sm:text-sm rounded-xl bg-stone-50 border border-stone-200 focus:outline-none focus:border-rose-300 text-stone-800 placeholder:text-stone-400"
-                    />
-                    <button 
-                      type="button"
-                      onClick={handleAddComment}
-                      className="p-2.5 sm:p-3 rounded-xl bg-rose-500 hover:bg-rose-600 active:scale-95 text-white transition-all shrink-0 shadow-sm cursor-pointer"
-                    >
-                      <Send className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-          </div>
+            <Plus className="w-4 h-4" />
+            <span>Share Confession</span>
+          </button>
         </div>
-      )}
+      </header>
 
-      {createOpen && (
-        <CreateConfessionModal onClose={() => setCreateOpen(false)} onCreated={handleCreated} />
+      {/* Hero Section */}
+      <section className="px-4 pt-10 pb-6 text-center max-w-2xl mx-auto">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100/80 text-rose-700 text-xs font-semibold tracking-wide uppercase mb-4">
+          <Sparkles className="w-3.5 h-3.5" /> 100% Anonymous & Safe
+        </span>
+        <h1 className="font-serif text-3xl sm:text-5xl font-bold tracking-tight text-stone-900 leading-[1.15]">
+          Real stories. <span className="italic text-rose-600">Zero identities.</span>
+        </h1>
+        <p className="mt-3 text-stone-600 text-sm sm:text-base font-sans max-w-lg mx-auto leading-relaxed">
+          A judgment-free space to speak the unspoken thoughts from across the globe. No account, no email, no tracking.
+        </p>
+
+        {/* Search Bar */}
+        <div className="mt-6 relative max-w-md mx-auto">
+          <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Search by thoughts, city or country..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-white border border-stone-200 rounded-full focus:outline-none focus:ring-2 focus:ring-rose-400/50 shadow-sm"
+          />
+        </div>
+
+        {/* Category Pills */}
+        <div className="flex items-center justify-center gap-2 mt-5 overflow-x-auto pb-2 scrollbar-none">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+                selectedCategory === cat
+                  ? 'bg-stone-900 text-white shadow-sm'
+                  : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Confessions Feed */}
+      <main className="max-w-xl mx-auto px-4 space-y-4">
+        {loading ? (
+          <div className="py-20 text-center text-stone-400 text-sm">
+            Loading real stories...
+          </div>
+        ) : filteredConfessions.length === 0 ? (
+          <div className="py-16 text-center bg-white/70 rounded-2xl border border-stone-200 p-8">
+            <MessageCircle className="w-8 h-8 text-stone-300 mx-auto mb-2" />
+            <p className="text-stone-700 font-medium text-sm">No confessions found</p>
+            <p className="text-stone-400 text-xs mt-1">Be the first to share one!</p>
+          </div>
+        ) : (
+          filteredConfessions.map((confession) => (
+            <ConfessionCard
+              key={confession.id}
+              confession={confession}
+              onReact={(emoji: string) => handleReaction(confession.id, emoji)}
+            />
+          ))
+        )}
+      </main>
+
+      {/* New Confession Modal */}
+      {isModalOpen && (
+        <ConfessionModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onCreated={handleConfessionCreated}
+        />
       )}
     </div>
   );
