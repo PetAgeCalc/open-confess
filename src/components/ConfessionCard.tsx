@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, MapPin } from 'lucide-react';
-import { Confession } from '../types';
+import { Confession, ReactionEmoji } from '../types';
+import { setReaction } from '../lib/confessionService';
 
 interface ConfessionCardProps {
   confession: Confession;
@@ -8,7 +9,7 @@ interface ConfessionCardProps {
   onReactionChange?: (postId: string, emoji: string | null) => void;
 }
 
-const EMOJI_OPTIONS = [
+const EMOJI_OPTIONS: { label: string; emoji: ReactionEmoji }[] = [
   { label: 'Love', emoji: '❤️' },
   { label: 'Hug', emoji: '🫂' },
   { label: 'Sad', emoji: '😢' },
@@ -30,8 +31,9 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
 
   const [likes, setLikes] = useState(initialLikes);
   const [commentsCount, setCommentsCount] = useState(initialComments);
-  const [userReaction, setUserReaction] = useState<string | null>(null);
+  const [userReaction, setUserReaction] = useState<ReactionEmoji | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Sync state and check local reaction storage per unique postId
   useEffect(() => {
@@ -41,7 +43,11 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
     // Read stored reaction for this specific post
     if (postId) {
       try {
-        const stored = JSON.parse(localStorage.getItem('user_reactions') || '{}');
+        const stored = JSON.parse(
+          localStorage.getItem('openconfess_user_reactions') || 
+          localStorage.getItem('user_reactions') || 
+          '{}'
+        );
         if (stored[postId]) {
           setUserReaction(stored[postId]);
           return;
@@ -53,55 +59,63 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
 
     // Fallback only if post explicitly provides a valid string emoji
     if (typeof post.userReaction === 'string' && post.userReaction.trim() !== '') {
-      setUserReaction(post.userReaction);
+      setUserReaction(post.userReaction as ReactionEmoji);
     } else {
       setUserReaction(null);
     }
   }, [postId, post.likesCount, post.likes, post.commentsCount, post.comments, post.commentsList, post.userReaction]);
 
-  const author = post.authorName || post.author || 'Anonymous';
-  const location = [post.city, post.country].filter(Boolean).join(', ') || (post.location ? String(post.location) : '');
-  const imageUrl = post.imageUrl || post.image || '';
-  const textContent = post.text || post.content || '';
-
-  function handleReactionSelect(e: React.MouseEvent, emoji: string) {
+  async function handleReactionSelect(e: React.MouseEvent, emoji: ReactionEmoji) {
     e.stopPropagation();
-    let updatedReaction: string | null = null;
+    if (!postId || isUpdating) return;
 
-    if (userReaction === emoji) {
-      // Toggle off
-      updatedReaction = null;
-      setUserReaction(null);
+    setIsUpdating(true);
+    const previousReaction = userReaction;
+    const nextReaction: ReactionEmoji | null = userReaction === emoji ? null : emoji;
+
+    // 1. Instant optimistic UI update
+    setUserReaction(nextReaction);
+    if (!previousReaction && nextReaction) {
+      setLikes((prev) => prev + 1);
+    } else if (previousReaction && !nextReaction) {
       setLikes((prev) => Math.max(0, prev - 1));
-    } else {
-      // Toggle new or change emoji
-      updatedReaction = emoji;
-      if (!userReaction) {
-        setLikes((prev) => prev + 1);
-      }
-      setUserReaction(emoji);
     }
-
-    // Persist per post ID in localStorage
-    if (postId) {
-      try {
-        const stored = JSON.parse(localStorage.getItem('user_reactions') || '{}');
-        if (updatedReaction) {
-          stored[postId] = updatedReaction;
-        } else {
-          delete stored[postId];
-        }
-        localStorage.setItem('user_reactions', JSON.stringify(stored));
-      } catch (err) {
-        console.error('Failed saving reaction to localStorage', err);
-      }
-    }
-
-    if (onReactionChange && postId) {
-      onReactionChange(postId, updatedReaction);
-    }
-
     setPickerOpen(false);
+
+    // 2. Persist in localStorage across both common keys
+    try {
+      const stored = JSON.parse(
+        localStorage.getItem('openconfess_user_reactions') || 
+        localStorage.getItem('user_reactions') || 
+        '{}'
+      );
+      if (nextReaction) {
+        stored[postId] = nextReaction;
+      } else {
+        delete stored[postId];
+      }
+      localStorage.setItem('openconfess_user_reactions', JSON.stringify(stored));
+      localStorage.setItem('user_reactions', JSON.stringify(stored));
+    } catch (err) {
+      console.error('Failed saving reaction to localStorage', err);
+    }
+
+    // 3. Trigger parent callback if provided
+    if (onReactionChange) {
+      onReactionChange(postId, nextReaction);
+    }
+
+    // 4. Send persistent update to Firestore / Backend Database
+    try {
+      await setReaction(postId, previousReaction, nextReaction);
+    } catch (err) {
+      console.error('Failed to sync reaction to database:', err);
+      // Revert if database write fails
+      setUserReaction(previousReaction);
+      setLikes(initialLikes);
+    } finally {
+      setIsUpdating(false);
+    }
   }
 
   function handleCardClick() {
