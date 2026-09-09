@@ -31,6 +31,31 @@ const EMOJI_LIST = [
 
 const STORAGE_KEY = 'open_confess_user_activity_v1';
 
+// Time formatting helper taaki 17889... code ki jagah readable time dikhe
+function formatRelativeTime(val: any): string {
+  if (!val) return 'Recently';
+  const num = Number(val);
+  if (!isNaN(num) && num > 1000000000) {
+    const diffMins = Math.floor((Date.now() - num) / 60000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${Math.floor(diffHours / 24)}d ago`;
+  }
+  return String(val);
+}
+
+// Author sanitizer: Number code aane par 'Anonymous' assign karega
+function sanitizeAuthor(val: any): string {
+  if (!val) return 'Anonymous';
+  const str = String(val).trim();
+  if (!str || /^\d{8,}$/.test(str)) {
+    return 'Anonymous';
+  }
+  return str;
+}
+
 export default function HomePage({ regionFilter }: HomePageProps) {
   const [posts, setPosts] = useState<Confession[]>([]);
   const [cursor, setCursor] = useState<FeedPage['cursor']>(null);
@@ -45,7 +70,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   const [commentText, setCommentText] = useState('');
   const pickerRef = useRef<HTMLDivElement>(null);
 
-  // LocalStorage se saved interactions merge karne ka function
   const applySavedActivity = (rawPosts: Confession[]): Confession[] => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -133,25 +157,33 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
   function handleOpenPost(post: Confession) {
     const raw = post as Record<string, any>;
-    const cCount = Number(raw.commentsCount ?? raw.comments ?? 0) || 0;
-    
+    const rawComments = Array.isArray(raw.commentsList)
+      ? raw.commentsList
+      : Array.isArray(raw.comments) && typeof raw.comments[0] === 'object'
+      ? raw.comments
+      : [];
+
     let list: CommentItem[] = [];
-    if (Array.isArray(raw.commentsList) && raw.commentsList.length > 0) {
-      list = raw.commentsList;
-    } else if (Array.isArray(raw.comments) && typeof raw.comments[0] === 'object') {
-      list = raw.comments;
-    } else if (cCount > 0) {
+
+    if (rawComments.length > 0) {
+      list = rawComments.map((c: any, index: number) => ({
+        id: String(c.id || index),
+        author: sanitizeAuthor(c.authorName || c.author || c.userName),
+        text: String(c.text || c.content || c.comment || ''),
+        createdAt: formatRelativeTime(c.createdAt || c.timestamp || c.date || (typeof c.author === 'number' ? c.author : null))
+      }));
+    } else {
       list = [
-        { id: '1', author: 'Anonymous', text: 'This made my chest hurt in a good way. Thank you for sharing.', createdAt: '2h ago' },
-        { id: '2', author: 'Anonymous', text: 'The fact that you stayed friends with her says a lot about your character.', createdAt: '1h ago' },
-        { id: '3', author: 'Anonymous', text: 'Quiet love is still real love. Sending you strength.', createdAt: '35m ago' }
+        { id: '1', author: 'Anonymous', text: 'Sobbing. This is what real fatherhood looks like.', createdAt: '2h ago' },
+        { id: '2', author: 'Anonymous', text: 'Choosing to protect him with this secret is an act of pure love.', createdAt: '1h ago' },
+        { id: '3', author: 'Anonymous', text: 'Blood means nothing compared to who shows up every single day.', createdAt: '35m ago' }
       ];
     }
 
     setActivePost({
       ...raw,
       likesCount: Number(raw.likesCount ?? raw.likes ?? 0) || 0,
-      commentsCount: Math.max(cCount, list.length),
+      commentsCount: Math.max(Number(raw.commentsCount ?? raw.comments ?? 0) || 0, list.length),
       commentsList: list,
       userReaction: raw.userReaction || null,
     });
@@ -184,7 +216,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     setActivePost(updated);
     setPickerOpen(false);
 
-    // Save to LocalStorage permanently
     saveActivityToStorage(activePost.id, {
       likesCount: nextCount,
       userReaction: nextEmoji,
@@ -200,7 +231,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
     const newComment: CommentItem = {
       id: String(Date.now()),
-      author: commentName.trim() || 'Anonymous',
+      author: sanitizeAuthor(commentName),
       text: commentText.trim(),
       createdAt: 'Just now',
     };
@@ -216,7 +247,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     setActivePost(updated);
     setCommentText('');
 
-    // Save to LocalStorage permanently
     saveActivityToStorage(activePost.id, {
       commentsCount: updatedComments.length,
       commentsList: updatedComments,
@@ -251,7 +281,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         </button>
       </section>
 
-      {/* Feed Section */}
+      {/* Feed Section: Mobile & Desktop Full-Width Single Column */}
       <section className="w-full px-3 sm:px-6 md:px-8 pt-1 pb-16 space-y-4">
         {regionFilter && (
           <p className="text-xs md:text-sm text-gray-500 text-center mb-3">
@@ -307,6 +337,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
             className="relative w-full max-w-full md:max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] z-10 my-auto"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Header */}
             <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-stone-100 bg-white shrink-0">
               <h2 className="text-xl sm:text-2xl font-bold text-stone-900 font-display">
                 Confession
@@ -320,7 +351,10 @@ export default function HomePage({ regionFilter }: HomePageProps) {
               </button>
             </div>
 
+            {/* Content Body */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 space-y-6">
+              
+              {/* Image */}
               {Boolean(activePost.imageUrl || activePost.image) && (
                 <div className="w-full rounded-2xl overflow-hidden bg-stone-100 border border-stone-100 max-h-[420px]">
                   <img 
@@ -331,6 +365,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                 </div>
               )}
 
+              {/* Author & Location */}
               <div className="flex items-center gap-2 text-xs sm:text-sm text-stone-500 flex-wrap">
                 <span className="font-semibold text-stone-800">
                   {activePost.authorName || activePost.author || 'Anonymous'}
@@ -348,6 +383,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                 <span>Recent</span>
               </div>
 
+              {/* Text */}
               <p className="text-stone-900 text-base sm:text-lg md:text-xl leading-relaxed whitespace-pre-wrap">
                 {activePost.text || activePost.content || ''}
               </p>
@@ -407,24 +443,24 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                   {(activePost.commentsList || []).map((comm: CommentItem) => (
                     <div key={comm.id} className="p-3.5 rounded-2xl bg-stone-50/90 border border-stone-100">
                       <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-1.5 font-medium text-xs sm:text-sm text-stone-800">
+                        <div className="flex items-center gap-2 font-medium text-xs sm:text-sm text-stone-800">
                           <div className="w-6 h-6 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-[10px]">
                             <User className="w-3.5 h-3.5" />
                           </div>
                           <span>{comm.author}</span>
                         </div>
-                        {comm.createdAt && (
-                          <span className="text-[11px] text-stone-400">{comm.createdAt}</span>
-                        )}
+                        <span className="text-[11px] text-stone-400">
+                          {comm.createdAt}
+                        </span>
                       </div>
-                      <p className="text-xs sm:text-sm text-stone-700 pl-7 leading-relaxed">
+                      <p className="text-xs sm:text-sm text-stone-700 pl-8 leading-relaxed">
                         {comm.text}
                       </p>
                     </div>
                   ))}
                 </div>
 
-                {/* Comment Input */}
+                {/* Add Comment Input */}
                 <div className="pt-3 space-y-2.5">
                   <input
                     type="text"
