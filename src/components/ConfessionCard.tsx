@@ -26,6 +26,7 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
   const post = confession as Record<string, any>;
   const postId = String(post.id || post._id || '');
 
+  // Base counts
   const initialLikes = Number(post.likesCount ?? post.likes ?? 0) || 0;
   const initialComments = Number(post.commentsCount ?? post.comments ?? (post.commentsList?.length || 0)) || 0;
 
@@ -33,8 +34,8 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
   const [commentsCount, setCommentsCount] = useState(initialComments);
   const [userReaction, setUserReaction] = useState<ReactionEmoji | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
 
+  // Sync initial state and user's saved reaction
   useEffect(() => {
     setLikes(Number(post.likesCount ?? post.likes ?? 0) || 0);
     setCommentsCount(Number(post.commentsCount ?? post.comments ?? (post.commentsList?.length || 0)) || 0);
@@ -47,39 +48,23 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
           return;
         }
       } catch (e) {
-        console.error('Error reading reaction state', e);
+        // ignore error
       }
     }
     setUserReaction(null);
-  }, [postId, post.likesCount, post.likes, post.commentsCount, post.comments]);
+  }, [postId]);
 
-  async function handleMainReactionClick(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation(); // Card open hone se rokta hai
-
-    // Agar pehle se koi reaction nahi hai toh 1-tap me seedha Love react karega
-    // Agar pehle se react hai toh tray toggle karega ya un-react karega
-    if (!userReaction) {
-      await executeReaction('❤️');
-    } else {
-      setPickerOpen((prev) => !prev);
-    }
-  }
-
+  // Handle direct emoji selection from the tray
   async function handleEmojiSelect(e: React.MouseEvent, emoji: ReactionEmoji) {
     e.preventDefault();
     e.stopPropagation();
-    await executeReaction(emoji);
-  }
 
-  async function executeReaction(emoji: ReactionEmoji) {
-    if (!postId || isUpdating) return;
+    if (!postId) return;
 
-    setIsUpdating(true);
     const previousReaction = userReaction;
     const nextReaction: ReactionEmoji | null = userReaction === emoji ? null : emoji;
 
-    // Optimistic UI Update
+    // 1. Instant local visual update
     setUserReaction(nextReaction);
     if (!previousReaction && nextReaction) {
       setLikes((prev) => prev + 1);
@@ -88,7 +73,7 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
     }
     setPickerOpen(false);
 
-    // Save to local storage
+    // 2. Local storage persistence so it remembers on refresh
     try {
       const stored = JSON.parse(localStorage.getItem('openconfess_user_reactions') || '{}');
       if (nextReaction) {
@@ -98,23 +83,27 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
       }
       localStorage.setItem('openconfess_user_reactions', JSON.stringify(stored));
     } catch (err) {
-      console.error(err);
+      console.error('LocalStorage error:', err);
     }
 
+    // 3. Parent notification
     if (onReactionChange) {
       onReactionChange(postId, nextReaction);
     }
 
-    // Save to Firebase
+    // 4. Send to backend service (Firestore / Local stats)
     try {
       await setReaction(postId, previousReaction, nextReaction);
     } catch (err) {
-      console.error('Failed to update Firestore reaction:', err);
-      setUserReaction(previousReaction);
-      setLikes(initialLikes);
-    } finally {
-      setIsUpdating(false);
+      console.error('Service setReaction failed:', err);
     }
+  }
+
+  // Toggle picker or quick toggle
+  function handleMainButtonClick(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setPickerOpen((prev) => !prev);
   }
 
   const author = post.authorName || post.author || 'Anonymous';
@@ -125,7 +114,7 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
   return (
     <article 
       onClick={onOpen}
-      className="w-full bg-white rounded-3xl border border-stone-200/70 p-4 sm:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden select-none"
+      className="w-full bg-white rounded-3xl border border-stone-200/70 p-4 sm:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-visible select-none"
     >
       {/* Header Info */}
       <div className="flex items-center gap-2 text-xs sm:text-sm text-stone-500 mb-3 flex-wrap">
@@ -162,12 +151,12 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
         {textContent}
       </p>
 
-      {/* Footer Reaction & Comment Counts */}
-      <div className="flex items-center gap-4 pt-3 border-t border-stone-100 text-xs sm:text-sm text-stone-600">
+      {/* Footer Actions */}
+      <div className="flex items-center gap-4 pt-3 border-t border-stone-100 text-xs sm:text-sm text-stone-600 relative">
         
-        {/* Emoji Reaction Tray */}
+        {/* Reaction Button & Picker Container */}
         <div 
-          className="relative z-20" 
+          className="relative" 
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -175,10 +164,10 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
         >
           <button
             type="button"
-            onClick={handleMainReactionClick}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all active:scale-90 ${
+            onClick={handleMainButtonClick}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all active:scale-95 ${
               userReaction 
-                ? 'border-rose-300 bg-rose-50 text-rose-600 font-medium shadow-sm' 
+                ? 'border-rose-300 bg-rose-50 text-rose-600 font-medium' 
                 : 'border-stone-200 hover:bg-stone-50 text-stone-600'
             }`}
           >
@@ -187,12 +176,13 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
             ) : (
               <Heart className="w-4 h-4 text-stone-400 hover:text-rose-500" />
             )}
-            <span>{likes}</span>
+            <span className="font-semibold">{likes}</span>
           </button>
 
+          {/* Reaction Tray */}
           {pickerOpen && (
             <div 
-              className="absolute bottom-full left-0 mb-2 flex items-center gap-1 p-2 bg-white rounded-2xl shadow-xl border border-stone-200 z-50 overflow-x-auto max-w-[85vw] sm:max-w-none"
+              className="absolute bottom-full left-0 mb-2 flex items-center gap-1 p-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-stone-200 z-50 overflow-x-auto max-w-[85vw] sm:max-w-none"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
