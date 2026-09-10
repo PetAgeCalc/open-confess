@@ -35,12 +35,10 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
   const [pickerOpen, setPickerOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Sync state and check local reaction strictly for this current user
   useEffect(() => {
     setLikes(Number(post.likesCount ?? post.likes ?? 0) || 0);
     setCommentsCount(Number(post.commentsCount ?? post.comments ?? (post.commentsList?.length || 0)) || 0);
 
-    // Check if the current user has explicitly reacted to this specific post
     if (postId) {
       try {
         const stored = JSON.parse(localStorage.getItem('openconfess_user_reactions') || '{}');
@@ -48,24 +46,40 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
           setUserReaction(stored[postId] as ReactionEmoji);
           return;
         }
-      } catch (err) {
-        console.error('Failed reading user reaction', err);
+      } catch (e) {
+        console.error('Error reading reaction state', e);
       }
     }
-
-    // Always start clean so all cards do not appear pre-reacted
     setUserReaction(null);
-  }, [postId, post.likesCount, post.likes, post.commentsCount, post.comments, post.commentsList]);
+  }, [postId, post.likesCount, post.likes, post.commentsCount, post.comments]);
 
-  async function handleReactionSelect(e: React.MouseEvent, emoji: ReactionEmoji) {
+  async function handleMainReactionClick(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation(); // Card open hone se rokta hai
+
+    // Agar pehle se koi reaction nahi hai toh 1-tap me seedha Love react karega
+    // Agar pehle se react hai toh tray toggle karega ya un-react karega
+    if (!userReaction) {
+      await executeReaction('❤️');
+    } else {
+      setPickerOpen((prev) => !prev);
+    }
+  }
+
+  async function handleEmojiSelect(e: React.MouseEvent, emoji: ReactionEmoji) {
+    e.preventDefault();
     e.stopPropagation();
+    await executeReaction(emoji);
+  }
+
+  async function executeReaction(emoji: ReactionEmoji) {
     if (!postId || isUpdating) return;
 
     setIsUpdating(true);
     const previousReaction = userReaction;
     const nextReaction: ReactionEmoji | null = userReaction === emoji ? null : emoji;
 
-    // 1. Instant optimistic UI update
+    // Optimistic UI Update
     setUserReaction(nextReaction);
     if (!previousReaction && nextReaction) {
       setLikes((prev) => prev + 1);
@@ -74,7 +88,7 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
     }
     setPickerOpen(false);
 
-    // 2. Persist cleanly in local storage
+    // Save to local storage
     try {
       const stored = JSON.parse(localStorage.getItem('openconfess_user_reactions') || '{}');
       if (nextReaction) {
@@ -84,28 +98,23 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
       }
       localStorage.setItem('openconfess_user_reactions', JSON.stringify(stored));
     } catch (err) {
-      console.error('Failed saving reaction locally', err);
+      console.error(err);
     }
 
-    // 3. Trigger parent callback if provided
     if (onReactionChange) {
       onReactionChange(postId, nextReaction);
     }
 
-    // 4. Send persistent update to Firestore
+    // Save to Firebase
     try {
       await setReaction(postId, previousReaction, nextReaction);
     } catch (err) {
-      console.error('Failed to sync reaction to database:', err);
+      console.error('Failed to update Firestore reaction:', err);
       setUserReaction(previousReaction);
       setLikes(initialLikes);
     } finally {
       setIsUpdating(false);
     }
-  }
-
-  function handleCardClick() {
-    onOpen();
   }
 
   const author = post.authorName || post.author || 'Anonymous';
@@ -115,8 +124,8 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
 
   return (
     <article 
-      onClick={handleCardClick}
-      className="w-full bg-white rounded-3xl border border-stone-200/70 p-4 sm:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden"
+      onClick={onOpen}
+      className="w-full bg-white rounded-3xl border border-stone-200/70 p-4 sm:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden select-none"
     >
       {/* Header Info */}
       <div className="flex items-center gap-2 text-xs sm:text-sm text-stone-500 mb-3 flex-wrap">
@@ -157,31 +166,43 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
       <div className="flex items-center gap-4 pt-3 border-t border-stone-100 text-xs sm:text-sm text-stone-600">
         
         {/* Emoji Reaction Tray */}
-        <div className="relative" onClick={(e) => e.stopPropagation()}>
+        <div 
+          className="relative z-20" 
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        >
           <button
             type="button"
-            onClick={() => setPickerOpen(!pickerOpen)}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all active:scale-95 ${
+            onClick={handleMainReactionClick}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all active:scale-90 ${
               userReaction 
-                ? 'border-rose-300 bg-rose-50 text-rose-600 font-medium' 
-                : 'border-stone-200 hover:bg-stone-50'
+                ? 'border-rose-300 bg-rose-50 text-rose-600 font-medium shadow-sm' 
+                : 'border-stone-200 hover:bg-stone-50 text-stone-600'
             }`}
           >
             {userReaction ? (
               <span className="text-base leading-none">{userReaction}</span>
             ) : (
-              <Heart className="w-4 h-4 text-stone-400" />
+              <Heart className="w-4 h-4 text-stone-400 hover:text-rose-500" />
             )}
             <span>{likes}</span>
           </button>
 
           {pickerOpen && (
-            <div className="absolute bottom-full left-0 mb-2 flex items-center gap-1 p-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-stone-200 z-30 overflow-x-auto max-w-[85vw] sm:max-w-none">
+            <div 
+              className="absolute bottom-full left-0 mb-2 flex items-center gap-1 p-2 bg-white rounded-2xl shadow-xl border border-stone-200 z-50 overflow-x-auto max-w-[85vw] sm:max-w-none"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
               {EMOJI_OPTIONS.map((item) => (
                 <button
                   key={item.label}
                   type="button"
-                  onClick={(e) => handleReactionSelect(e, item.emoji)}
+                  onClick={(e) => handleEmojiSelect(e, item.emoji)}
                   className={`text-xl p-1.5 rounded-xl hover:scale-125 active:scale-90 transition-all ${
                     userReaction === item.emoji ? 'bg-rose-100 scale-110' : 'hover:bg-stone-100'
                   }`}
