@@ -35,35 +35,27 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
   const [pickerOpen, setPickerOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Sync state and check local reaction storage per unique postId
+  // Sync state and check local reaction strictly for this current user
   useEffect(() => {
     setLikes(Number(post.likesCount ?? post.likes ?? 0) || 0);
     setCommentsCount(Number(post.commentsCount ?? post.comments ?? (post.commentsList?.length || 0)) || 0);
 
-    // Read stored reaction for this specific post
+    // Check if the current user has explicitly reacted to this specific post
     if (postId) {
       try {
-        const stored = JSON.parse(
-          localStorage.getItem('openconfess_user_reactions') || 
-          localStorage.getItem('user_reactions') || 
-          '{}'
-        );
-        if (stored[postId]) {
-          setUserReaction(stored[postId]);
+        const stored = JSON.parse(localStorage.getItem('openconfess_user_reactions') || '{}');
+        if (stored[postId] && typeof stored[postId] === 'string') {
+          setUserReaction(stored[postId] as ReactionEmoji);
           return;
         }
       } catch (err) {
-        console.error('Failed reading user_reactions', err);
+        console.error('Failed reading user reaction', err);
       }
     }
 
-    // Fallback only if post explicitly provides a valid string emoji
-    if (typeof post.userReaction === 'string' && post.userReaction.trim() !== '') {
-      setUserReaction(post.userReaction as ReactionEmoji);
-    } else {
-      setUserReaction(null);
-    }
-  }, [postId, post.likesCount, post.likes, post.commentsCount, post.comments, post.commentsList, post.userReaction]);
+    // Always start clean so all cards do not appear pre-reacted
+    setUserReaction(null);
+  }, [postId, post.likesCount, post.likes, post.commentsCount, post.comments, post.commentsList]);
 
   async function handleReactionSelect(e: React.MouseEvent, emoji: ReactionEmoji) {
     e.stopPropagation();
@@ -82,22 +74,17 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
     }
     setPickerOpen(false);
 
-    // 2. Persist in localStorage across both common keys
+    // 2. Persist cleanly in local storage
     try {
-      const stored = JSON.parse(
-        localStorage.getItem('openconfess_user_reactions') || 
-        localStorage.getItem('user_reactions') || 
-        '{}'
-      );
+      const stored = JSON.parse(localStorage.getItem('openconfess_user_reactions') || '{}');
       if (nextReaction) {
         stored[postId] = nextReaction;
       } else {
         delete stored[postId];
       }
       localStorage.setItem('openconfess_user_reactions', JSON.stringify(stored));
-      localStorage.setItem('user_reactions', JSON.stringify(stored));
     } catch (err) {
-      console.error('Failed saving reaction to localStorage', err);
+      console.error('Failed saving reaction locally', err);
     }
 
     // 3. Trigger parent callback if provided
@@ -105,12 +92,11 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
       onReactionChange(postId, nextReaction);
     }
 
-    // 4. Send persistent update to Firestore / Backend Database
+    // 4. Send persistent update to Firestore
     try {
       await setReaction(postId, previousReaction, nextReaction);
     } catch (err) {
       console.error('Failed to sync reaction to database:', err);
-      // Revert if database write fails
       setUserReaction(previousReaction);
       setLikes(initialLikes);
     } finally {
@@ -121,6 +107,11 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
   function handleCardClick() {
     onOpen();
   }
+
+  const author = post.authorName || post.author || 'Anonymous';
+  const location = [post.city, post.country].filter(Boolean).join(', ') || (post.location ? String(post.location) : '');
+  const imageUrl = post.imageUrl || post.image || '';
+  const textContent = post.text || post.content || '';
 
   return (
     <article 
@@ -151,7 +142,6 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
             alt="Confession" 
             className="w-full h-full object-cover block"
             onError={(e) => {
-              // Broken image handle: hide container if url fails
               (e.target as HTMLElement).parentElement?.classList.add('hidden');
             }}
           />
