@@ -81,6 +81,37 @@ function parsePostTimestamp(post: any): number {
   return 0;
 }
 
+function generateRelativeComments(postTimestamp: number): CommentItem[] {
+  const now = Date.now();
+  const postTime = postTimestamp > 0 ? postTimestamp : now;
+  const elapsedSecs = Math.max(0, Math.floor((now - postTime) / 1000));
+
+  const time1 = postTime + Math.floor(elapsedSecs * 0.35 * 1000);
+  const time2 = postTime + Math.floor(elapsedSecs * 0.65 * 1000);
+  const time3 = postTime + Math.floor(elapsedSecs * 0.90 * 1000);
+
+  return [
+    {
+      id: '1',
+      author: 'Anonymous',
+      text: 'Sobbing. This is what real empathy and strength look like.',
+      createdAt: elapsedSecs < 120 ? 'Just now' : parseTimeToHuman(time1),
+    },
+    {
+      id: '2',
+      author: 'Anonymous',
+      text: 'Choosing to carry this requires immense courage. Much love.',
+      createdAt: elapsedSecs < 90 ? 'Just now' : parseTimeToHuman(time2),
+    },
+    {
+      id: '3',
+      author: 'Anonymous',
+      text: 'Blood means nothing compared to who shows up every single day.',
+      createdAt: elapsedSecs < 60 ? 'Just now' : parseTimeToHuman(time3),
+    },
+  ];
+}
+
 function safeCommentCount(post: any): number {
   if (!post) return 3;
   if (Array.isArray(post.commentsList) && post.commentsList.length > 0) {
@@ -255,19 +286,16 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   }
 
   function handleCreated(confession: Confession) {
-    const defaultFakeList: CommentItem[] = [
-      { id: '1', author: 'Anonymous', text: 'Sobbing. This is what real empathy and strength look like.', createdAt: '2h ago' },
-      { id: '2', author: 'Anonymous', text: 'Choosing to carry this requires immense courage. Much love.', createdAt: '1h ago' },
-      { id: '3', author: 'Anonymous', text: 'Blood means nothing compared to who shows up every single day.', createdAt: '35m ago' },
-    ];
+    const postTimestamp = (confession as any).createdAt || Date.now();
+    const defaultRelativeList = generateRelativeComments(postTimestamp);
 
     const postWithTime = {
       ...confession,
-      createdAt: (confession as any).createdAt || Date.now(),
+      createdAt: postTimestamp,
       userReaction: null,
       commentsCount: 3,
       comments: 3,
-      commentsList: defaultFakeList,
+      commentsList: defaultRelativeList,
     };
     setPosts((prev) => [postWithTime, ...prev]);
 
@@ -276,7 +304,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         prev.map((p) => {
           if (p.id !== postWithTime.id) return p;
           const currentLikes = safeLikesCount(p);
-          const currentList = (p as any).commentsList && (p as any).commentsList.length > 0 ? (p as any).commentsList : defaultFakeList;
+          const currentList = (p as any).commentsList && (p as any).commentsList.length > 0 ? (p as any).commentsList : defaultRelativeList;
           const updatedList = newComment ? [...currentList, newComment] : currentList;
           const updatedLikes = likesCountIncrement ? currentLikes + likesCountIncrement : currentLikes;
 
@@ -314,11 +342,8 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     if (rawComments.length > 0) {
       list = rawComments.map((c: any, index: number) => normalizeComment(c, index));
     } else {
-      list = [
-        { id: '1', author: 'Anonymous', text: 'Sobbing. This is what real empathy and strength look like.', createdAt: '2h ago' },
-        { id: '2', author: 'Anonymous', text: 'Choosing to carry this requires immense courage. Much love.', createdAt: '1h ago' },
-        { id: '3', author: 'Anonymous', text: 'Blood means nothing compared to who shows up every single day.', createdAt: '35m ago' },
-      ];
+      const postTimestamp = parsePostTimestamp(raw);
+      list = generateRelativeComments(postTimestamp);
     }
 
     const totalComments = Math.max(list.length, safeCommentCount(raw));
@@ -416,13 +441,10 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       createdAt: 'Just now',
     };
 
+    const postTimestamp = parsePostTimestamp(activePost);
     const currentList = (activePost.commentsList && activePost.commentsList.length > 0)
       ? activePost.commentsList
-      : [
-          { id: '1', author: 'Anonymous', text: 'Sobbing. This is what real empathy and strength look like.', createdAt: '2h ago' },
-          { id: '2', author: 'Anonymous', text: 'Choosing to carry this requires immense courage. Much love.', createdAt: '1h ago' },
-          { id: '3', author: 'Anonymous', text: 'Blood means nothing compared to who shows up every single day.', createdAt: '35m ago' },
-        ];
+      : generateRelativeComments(postTimestamp);
 
     const updatedComments = [...currentList, newComment];
     const updated = {
@@ -563,6 +585,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
+                              // Agar react nahi kiya toh direct Love ❤️ react karega, nahi toh tray open karega
                               if (!hasReaction) {
                                 handleSelectReaction(post.id, '❤️', e);
                               } else {
