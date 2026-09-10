@@ -153,29 +153,24 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     return [...items].sort((a, b) => parsePostTimestamp(b) - parsePostTimestamp(a));
   };
 
+  // Strictly sync ONLY actual user actions, ignore simulator fake user reactions
   const applySavedActivity = (rawPosts: Confession[]): Confession[] => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) return rawPosts;
-      const parsed = JSON.parse(saved);
+      const parsed = saved ? JSON.parse(saved) : {};
 
       return rawPosts.map((post) => {
         const customData = parsed[post.id];
-        if (customData) {
-          return {
-            ...post,
-            likesCount: customData.likesCount ?? (post as any).likesCount,
-            likes: customData.likesCount ?? (post as any).likes,
-            userReaction: customData.userReaction !== undefined ? customData.userReaction : null,
-            commentsCount: customData.commentsCount ?? (post as any).commentsCount,
-            comments: customData.commentsCount ?? (post as any).comments,
-            commentsList: customData.commentsList ?? (post as any).commentsList,
-          } as Confession;
-        }
         return {
           ...post,
-          userReaction: null, // Reset default pre-reaction look
-        };
+          likesCount: customData?.likesCount ?? (post as any).likesCount ?? 0,
+          likes: customData?.likesCount ?? (post as any).likes ?? 0,
+          // If the user actually reacted, keep it; otherwise ALWAYS null so it looks un-reacted
+          userReaction: (customData?.userReaction && typeof customData.userReaction === 'string') ? customData.userReaction : null,
+          commentsCount: customData?.commentsCount ?? (post as any).commentsCount ?? 0,
+          comments: customData?.commentsCount ?? (post as any).comments ?? 0,
+          commentsList: customData?.commentsList ?? (post as any).commentsList ?? [],
+        } as Confession;
       });
     } catch {
       return rawPosts;
@@ -192,7 +187,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
     } catch (e) {
-      console.error('Failed to save to localStorage', e);
+      console.error('Failed to save activity', e);
     }
   };
 
@@ -260,7 +255,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     };
     setPosts((prev) => [postWithTime, ...prev]);
 
-    scheduleEngagementForNewPost(postWithTime, ({ likesCountIncrement, reaction, newComment }) => {
+    scheduleEngagementForNewPost(postWithTime, ({ likesCountIncrement, newComment }) => {
       setPosts((prev) =>
         prev.map((p) => {
           if (p.id !== postWithTime.id) return p;
@@ -320,14 +315,15 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     });
   }
 
-  // Unified Reaction Trigger with direct backend sync
+  // BULLETPROOF REACTION: Works identically for both Card and Modal
   async function handleSelectReaction(postId: string, emoji: string, e?: React.MouseEvent) {
     if (e) {
-      e.preventDefault();
       e.stopPropagation();
+      e.preventDefault();
     }
 
-    const targetPost = posts.find((p) => p.id === postId) || activePost;
+    // Identify current target post
+    const targetPost = posts.find((p) => String(p.id) === String(postId)) || (activePost && String(activePost.id) === String(postId) ? activePost : null);
     if (!targetPost) return;
 
     const currentEmoji = (targetPost as any).userReaction;
@@ -335,43 +331,57 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     let nextEmoji: string | null = null;
 
     if (currentEmoji === emoji) {
+      // Toggle off
       nextEmoji = null;
       nextCount = Math.max(0, nextCount - 1);
     } else {
+      // Toggle on or switch emoji
       if (!currentEmoji) {
         nextCount = nextCount + 1;
       }
       nextEmoji = emoji;
     }
 
-    const updated = {
-      ...targetPost,
-      likesCount: nextCount,
-      likes: nextCount,
-      userReaction: nextEmoji,
-    };
+    // 1. Instant UI update in feed posts state
+    setPosts((prev) =>
+      prev.map((p) => {
+        if (String(p.id) === String(postId)) {
+          return {
+            ...p,
+            likesCount: nextCount,
+            likes: nextCount,
+            userReaction: nextEmoji,
+          };
+        }
+        return p;
+      })
+    );
 
-    if (activePost && activePost.id === postId) {
-      setActivePost(updated);
+    // 2. Instant UI update in modal if open
+    if (activePost && String(activePost.id) === String(postId)) {
+      setActivePost({
+        ...activePost,
+        likesCount: nextCount,
+        likes: nextCount,
+        userReaction: nextEmoji,
+      });
     }
 
+    // Close trays
     setModalPickerOpen(false);
     setCardPickerPostId(null);
 
+    // 3. Persist locally
     saveActivityToStorage(postId, {
       likesCount: nextCount,
       userReaction: nextEmoji,
     });
 
-    setPosts((prev) =>
-      prev.map((p) => (p.id === postId ? { ...p, ...updated } : p))
-    );
-
-    // Sync straight to Firestore / backend
+    // 4. Persist in Firebase
     try {
       await setReaction(postId, currentEmoji as any, nextEmoji as any);
     } catch (err) {
-      console.error('Failed to sync reaction:', err);
+      console.error('Firebase reaction error:', err);
     }
   }
 
@@ -417,8 +427,8 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
   const triggerShare = (post: any, e?: React.MouseEvent) => {
     if (e) {
-      e.preventDefault();
       e.stopPropagation();
+      e.preventDefault();
     }
     setSharePopupPost(post);
   };
@@ -456,7 +466,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         </button>
       </section>
 
-      {/* Feed Section - Full Width Single Column Layout (No Side Gaps) */}
+      {/* Feed Section - Full-Width Single Column */}
       <section className="w-full px-3 sm:px-6 md:px-8 pt-1 pb-20 space-y-6">
         {regionFilter && (
           <p className="text-xs md:text-sm text-stone-600 text-center mb-2">
@@ -515,14 +525,24 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
                     <div className="mt-5 flex items-center justify-between pt-3 border-t border-[#ebd8c8]/60">
                       <div className="flex items-center gap-2.5">
+                        
                         {/* Interactive Reaction/Like on Card */}
-                        <div className="relative">
+                        <div 
+                          className="relative" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                        >
                           <button
                             type="button"
                             onClick={(e) => {
-                              e.preventDefault();
                               e.stopPropagation();
-                              setCardPickerPostId(isCardPickerOpen ? null : post.id);
+                              // Agar react nahi kiya toh direct Love ❤️ react karega, nahi toh tray open karega
+                              if (!hasReaction) {
+                                handleSelectReaction(post.id, '❤️', e);
+                              } else {
+                                setCardPickerPostId(isCardPickerOpen ? null : post.id);
+                              }
                             }}
                             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium border transition-all active:scale-95 cursor-pointer ${
                               hasReaction
@@ -541,10 +561,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                           {/* Card Emoji Picker Tray */}
                           {isCardPickerOpen && (
                             <div
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                              }}
+                              onClick={(e) => e.stopPropagation()}
                               className="absolute bottom-full left-0 mb-2 z-50 flex items-center gap-1 p-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-stone-200 max-w-[85vw] sm:max-w-none overflow-x-auto"
                             >
                               {EMOJI_LIST.map((item) => (
@@ -552,7 +569,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                                   key={item.label}
                                   type="button"
                                   onClick={(e) => handleSelectReaction(post.id, item.emoji, e)}
-                                  className={`text-2xl p-1.5 rounded-xl hover:scale-125 transition-transform cursor-pointer ${
+                                  className={`text-2xl p-1.5 rounded-xl hover:scale-125 active:scale-95 transition-transform cursor-pointer ${
                                     (post as any).userReaction === item.emoji ? 'bg-rose-100 scale-110' : 'hover:bg-stone-100'
                                   }`}
                                   title={item.label}
@@ -564,13 +581,13 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                           )}
                         </div>
 
-                        {/* Safe Comments Count */}
+                        {/* Comments Count */}
                         <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#eee0d2] text-stone-700 text-xs sm:text-sm font-medium">
                           <MessageCircle className="w-4 h-4 text-stone-500" />
                           <span>{safeCommentCount(post)}</span>
                         </div>
 
-                        {/* Working Share Button */}
+                        {/* Share Button */}
                         <button
                           type="button"
                           onClick={(e) => triggerShare(post, e)}
