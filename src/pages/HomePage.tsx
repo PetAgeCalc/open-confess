@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Loader2, X, Heart, MessageCircle, MapPin, Send, User, Share2, Copy, Check } from 'lucide-react';
 import { Confession } from '../types';
-import { fetchInitialFeed, fetchNextPage, FeedPage } from '../lib/confessionService';
-import ConfessionCard from '../components/ConfessionCard';
+import { fetchInitialFeed, fetchNextPage, FeedPage, setReaction, addComment } from '../lib/confessionService';
 import CreateConfessionModal from '../components/CreateConfessionModal';
-// Simulation Engine Import
 import { syncSimulatedActivity, scheduleEngagementForNewPost } from '../lib/activitySimulator';
 
 interface HomePageProps {
@@ -70,7 +68,6 @@ function parsePostTimestamp(post: any): number {
   if (typeof raw === 'string') {
     const parsed = Date.parse(raw);
     if (!isNaN(parsed)) return parsed;
-    // Relative string parse fallback (e.g., "3h ago", "25m ago")
     const match = raw.match(/(\d+)\s*(m|h|d)/i);
     if (match) {
       const amount = parseInt(match[1], 10);
@@ -84,17 +81,13 @@ function parsePostTimestamp(post: any): number {
   return 0;
 }
 
-// 100% Guaranteed NaN Fix for Comments
 function safeCommentCount(post: any): number {
   if (!post) return 0;
   if (Array.isArray(post.commentsList)) return post.commentsList.length;
   if (Array.isArray(post.comments)) return post.comments.length;
-
   const countVal = post.commentsCount ?? post.comments;
   const num = Number(countVal);
-  if (!isNaN(num) && num >= 0) return num;
-
-  return 0;
+  return !isNaN(num) && num >= 0 ? num : 0;
 }
 
 function safeLikesCount(post: any): number {
@@ -143,14 +136,11 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   const [activePost, setActivePost] = useState<any | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
-  // Pagination state: Limits items in increments of 8
   const [visibleCount, setVisibleCount] = useState<number>(POSTS_PER_PAGE);
 
-  // Sharing states
   const [sharePopupPost, setSharePopupPost] = useState<Confession | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // Reaction picker states
   const [modalPickerOpen, setModalPickerOpen] = useState(false);
   const [cardPickerPostId, setCardPickerPostId] = useState<string | null>(null);
 
@@ -159,7 +149,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   const modalPickerRef = useRef<HTMLDivElement>(null);
   const shareRef = useRef<HTMLDivElement>(null);
 
-  // Function to ensure freshest/recent posts always remain at the top
   const sortPostsByRecent = (items: Confession[]): Confession[] => {
     return [...items].sort((a, b) => parsePostTimestamp(b) - parsePostTimestamp(a));
   };
@@ -177,13 +166,16 @@ export default function HomePage({ regionFilter }: HomePageProps) {
             ...post,
             likesCount: customData.likesCount ?? (post as any).likesCount,
             likes: customData.likesCount ?? (post as any).likes,
-            userReaction: customData.userReaction ?? (post as any).userReaction,
+            userReaction: customData.userReaction !== undefined ? customData.userReaction : null,
             commentsCount: customData.commentsCount ?? (post as any).commentsCount,
             comments: customData.commentsCount ?? (post as any).comments,
             commentsList: customData.commentsList ?? (post as any).commentsList,
           } as Confession;
         }
-        return post;
+        return {
+          ...post,
+          userReaction: null, // Reset default pre-reaction look
+        };
       });
     } catch {
       return rawPosts;
@@ -210,7 +202,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       const page = await fetchInitialFeed(regionFilter ?? undefined);
       const blended = await syncSimulatedActivity(page.posts);
       const merged = applySavedActivity(blended);
-      // Newest First Ordering
       const sorted = sortPostsByRecent(merged);
       setPosts(sorted);
       setCursor(page.cursor);
@@ -240,7 +231,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [modalPickerOpen, sharePopupPost, cardPickerPostId]);
 
-  // Load 8 More Posts
   async function handleLoadMore() {
     if (visibleCount < posts.length) {
       setVisibleCount((prev) => prev + POSTS_PER_PAGE);
@@ -262,11 +252,11 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     }
   }
 
-  // Real user post creation (Always on Top)
   function handleCreated(confession: Confession) {
     const postWithTime = {
       ...confession,
       createdAt: (confession as any).createdAt || Date.now(),
+      userReaction: null,
     };
     setPosts((prev) => [postWithTime, ...prev]);
 
@@ -286,14 +276,12 @@ export default function HomePage({ regionFilter }: HomePageProps) {
             commentsCount: updatedList.length,
             comments: updatedList.length,
             commentsList: updatedList,
-            userReaction: reaction || (p as any).userReaction,
           };
 
           saveActivityToStorage(postWithTime.id, {
             likesCount: updatedLikes,
             commentsCount: updatedList.length,
             commentsList: updatedList,
-            userReaction: reaction || (p as any).userReaction,
           });
 
           return updatedPost as Confession;
@@ -318,7 +306,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       list = [
         { id: '1', author: 'Anonymous', text: 'Sobbing. This is what real empathy and strength look like.', createdAt: '2h ago' },
         { id: '2', author: 'Anonymous', text: 'Choosing to carry this requires immense courage. Much love.', createdAt: '1h ago' },
-        { id: '3', author: 'Anonymous', text: 'Blood means nothing compared to who shows up every single day.', createdAt: '35m ago' }
+        { id: '3', author: 'Anonymous', text: 'Blood means nothing compared to who shows up every single day.', createdAt: '35m ago' },
       ];
     }
 
@@ -332,9 +320,12 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     });
   }
 
-  // Reaction Trigger for Card as well as Modal
-  function handleSelectReaction(postId: string, emoji: string, e?: React.MouseEvent) {
-    if (e) e.stopPropagation();
+  // Unified Reaction Trigger with direct backend sync
+  async function handleSelectReaction(postId: string, emoji: string, e?: React.MouseEvent) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
 
     const targetPost = posts.find((p) => p.id === postId) || activePost;
     if (!targetPost) return;
@@ -375,15 +366,25 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     setPosts((prev) =>
       prev.map((p) => (p.id === postId ? { ...p, ...updated } : p))
     );
+
+    // Sync straight to Firestore / backend
+    try {
+      await setReaction(postId, currentEmoji as any, nextEmoji as any);
+    } catch (err) {
+      console.error('Failed to sync reaction:', err);
+    }
   }
 
-  function handleAddComment() {
+  async function handleAddComment() {
     if (!activePost || !commentText.trim()) return;
+
+    const author = commentName.trim() || 'Anonymous';
+    const text = commentText.trim();
 
     const newComment: CommentItem = {
       id: String(Date.now()),
-      author: commentName.trim() || 'Anonymous',
-      text: commentText.trim(),
+      author,
+      text,
       createdAt: 'Just now',
     };
 
@@ -406,11 +407,19 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     setPosts((prev) =>
       prev.map((p) => (p.id === activePost.id ? { ...p, ...updated } : p))
     );
+
+    try {
+      await addComment(activePost.id, author, text);
+    } catch (err) {
+      console.error('Failed to save comment:', err);
+    }
   }
 
-  // Multi-platform Share Trigger
   const triggerShare = (post: any, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setSharePopupPost(post);
   };
 
@@ -447,8 +456,8 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         </button>
       </section>
 
-      {/* Feed Section - Single Column Responsive Layout */}
-      <section className="w-full max-w-xl md:max-w-2xl mx-auto px-3 sm:px-4 pt-1 pb-20 space-y-6">
+      {/* Feed Section - Full Width Single Column Layout (No Side Gaps) */}
+      <section className="w-full px-3 sm:px-6 md:px-8 pt-1 pb-20 space-y-6">
         {regionFilter && (
           <p className="text-xs md:text-sm text-stone-600 text-center mb-2">
             Showing confessions from <span className="font-semibold text-stone-800">{regionFilter}</span>
@@ -477,7 +486,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                 >
                   {/* Image Banner */}
                   {Boolean((post as any).imageUrl || (post as any).image) && (
-                    <div className="w-full h-56 sm:h-64 overflow-hidden bg-stone-200">
+                    <div className="w-full h-64 sm:h-80 md:h-96 overflow-hidden bg-stone-200">
                       <img
                         src={(post as any).imageUrl || (post as any).image}
                         alt="Confession story"
@@ -488,8 +497,8 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                   )}
 
                   {/* Card Body */}
-                  <div className="p-5">
-                    <div className="flex items-center gap-1.5 text-xs text-stone-500 font-medium mb-3">
+                  <div className="p-5 sm:p-7">
+                    <div className="flex items-center gap-1.5 text-xs sm:text-sm text-stone-500 font-medium mb-3">
                       <span>{extractAuthorName(post)}</span>
                       <span>·</span>
                       <span className="inline-flex items-center gap-1 text-[#e15b50]">
@@ -500,30 +509,31 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                       <span>{parseTimeToHuman((post as any).createdAt || (post as any).timestamp || (post as any).time)}</span>
                     </div>
 
-                    <p className="text-stone-800 text-sm sm:text-base leading-relaxed line-clamp-3 font-normal">
+                    <p className="text-stone-800 text-sm sm:text-base md:text-lg leading-relaxed line-clamp-4 font-normal whitespace-pre-wrap">
                       {(post as any).text || (post as any).content || ''}
                     </p>
 
-                    <div className="mt-5 flex items-center justify-between pt-1 border-t border-[#ebd8c8]/60">
+                    <div className="mt-5 flex items-center justify-between pt-3 border-t border-[#ebd8c8]/60">
                       <div className="flex items-center gap-2.5">
                         {/* Interactive Reaction/Like on Card */}
                         <div className="relative">
                           <button
                             type="button"
                             onClick={(e) => {
+                              e.preventDefault();
                               e.stopPropagation();
                               setCardPickerPostId(isCardPickerOpen ? null : post.id);
                             }}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all active:scale-95 cursor-pointer ${
+                            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium border transition-all active:scale-95 cursor-pointer ${
                               hasReaction
-                                ? 'border-rose-300 bg-rose-50 text-rose-600'
+                                ? 'border-rose-300 bg-rose-50 text-rose-600 font-semibold'
                                 : 'bg-[#eee0d2] text-stone-700 hover:bg-[#e6d6c6] border-transparent'
                             }`}
                           >
                             {hasReaction ? (
-                              <span className="text-sm leading-none">{(post as any).userReaction}</span>
+                              <span className="text-base leading-none">{(post as any).userReaction}</span>
                             ) : (
-                              <Heart className="w-3.5 h-3.5 fill-stone-400 text-stone-400" />
+                              <Heart className="w-4 h-4 text-stone-500 hover:text-rose-500" />
                             )}
                             <span>{safeLikesCount(post)}</span>
                           </button>
@@ -531,16 +541,19 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                           {/* Card Emoji Picker Tray */}
                           {isCardPickerOpen && (
                             <div
-                              onClick={(e) => e.stopPropagation()}
-                              className="absolute bottom-full left-0 mb-2 z-40 flex items-center gap-1 p-1.5 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-stone-200 max-w-[80vw] overflow-x-auto"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
+                              className="absolute bottom-full left-0 mb-2 z-50 flex items-center gap-1 p-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-stone-200 max-w-[85vw] sm:max-w-none overflow-x-auto"
                             >
                               {EMOJI_LIST.map((item) => (
                                 <button
                                   key={item.label}
                                   type="button"
                                   onClick={(e) => handleSelectReaction(post.id, item.emoji, e)}
-                                  className={`text-xl p-1.5 rounded-xl hover:scale-125 transition-transform cursor-pointer ${
-                                    (post as any).userReaction === item.emoji ? 'bg-rose-100' : 'hover:bg-stone-100'
+                                  className={`text-2xl p-1.5 rounded-xl hover:scale-125 transition-transform cursor-pointer ${
+                                    (post as any).userReaction === item.emoji ? 'bg-rose-100 scale-110' : 'hover:bg-stone-100'
                                   }`}
                                   title={item.label}
                                 >
@@ -551,9 +564,9 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                           )}
                         </div>
 
-                        {/* Safe Comments Count (Zero NaN) */}
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#eee0d2] text-stone-700 text-xs font-medium">
-                          <MessageCircle className="w-3.5 h-3.5 text-stone-500" />
+                        {/* Safe Comments Count */}
+                        <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#eee0d2] text-stone-700 text-xs sm:text-sm font-medium">
+                          <MessageCircle className="w-4 h-4 text-stone-500" />
                           <span>{safeCommentCount(post)}</span>
                         </div>
 
@@ -561,15 +574,15 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                         <button
                           type="button"
                           onClick={(e) => triggerShare(post, e)}
-                          className="p-1.5 rounded-full bg-[#eee0d2] text-stone-700 hover:bg-[#e6d6c6] active:scale-90 transition-all cursor-pointer"
+                          className="p-2 rounded-full bg-[#eee0d2] text-stone-700 hover:bg-[#e6d6c6] active:scale-90 transition-all cursor-pointer"
                           title="Share confession"
                         >
-                          <Share2 className="w-3.5 h-3.5 text-stone-600" />
+                          <Share2 className="w-4 h-4 text-stone-600" />
                         </button>
                       </div>
 
-                      {/* Exact Tap to View */}
-                      <span className="text-xs font-medium text-[#e15b50] hover:underline cursor-pointer">
+                      {/* Tap to View */}
+                      <span className="text-xs sm:text-sm font-medium text-[#e15b50] hover:underline cursor-pointer">
                         Tap to view
                       </span>
                     </div>
@@ -580,13 +593,13 @@ export default function HomePage({ regionFilter }: HomePageProps) {
           </div>
         )}
 
-        {/* Load More 8 Confessions Button */}
+        {/* Load More Button */}
         {!loading && canLoadMore && (
           <div className="flex justify-center pt-6">
             <button
               onClick={handleLoadMore}
               disabled={loadingMore}
-              className="flex items-center gap-2 px-7 py-3 rounded-full bg-[#faefe6] border border-[#ebd8c8] text-[#e15b50] text-xs sm:text-sm font-semibold hover:bg-[#f3e6d8] active:scale-95 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-2 px-8 py-3 rounded-full bg-[#faefe6] border border-[#ebd8c8] text-[#e15b50] text-xs sm:text-sm font-semibold hover:bg-[#f3e6d8] active:scale-95 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
             >
               {loadingMore ? (
                 <>
@@ -601,7 +614,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         )}
       </section>
 
-      {/* Floating Share Tray */}
+      {/* Share Popup */}
       {sharePopupPost && (
         <div 
           className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
@@ -765,7 +778,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                           <button
                             key={item.label}
                             type="button"
-                            onClick={() => handleSelectReaction(activePost.id, item.emoji)}
+                            onClick={(e) => handleSelectReaction(activePost.id, item.emoji, e)}
                             className={`text-2xl p-1.5 sm:p-2 rounded-xl transition-all hover:scale-125 active:scale-90 cursor-pointer shrink-0 ${
                               activePost.userReaction === item.emoji ? 'bg-rose-100 scale-110' : 'hover:bg-stone-100'
                             }`}
@@ -853,9 +866,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                     </button>
                   </div>
                 </div>
-
               </div>
-
             </div>
           </div>
         </div>
