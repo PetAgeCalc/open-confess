@@ -11,7 +11,7 @@ interface ConfessionCardProps {
 
 const EMOJI_OPTIONS = [
   { label: 'Love', emoji: '❤️' },
-  { label: 'Hug', emoji: '🫂' },
+  { label: 'Hug', emoji: '🤗' },
   { label: 'Sad', emoji: '😢' },
   { label: 'Support', emoji: '👏' },
   { label: 'Fire', emoji: '🔥' },
@@ -40,7 +40,7 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
   const [pickerOpen, setPickerOpen] = useState<boolean>(false);
   const pickerRef = useRef<HTMLDivElement>(null);
 
-  // Sync state & persistent reaction
+  // Sync initial state and user's saved reaction (only on postId change to prevent unwanted resets)
   useEffect(() => {
     setLikes(Number(post.likesCount ?? post.likes ?? 0) || 0);
     setCommentsCount(Number(post.commentsCount ?? post.comments ?? (post.commentsList?.length || 0)) || 0);
@@ -57,18 +57,22 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
       }
     }
     setSelectedEmoji(null);
-  }, [postId, post.likesCount, post.likes, post.commentsCount]);
+  }, [postId]);
 
-  // Click outside to close tray
+  // Click outside to close tray safely
   useEffect(() => {
     if (!pickerOpen) return;
-    const handleOutside = (e: MouseEvent) => {
+    const handleOutside = (e: MouseEvent | TouchEvent) => {
       if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
         setPickerOpen(false);
       }
     };
     document.addEventListener('mousedown', handleOutside);
-    return () => document.removeEventListener('mousedown', handleOutside);
+    document.addEventListener('touchstart', handleOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleOutside);
+      document.removeEventListener('touchstart', handleOutside);
+    };
   }, [pickerOpen]);
 
   // Main button toggle
@@ -78,8 +82,8 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
     setPickerOpen((prev) => !prev);
   }
 
-  // Emoji select: Har emoji (Love ke alawa bhi) turant count aur add hoga
-  function handleSelectEmoji(e: React.MouseEvent, emoji: string) {
+  // Emoji select: Love ke alawa har emoji instant count hoga aur add hoga
+  function handleSelectEmoji(e: React.MouseEvent | React.PointerEvent, emoji: string) {
     e.preventDefault();
     e.stopPropagation();
 
@@ -90,18 +94,18 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
     let nextEmoji: string | null = null;
 
     if (selectedEmoji === emoji) {
-      // Dubara wahi dabaya to cancel (-1)
+      // Toggle off / Cancel (-1)
       nextEmoji = null;
       nextCount = Math.max(0, likes - 1);
     } else {
-      // Agar pehle se koi emoji nahi tha to count +1
+      // Toggle on (+1) if first reaction
       if (!selectedEmoji) {
         nextCount = likes + 1;
       }
       nextEmoji = emoji;
     }
 
-    // 1. Instant Screen Update (Isse turant emoji aur number badal jayega)
+    // 1. Instant Screen Update
     setSelectedEmoji(nextEmoji);
     setLikes(nextCount);
     setPickerOpen(false);
@@ -119,12 +123,12 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
       console.error(err);
     }
 
-    // 3. Inform parent
+    // 3. Parent Callback
     if (onReactionChange) {
       onReactionChange(postId, nextEmoji);
     }
 
-    // 4. Background Database Call (try-catch isolated taaki screen freeze na ho)
+    // 4. Background Database Call
     setTimeout(async () => {
       try {
         await setReaction(postId, previousReaction as any, nextEmoji as any);
@@ -216,6 +220,7 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
                 <button
                   key={item.label}
                   type="button"
+                  onPointerDown={(e) => handleSelectEmoji(e, item.emoji)}
                   onClick={(e) => handleSelectEmoji(e, item.emoji)}
                   className={`text-xl p-1.5 rounded-xl hover:scale-125 active:scale-90 transition-all cursor-pointer ${
                     selectedEmoji === item.emoji ? 'bg-rose-100 scale-110' : 'hover:bg-stone-100'
