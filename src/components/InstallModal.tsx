@@ -8,9 +8,10 @@ interface BeforeInstallPromptEvent extends Event {
 export const InstallModal: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
-    // 1. Agar app already installed hai ya user install kar chuka hai
+    // 1. Check karein ki user standalone mode me hai ya pehle se install kar chuka hai
     const isStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as unknown as { standalone?: boolean }).standalone === true;
@@ -18,18 +19,26 @@ export const InstallModal: React.FC = () => {
     const alreadyInstalled = localStorage.getItem('openconfess_installed') === 'true';
     const dismissedThisSession = sessionStorage.getItem('dismissed_install_modal') === 'true';
 
-    if (isStandalone || alreadyInstalled) {
+    if (isStandalone || alreadyInstalled || dismissedThisSession) {
       return;
     }
 
-    // 2. Browser install prompt capture karein
+    // 2. Detect iOS (iPhone / iPad)
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
+    setIsIOS(isIosDevice);
+
+    if (isIosDevice) {
+      // iOS par prompt event nahi hota, direct modal dikhana hota hai
+      setShowModal(true);
+      return;
+    }
+
+    // 3. Android / Chrome prompt capture karein
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-
-      if (!dismissedThisSession) {
-        setShowModal(true);
-      }
+      setShowModal(true);
     };
 
     const handleAppInstalled = () => {
@@ -89,25 +98,41 @@ export const InstallModal: React.FC = () => {
         <h3 className="text-xl font-bold text-gray-800 mb-1">
           Install Open Confess
         </h3>
-        <p className="text-sm text-gray-500 mb-5 leading-relaxed">
-          Open Confess app install karein aur direct bina identity ke post aur react karein.
+        <p className="text-sm text-gray-500 mb-4 leading-relaxed">
+          Open Confess app install karein aur bina kisi identity ke post aur react karein.
         </p>
 
-        <div className="flex flex-col gap-2">
+        {isIOS ? (
+          /* iPhone / iOS Guide */
+          <div className="bg-pink-50/70 border border-pink-100 rounded-xl p-3 text-xs text-stone-700 text-left mb-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-stone-900">1.</span>
+              <span>Niche Safari browser me <strong>Share</strong> button dabayein</span>
+              <svg className="w-4 h-4 text-stone-800 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-stone-900">2.</span>
+              <span>Menu me niche scroll karke <strong>Add to Home Screen</strong> chunein</span>
+            </div>
+          </div>
+        ) : (
+          /* Android 1-Click Install Button */
           <button
             onClick={handleInstallClick}
-            className="w-full py-2.5 px-4 bg-[#ee4266] hover:bg-[#d93b5d] text-white font-semibold rounded-xl shadow-sm transition-all"
+            className="w-full py-2.5 px-4 bg-[#ee4266] hover:bg-[#d93b5d] text-white font-semibold rounded-xl shadow-sm transition-all mb-2"
           >
             Install OpenConfess App
           </button>
-          
-          <button
-            onClick={handleDismiss}
-            className="text-xs text-gray-400 hover:text-gray-600 mt-1"
-          >
-            Maybe later
-          </button>
-        </div>
+        )}
+
+        <button
+          onClick={handleDismiss}
+          className="text-xs text-gray-400 hover:text-gray-600 font-medium"
+        >
+          Maybe later
+        </button>
 
       </div>
     </div>
