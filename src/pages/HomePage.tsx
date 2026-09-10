@@ -359,7 +359,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     });
   }
 
-  async function handleSelectReaction(postId: string, emoji: string, e?: React.MouseEvent) {
+  async function handleSelectReaction(postId: string, emoji: string, e?: React.MouseEvent | React.PointerEvent) {
     if (e) {
       e.stopPropagation();
       e.preventDefault();
@@ -368,20 +368,22 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     const targetPost = posts.find((p) => String(p.id) === String(postId)) || (activePost && String(activePost.id) === String(postId) ? activePost : null);
     if (!targetPost) return;
 
-    const currentEmoji = (targetPost as any).userReaction;
-    let nextCount = safeLikesCount(targetPost);
+    const currentEmoji = (targetPost as any).userReaction || null;
+    const currentLikes = safeLikesCount(targetPost);
+    let nextCount = currentLikes;
     let nextEmoji: string | null = null;
 
     if (currentEmoji === emoji) {
       nextEmoji = null;
-      nextCount = Math.max(0, nextCount - 1);
+      nextCount = Math.max(0, currentLikes - 1);
     } else {
       if (!currentEmoji) {
-        nextCount = nextCount + 1;
+        nextCount = currentLikes + 1;
       }
       nextEmoji = emoji;
     }
 
+    // 1. Instant optimistic update for feed posts
     setPosts((prev) =>
       prev.map((p) => {
         if (String(p.id) === String(postId)) {
@@ -396,25 +398,28 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       })
     );
 
+    // 2. Instant optimistic update for modal if opened
     if (activePost && String(activePost.id) === String(postId)) {
-      setActivePost({
-        ...activePost,
+      setActivePost((prev: any) => ({
+        ...prev,
         likesCount: nextCount,
         likes: nextCount,
         userReaction: nextEmoji,
-      });
+      }));
     }
 
     setModalPickerOpen(false);
     setCardPickerPostId(null);
 
-    saveActivityToStorage(postId, {
+    // 3. Storage persistence
+    saveActivityToStorage(String(postId), {
       likesCount: nextCount,
       userReaction: nextEmoji,
     });
 
+    // 4. Remote Firebase persistence
     try {
-      await setReaction(postId, currentEmoji as any, nextEmoji as any);
+      await setReaction(String(postId), currentEmoji as any, nextEmoji as any);
     } catch (err) {
       console.error('Firebase reaction error:', err);
     }
@@ -577,7 +582,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              // Toggle picker on click
                               setCardPickerPostId(isCardPickerOpen ? null : post.id);
                             }}
                             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium border transition-all active:scale-95 cursor-pointer ${
@@ -604,8 +608,15 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                                 <button
                                   key={item.label}
                                   type="button"
-                                  onClick={(e) => handleSelectReaction(post.id, item.emoji, e)}
-                                  className={`text-2xl p-1.5 rounded-xl hover:scale-125 active:scale-95 transition-transform cursor-pointer ${
+                                  onPointerDown={(e) => {
+                                    e.stopPropagation();
+                                    handleSelectReaction(post.id, item.emoji, e);
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSelectReaction(post.id, item.emoji, e);
+                                  }}
+                                  className={`text-2xl p-1.5 rounded-xl hover:scale-125 active:scale-95 transition-transform cursor-pointer shrink-0 ${
                                     (post as any).userReaction === item.emoji ? 'bg-rose-100 scale-110' : 'hover:bg-stone-100'
                                   }`}
                                   title={item.label}
