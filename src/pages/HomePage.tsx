@@ -18,7 +18,7 @@ interface CommentItem {
 
 const EMOJI_LIST = [
   { label: 'Love', emoji: '❤️' },
-  { label: 'Hug', emoji: '🫂' },
+  { label: 'Hug', emoji: '🤗' },
   { label: 'Sad', emoji: '😢' },
   { label: 'Support', emoji: '👏' },
   { label: 'Fire', emoji: '🔥' },
@@ -191,7 +191,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     return [...items].sort((a, b) => parsePostTimestamp(b) - parsePostTimestamp(a));
   };
 
-  // Strictly sync ONLY actual user actions, ignore simulator fake user reactions
   const applySavedActivity = (rawPosts: Confession[]): Confession[] => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -203,7 +202,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
           ...post,
           likesCount: customData?.likesCount ?? (post as any).likesCount ?? 0,
           likes: customData?.likesCount ?? (post as any).likes ?? 0,
-          // If the user actually reacted, keep it; otherwise ALWAYS null so it looks un-reacted
           userReaction: (customData?.userReaction && typeof customData.userReaction === 'string') ? customData.userReaction : null,
           commentsCount: customData?.commentsCount ?? (post as any).commentsCount ?? safeCommentCount(post),
           comments: customData?.commentsCount ?? (post as any).comments ?? safeCommentCount(post),
@@ -258,7 +256,10 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       if (shareRef.current && !shareRef.current.contains(e.target as Node)) {
         setSharePopupPost(null);
       }
-      setCardPickerPostId(null);
+      const target = e.target as HTMLElement;
+      if (!target.closest('.card-reaction-container')) {
+        setCardPickerPostId(null);
+      }
     };
     document.addEventListener('mousedown', handleOutside);
     return () => document.removeEventListener('mousedown', handleOutside);
@@ -358,14 +359,12 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     });
   }
 
-  // BULLETPROOF REACTION: Works identically for both Card and Modal
   async function handleSelectReaction(postId: string, emoji: string, e?: React.MouseEvent) {
     if (e) {
       e.stopPropagation();
       e.preventDefault();
     }
 
-    // Identify current target post
     const targetPost = posts.find((p) => String(p.id) === String(postId)) || (activePost && String(activePost.id) === String(postId) ? activePost : null);
     if (!targetPost) return;
 
@@ -374,18 +373,15 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     let nextEmoji: string | null = null;
 
     if (currentEmoji === emoji) {
-      // Toggle off
       nextEmoji = null;
       nextCount = Math.max(0, nextCount - 1);
     } else {
-      // Toggle on or switch emoji
       if (!currentEmoji) {
         nextCount = nextCount + 1;
       }
       nextEmoji = emoji;
     }
 
-    // 1. Instant UI update in feed posts state
     setPosts((prev) =>
       prev.map((p) => {
         if (String(p.id) === String(postId)) {
@@ -400,7 +396,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       })
     );
 
-    // 2. Instant UI update in modal if open
     if (activePost && String(activePost.id) === String(postId)) {
       setActivePost({
         ...activePost,
@@ -410,17 +405,14 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       });
     }
 
-    // Close trays
     setModalPickerOpen(false);
     setCardPickerPostId(null);
 
-    // 3. Persist locally
     saveActivityToStorage(postId, {
       likesCount: nextCount,
       userReaction: nextEmoji,
     });
 
-    // 4. Persist in Firebase
     try {
       await setReaction(postId, currentEmoji as any, nextEmoji as any);
     } catch (err) {
@@ -576,7 +568,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                         
                         {/* Interactive Reaction/Like on Card */}
                         <div 
-                          className="relative" 
+                          className="relative card-reaction-container" 
                           onClick={(e) => {
                             e.stopPropagation();
                           }}
@@ -585,12 +577,8 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              // Agar react nahi kiya toh direct Love ❤️ react karega, nahi toh tray open karega
-                              if (!hasReaction) {
-                                handleSelectReaction(post.id, '❤️', e);
-                              } else {
-                                setCardPickerPostId(isCardPickerOpen ? null : post.id);
-                              }
+                              // Toggle picker on click
+                              setCardPickerPostId(isCardPickerOpen ? null : post.id);
                             }}
                             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium border transition-all active:scale-95 cursor-pointer ${
                               hasReaction
