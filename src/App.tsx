@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Header, { LegalTopic } from './components/Header';
 import HomePage from './pages/HomePage';
 import LegalPage from './pages/LegalPage';
+import { InstallModal } from './components/InstallModal';
 
 export default function App() {
   const [regionFilter, setRegionFilter] = useState<string | null>(null);
@@ -16,6 +17,9 @@ export default function App() {
       />
       <HomePage regionFilter={regionFilter} />
       {legalTopic && <LegalPage topic={legalTopic} onClose={() => setLegalTopic(null)} />}
+      
+      {/* Install App Popup Modal */}
+      <InstallModal />
     </div>
   );
 }
