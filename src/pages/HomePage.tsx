@@ -82,12 +82,19 @@ function parsePostTimestamp(post: any): number {
 }
 
 function safeCommentCount(post: any): number {
-  if (!post) return 0;
-  if (Array.isArray(post.commentsList)) return post.commentsList.length;
-  if (Array.isArray(post.comments)) return post.comments.length;
+  if (!post) return 3;
+  if (Array.isArray(post.commentsList) && post.commentsList.length > 0) {
+    return post.commentsList.length;
+  }
+  if (Array.isArray(post.comments) && post.comments.length > 0) {
+    return post.comments.length;
+  }
   const countVal = post.commentsCount ?? post.comments;
   const num = Number(countVal);
-  return !isNaN(num) && num >= 0 ? num : 0;
+  if (!isNaN(num) && num > 0) {
+    return num;
+  }
+  return 3;
 }
 
 function safeLikesCount(post: any): number {
@@ -167,8 +174,8 @@ export default function HomePage({ regionFilter }: HomePageProps) {
           likes: customData?.likesCount ?? (post as any).likes ?? 0,
           // If the user actually reacted, keep it; otherwise ALWAYS null so it looks un-reacted
           userReaction: (customData?.userReaction && typeof customData.userReaction === 'string') ? customData.userReaction : null,
-          commentsCount: customData?.commentsCount ?? (post as any).commentsCount ?? 0,
-          comments: customData?.commentsCount ?? (post as any).comments ?? 0,
+          commentsCount: customData?.commentsCount ?? (post as any).commentsCount ?? safeCommentCount(post),
+          comments: customData?.commentsCount ?? (post as any).comments ?? safeCommentCount(post),
           commentsList: customData?.commentsList ?? (post as any).commentsList ?? [],
         } as Confession;
       });
@@ -248,10 +255,19 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   }
 
   function handleCreated(confession: Confession) {
+    const defaultFakeList: CommentItem[] = [
+      { id: '1', author: 'Anonymous', text: 'Sobbing. This is what real empathy and strength look like.', createdAt: '2h ago' },
+      { id: '2', author: 'Anonymous', text: 'Choosing to carry this requires immense courage. Much love.', createdAt: '1h ago' },
+      { id: '3', author: 'Anonymous', text: 'Blood means nothing compared to who shows up every single day.', createdAt: '35m ago' },
+    ];
+
     const postWithTime = {
       ...confession,
       createdAt: (confession as any).createdAt || Date.now(),
       userReaction: null,
+      commentsCount: 3,
+      comments: 3,
+      commentsList: defaultFakeList,
     };
     setPosts((prev) => [postWithTime, ...prev]);
 
@@ -260,7 +276,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         prev.map((p) => {
           if (p.id !== postWithTime.id) return p;
           const currentLikes = safeLikesCount(p);
-          const currentList = (p as any).commentsList || [];
+          const currentList = (p as any).commentsList && (p as any).commentsList.length > 0 ? (p as any).commentsList : defaultFakeList;
           const updatedList = newComment ? [...currentList, newComment] : currentList;
           const updatedLikes = likesCountIncrement ? currentLikes + likesCountIncrement : currentLikes;
 
@@ -305,10 +321,12 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       ];
     }
 
+    const totalComments = Math.max(list.length, safeCommentCount(raw));
+
     setActivePost({
       ...raw,
       likesCount: safeLikesCount(raw),
-      commentsCount: Math.max(safeCommentCount(raw), list.length),
+      commentsCount: totalComments,
       commentsList: list,
       userReaction: raw.userReaction || null,
       formattedTime: parseTimeToHuman(raw.createdAt || raw.timestamp || raw.time),
@@ -398,7 +416,15 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       createdAt: 'Just now',
     };
 
-    const updatedComments = [...(activePost.commentsList || []), newComment];
+    const currentList = (activePost.commentsList && activePost.commentsList.length > 0)
+      ? activePost.commentsList
+      : [
+          { id: '1', author: 'Anonymous', text: 'Sobbing. This is what real empathy and strength look like.', createdAt: '2h ago' },
+          { id: '2', author: 'Anonymous', text: 'Choosing to carry this requires immense courage. Much love.', createdAt: '1h ago' },
+          { id: '3', author: 'Anonymous', text: 'Blood means nothing compared to who shows up every single day.', createdAt: '35m ago' },
+        ];
+
+    const updatedComments = [...currentList, newComment];
     const updated = {
       ...activePost,
       commentsCount: updatedComments.length,
@@ -537,7 +563,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              // Agar react nahi kiya toh direct Love ❤️ react karega, nahi toh tray open karega
                               if (!hasReaction) {
                                 handleSelectReaction(post.id, '❤️', e);
                               } else {
