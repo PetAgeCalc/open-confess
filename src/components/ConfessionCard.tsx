@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Heart, MessageCircle, MapPin } from 'lucide-react';
+import { Heart, MessageCircle, MapPin, Tag } from 'lucide-react';
 import { Confession } from '../types';
 import { setReaction } from '../lib/confessionService';
 
@@ -26,10 +26,12 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
   const post = confession as Record<string, any>;
   const postId = String(post.id || post._id || '');
 
+  // Firestore fields mapping: body, category, imageUrl
   const author = post.authorName || post.author || 'Anonymous';
+  const category = post.category || '';
   const location = [post.city, post.country].filter(Boolean).join(', ') || (post.location ? String(post.location) : '');
   const imageUrl = post.imageUrl || post.image || '';
-  const textContent = post.text || post.content || '';
+  const textContent = post.body || post.text || post.content || '';
 
   const initialLikes = Number(post.likesCount ?? post.likes ?? 0) || 0;
   const initialComments = Number(post.commentsCount ?? post.comments ?? (post.commentsList?.length || 0)) || 0;
@@ -40,7 +42,7 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
   const [pickerOpen, setPickerOpen] = useState<boolean>(false);
   const pickerRef = useRef<HTMLDivElement>(null);
 
-  // Sync initial state and user's saved reaction (only on postId change to prevent unwanted resets)
+  // Sync initial state and user's saved reaction
   useEffect(() => {
     setLikes(Number(post.likesCount ?? post.likes ?? 0) || 0);
     setCommentsCount(Number(post.commentsCount ?? post.comments ?? (post.commentsList?.length || 0)) || 0);
@@ -57,7 +59,7 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
       }
     }
     setSelectedEmoji(null);
-  }, [postId]);
+  }, [postId, post.likesCount, post.likes, post.commentsCount, post.comments]);
 
   // Click outside to close tray safely
   useEffect(() => {
@@ -75,14 +77,12 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
     };
   }, [pickerOpen]);
 
-  // Main button toggle
   function handleMainButtonClick(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
     setPickerOpen((prev) => !prev);
   }
 
-  // Emoji select: Love ke alawa har emoji instant count hoga aur add hoga
   function handleSelectEmoji(e: React.MouseEvent | React.PointerEvent, emoji: string) {
     e.preventDefault();
     e.stopPropagation();
@@ -94,23 +94,19 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
     let nextEmoji: string | null = null;
 
     if (selectedEmoji === emoji) {
-      // Toggle off / Cancel (-1)
       nextEmoji = null;
       nextCount = Math.max(0, likes - 1);
     } else {
-      // Toggle on (+1) if first reaction
       if (!selectedEmoji) {
         nextCount = likes + 1;
       }
       nextEmoji = emoji;
     }
 
-    // 1. Instant Screen Update
     setSelectedEmoji(nextEmoji);
     setLikes(nextCount);
     setPickerOpen(false);
 
-    // 2. LocalStorage Persistence
     try {
       const stored = JSON.parse(localStorage.getItem('openconfess_user_reactions') || '{}');
       if (nextEmoji) {
@@ -123,12 +119,10 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
       console.error(err);
     }
 
-    // 3. Parent Callback
     if (onReactionChange) {
       onReactionChange(postId, nextEmoji);
     }
 
-    // 4. Background Database Call
     setTimeout(async () => {
       try {
         await setReaction(postId, previousReaction as any, nextEmoji as any);
@@ -146,6 +140,15 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
       {/* Header Info */}
       <div className="flex items-center gap-2 text-xs sm:text-sm text-stone-500 mb-3 flex-wrap">
         <span className="font-semibold text-stone-800">{author}</span>
+        {Boolean(category) && (
+          <>
+            <span>•</span>
+            <span className="inline-flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full text-xs font-medium">
+              <Tag className="w-3 h-3 shrink-0" />
+              {category}
+            </span>
+          </>
+        )}
         {Boolean(location) && (
           <>
             <span>•</span>
@@ -180,7 +183,6 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
 
       {/* Footer Actions */}
       <div className="flex items-center gap-4 pt-3 border-t border-stone-100 text-xs sm:text-sm text-stone-600 relative">
-        
         {/* Emoji Button & Floating Tray */}
         <div
           ref={pickerRef}
@@ -239,7 +241,6 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
           <MessageCircle className="w-4 h-4 text-stone-400" />
           <span>{commentsCount} comments</span>
         </div>
-
       </div>
     </article>
   );
