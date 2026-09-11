@@ -18,8 +18,8 @@ import { Confession, Comment, ReactionEmoji, ReactionMap } from '../types';
 import { toEpochMs } from './timeUtils';
 
 const PAGE_SIZE = 8;
-const LOCAL_POSTS_KEY = 'openconfess_local_posts_v1';
-const LOCAL_INTERACTIONS_KEY = 'openconfess_local_post_stats_v1';
+const LOCAL_POSTS_KEY = 'openconfess_local_posts_v2';
+const LOCAL_INTERACTIONS_KEY = 'openconfess_local_post_stats_v2';
 
 interface LocalPostStats {
   likesCount: number;
