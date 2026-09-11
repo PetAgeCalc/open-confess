@@ -11,10 +11,10 @@ interface SimulatedPostItem {
   possibleComments: string[];
 }
 
-// Bumped to v10 to immediately purge old stale 4d-ago cached posts
-const USED_POST_IDS_KEY = 'openconfess_used_post_registry_v10';
-const LIVE_SIMULATED_POSTS_KEY = 'openconfess_live_simulated_posts_v10';
-const LAST_SIMULATION_TIMESTAMP_KEY = 'openconfess_last_drip_post_time_v10';
+// Bumped to v12 for 50 initial posts, 100 max cap & 12-minute drip interval
+const USED_POST_IDS_KEY = 'openconfess_used_post_registry_v12';
+const LIVE_SIMULATED_POSTS_KEY = 'openconfess_live_simulated_posts_v12';
+const LAST_SIMULATION_TIMESTAMP_KEY = 'openconfess_last_drip_post_time_v12';
 
 const FALLBACK_LIGHTWEIGHT_JPEG =
   'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=';
@@ -388,7 +388,7 @@ function updateSimulatedPostProgression(posts: Confession[]): Confession[] {
   const now = Date.now();
 
   return posts.map((post: any) => {
-    const poolItem = CURATED_POST_POOL.find((p) => p.id === post.id);
+    const poolItem = CURATED_POST_POOL.find((p) => post.id.startsWith(p.id));
     if (!poolItem) return post;
 
     const postTime = typeof post.createdAt === 'number' ? post.createdAt : new Date(post.createdAt).getTime() || now;
@@ -433,11 +433,11 @@ function updateSimulatedPostProgression(posts: Confession[]): Confession[] {
   });
 }
 
-async function buildInitialConfession(item: SimulatedPostItem, timestamp: number): Promise<Confession> {
+async function buildInitialConfession(item: SimulatedPostItem, timestamp: number, customId?: string): Promise<Confession> {
   const compressedImageJpg = await compressUrlToUnder50KB(item.rawImage);
 
   return {
-    id: item.id,
+    id: customId || item.id,
     authorName: item.author,
     text: item.text,
     body: item.text,
@@ -458,11 +458,17 @@ async function buildInitialConfession(item: SimulatedPostItem, timestamp: number
 }
 
 /**
- * FAST BOOTSTRAP TO 20 POSTS + NORMAL DRIP SWITCH
+ * FAST BOOTSTRAP TO 50 POSTS + 12-MINUTE DRIP UP TO 100 POSTS
  */
 export async function syncSimulatedActivity(existingPosts: Confession[]): Promise<Confession[]> {
-  // Purge ALL older versions to kill stale "4d ago" cache
+  // Purge older cache keys
   const OUTDATED_KEYS = [
+    'openconfess_used_post_registry_v11',
+    'openconfess_live_simulated_posts_v11',
+    'openconfess_last_drip_post_time_v11',
+    'openconfess_used_post_registry_v10',
+    'openconfess_live_simulated_posts_v10',
+    'openconfess_last_drip_post_time_v10',
     'openconfess_used_post_registry_v9',
     'openconfess_live_simulated_posts_v9',
     'openconfess_last_drip_post_time_v9',
@@ -479,38 +485,45 @@ export async function syncSimulatedActivity(existingPosts: Confession[]): Promis
   const usedIds = getUsedPostIds();
   const now = Date.now();
 
-  // 1. FAST GENERATION: Seed up to 20 realistic posts within the last 1 hour
-  if (livePosts.length < 20) {
-    const needed = 20 - livePosts.length;
-    const available = CURATED_POST_POOL.filter((p) => !usedIds.has(p.id)).slice(0, needed);
+  const INITIAL_POST_TARGET = 50;
+  const MAX_DAILY_CAP = 100;
+  const DRIP_INTERVAL = 12 * 60 * 1000; // Har 12 minute me 1 post
 
-    for (let idx = 0; idx < available.length; idx++) {
-      const item = available[idx];
-      // Stagger them realisticly between 1 minute and 55 minutes ago
-      const pastTime = now - (idx + 1) * (2.8 * 60 * 1000);
-      const post = await buildInitialConfession(item, pastTime);
-      livePosts.push(post);
-      recordUsedPostId(item.id);
+  // 1. FAST GENERATION: Bootstrap seed up to 50 realistic posts
+  if (livePosts.length < INITIAL_POST_TARGET) {
+    const needed = INITIAL_POST_TARGET - livePosts.length;
+
+    for (let idx = 0; idx < needed; idx++) {
+      const template = CURATED_POST_POOL[idx % CURATED_POST_POOL.length];
+      const cycle = Math.floor(idx / CURATED_POST_POOL.length);
+      const uniqueId = cycle === 0 ? template.id : `${template.id}_cycle_${cycle}_${idx}`;
+
+      if (!usedIds.has(uniqueId)) {
+        // Realistic staggered times over earlier hours
+        const pastTime = now - (idx + 1) * (14 * 60 * 1000);
+        const post = await buildInitialConfession(template, pastTime, uniqueId);
+        livePosts.push(post);
+        recordUsedPostId(uniqueId);
+      }
     }
 
     saveLiveSimulatedPosts(livePosts);
     localStorage.setItem(LAST_SIMULATION_TIMESTAMP_KEY, String(now));
   }
 
-  // 2. NORMAL DRIP MODE: After 20 posts are active, drip 1 post every 22 minutes
+  // 2. 12-MINUTE DRIP MODE: After 50 posts, drip 1 post every 12 mins up to 100 posts
   const lastPostTime = Number(localStorage.getItem(LAST_SIMULATION_TIMESTAMP_KEY) || 0);
-  const DRIP_INTERVAL = 22 * 60 * 1000;
 
-  if (livePosts.length >= 20 && now - lastPostTime >= DRIP_INTERVAL) {
-    const freshAvailable = CURATED_POST_POOL.filter((p) => !usedIds.has(p.id));
-    if (freshAvailable.length > 0) {
-      const nextItem = freshAvailable[0];
-      const newDripPost = await buildInitialConfession(nextItem, now);
-      livePosts.unshift(newDripPost);
-      recordUsedPostId(nextItem.id);
-      saveLiveSimulatedPosts(livePosts);
-      localStorage.setItem(LAST_SIMULATION_TIMESTAMP_KEY, String(now));
-    }
+  if (livePosts.length >= INITIAL_POST_TARGET && livePosts.length < MAX_DAILY_CAP && now - lastPostTime >= DRIP_INTERVAL) {
+    const currentCount = livePosts.length;
+    const template = CURATED_POST_POOL[currentCount % CURATED_POST_POOL.length];
+    const dripUniqueId = `${template.id}_drip_${Date.now()}`;
+
+    const newDripPost = await buildInitialConfession(template, now, dripUniqueId);
+    livePosts.unshift(newDripPost);
+    recordUsedPostId(dripUniqueId);
+    saveLiveSimulatedPosts(livePosts);
+    localStorage.setItem(LAST_SIMULATION_TIMESTAMP_KEY, String(now));
   }
 
   livePosts = updateSimulatedPostProgression(livePosts);
