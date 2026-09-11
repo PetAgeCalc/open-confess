@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/react';
 import Header, { LegalTopic } from './components/Header';
 import HomePage from './pages/HomePage';
 import LegalPage from './pages/LegalPage';
@@ -22,8 +20,6 @@ export default function App() {
       
       {/* Install App Popup Modal */}
       <InstallModal />
-      <Analytics />
-      <SpeedInsights />
     </div>
   );
 }
