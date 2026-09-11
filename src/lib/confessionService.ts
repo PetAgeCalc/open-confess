@@ -131,7 +131,9 @@ async function fetchFirestorePage(
 
   for (const docSnap of snap.docs) {
     const data = docSnap.data();
-    if (regionFilter && data.region !== regionFilter) continue;
+    
+    // Ignore region filter if document does not store regions
+    if (regionFilter && data.region && data.region !== regionFilter) continue;
 
     let interactionData: any = null;
     if (interactionsDb) {
@@ -147,12 +149,12 @@ async function fetchFirestorePage(
 
     posts.push({
       id: docSnap.id,
-      authorName: data.authorName || 'Anonymous',
-      text: data.text || '',
+      authorName: data.authorName || data.author || 'Anonymous',
+      text: data.body || data.text || data.content || '',
       imageUrl: data.imageUrl ?? null,
       country: data.country || '',
       city: data.city || '',
-      region: data.region || '',
+      region: data.region || data.category || '',
       createdAt: safeEpochMs(data.createdAt),
       viewsCount: data.viewsCount ?? 0,
       likesCount: Number(interactionData?.likesCount ?? data.likesCount ?? 0),
@@ -183,7 +185,11 @@ function fetchLocalPage(pageIndex: number, regionFilter?: string): FeedPage {
 export function getAllRegionsWithCounts(): { region: string; count: number }[] {
   const all = isFirebaseConfigured ? seedConfessions : getMergedLocalFeed();
   const counts = new Map<string, number>();
-  all.forEach((p) => counts.set(p.region, (counts.get(p.region) ?? 0) + 1));
+  all.forEach((p) => {
+    if (p.region) {
+      counts.set(p.region, (counts.get(p.region) ?? 0) + 1);
+    }
+  });
   return Array.from(counts.entries())
     .map(([region, count]) => ({ region, count }))
     .sort((a, b) => b.count - a.count);
@@ -199,16 +205,19 @@ export interface CreateConfessionInput {
   imageUrl: string | null;
   country: string;
   city: string;
+  category?: string;
 }
 
 export async function createConfession(input: CreateConfessionInput): Promise<Confession> {
-  const region = `${input.city}, ${input.country}`;
+  const region = [input.city, input.country].filter(Boolean).join(', ');
 
   if (isFirebaseConfigured && postsDb && interactionsDb) {
     const docRef = await addDoc(collection(postsDb, 'confessions'), {
       authorName: input.authorName || 'Anonymous',
+      body: input.text,
       text: input.text,
       imageUrl: input.imageUrl,
+      category: input.category || 'General',
       country: input.country,
       city: input.city,
       region,
