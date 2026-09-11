@@ -10,6 +10,7 @@ import {
   startAfter,
   serverTimestamp,
   setDoc,
+  where,
   QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import { postsDb, interactionsDb, isFirebaseConfigured } from './firebase';
@@ -39,9 +40,7 @@ function readLocalPosts(): Confession[] {
 function writeLocalPosts(posts: Confession[]): void {
   try {
     localStorage.setItem(LOCAL_POSTS_KEY, JSON.stringify(posts));
-  } catch {
-    // Ignore quota errors
-  }
+  } catch {}
 }
 
 function readLocalStats(): Record<string, LocalPostStats> {
@@ -56,9 +55,7 @@ function readLocalStats(): Record<string, LocalPostStats> {
 function writeLocalStats(stats: Record<string, LocalPostStats>): void {
   try {
     localStorage.setItem(LOCAL_INTERACTIONS_KEY, JSON.stringify(stats));
-  } catch {
-    // Ignore quota errors
-  }
+  } catch {}
 }
 
 function emptyReactions(): ReactionMap {
@@ -131,20 +128,17 @@ async function fetchFirestorePage(
 
   for (const docSnap of snap.docs) {
     const data = docSnap.data();
-    
-    // Ignore region filter if document does not store regions
     if (regionFilter && data.region && data.region !== regionFilter) continue;
 
-    let interactionData: any = null;
-    if (interactionsDb) {
+    let reactionData: any = null;
+    const targetDb = interactionsDb || postsDb;
+    if (targetDb) {
       try {
-        const interactionSnap = await getDoc(doc(interactionsDb, 'post_interactions', docSnap.id));
-        if (interactionSnap.exists()) {
-          interactionData = interactionSnap.data();
+        const reactionSnap = await getDoc(doc(targetDb, 'reactions', docSnap.id));
+        if (reactionSnap.exists()) {
+          reactionData = reactionSnap.data();
         }
-      } catch (e) {
-        console.error('Error loading interaction doc:', e);
-      }
+      } catch (e) {}
     }
 
     posts.push({
@@ -157,14 +151,13 @@ async function fetchFirestorePage(
       region: data.region || data.category || '',
       createdAt: safeEpochMs(data.createdAt),
       viewsCount: data.viewsCount ?? 0,
-      likesCount: Number(interactionData?.likesCount ?? data.likesCount ?? 0),
-      reactions: interactionData?.reactions ?? emptyReactions(),
+      likesCount: Number(reactionData?.likesCount ?? data.likesCount ?? 0),
+      reactions: reactionData?.reactions ?? emptyReactions(),
       comments: [],
     });
   }
 
   posts.sort((a, b) => safeEpochMs(b.createdAt) - safeEpochMs(a.createdAt));
-
   const lastDoc = snap.docs[snap.docs.length - 1] ?? null;
   return { posts, cursor: lastDoc, hasMore: snap.docs.length === PAGE_SIZE };
 }
@@ -211,7 +204,7 @@ export interface CreateConfessionInput {
 export async function createConfession(input: CreateConfessionInput): Promise<Confession> {
   const region = [input.city, input.country].filter(Boolean).join(', ');
 
-  if (isFirebaseConfigured && postsDb && interactionsDb) {
+  if (isFirebaseConfigured && postsDb) {
     const docRef = await addDoc(collection(postsDb, 'confessions'), {
       authorName: input.authorName || 'Anonymous',
       body: input.text,
@@ -225,10 +218,13 @@ export async function createConfession(input: CreateConfessionInput): Promise<Co
       viewsCount: 0,
     });
 
-    await setDoc(doc(interactionsDb, 'post_interactions', docRef.id), {
-      likesCount: 0,
-      reactions: emptyReactions(),
-    }, { merge: true });
+    const targetDb = interactionsDb || postsDb;
+    if (targetDb) {
+      await setDoc(doc(targetDb, 'reactions', docRef.id), {
+        likesCount: 0,
+        reactions: emptyReactions(),
+      }, { merge: true });
+    }
 
     return {
       id: docRef.id,
@@ -271,8 +267,9 @@ export async function setReaction(
   previous: ReactionEmoji | null,
   next: ReactionEmoji | null
 ): Promise<ReactionMap> {
-  if (isFirebaseConfigured && interactionsDb) {
-    const ref = doc(interactionsDb, 'post_interactions', postId);
+  const targetDb = interactionsDb || postsDb;
+  if (isFirebaseConfigured && targetDb) {
+    const ref = doc(targetDb, 'reactions', postId);
 
     try {
       const snap = await getDoc(ref);
@@ -304,7 +301,6 @@ export async function setReaction(
 
       return reactions;
     } catch (err) {
-      console.error('Firestore setReaction error:', err);
       return emptyReactions();
     }
   }
@@ -337,14 +333,16 @@ export async function addComment(
     parentId: null,
   };
 
-  if (isFirebaseConfigured && interactionsDb) {
+  const targetDb = interactionsDb || postsDb;
+  if (isFirebaseConfigured && targetDb) {
     await addDoc(
-      collection(interactionsDb, 'post_interactions', postId, 'comments'),
+      collection(targetDb, 'comments'),
       {
-        authorName: comment.authorName,
+        postId: postId,
+        author: comment.authorName,
+        body: comment.text,
         text: comment.text,
         createdAt: serverTimestamp(),
-        parentId: null,
       }
     );
     return comment;
@@ -363,20 +361,26 @@ export async function addComment(
 }
 
 export async function fetchComments(postId: string): Promise<Comment[]> {
-  if (isFirebaseConfigured && interactionsDb) {
-    const snap = await getDocs(
-      query(
-        collection(interactionsDb, 'post_interactions', postId, 'comments'),
-        orderBy('createdAt', 'asc')
-      )
-    );
-    return snap.docs.map((d) => ({
-      id: d.id,
-      authorName: d.data().authorName,
-      text: d.data().text,
-      createdAt: safeEpochMs(d.data().createdAt),
-      parentId: d.data().parentId ?? null,
-    }));
+  const targetDb = interactionsDb || postsDb;
+  if (isFirebaseConfigured && targetDb) {
+    try {
+      const snap = await getDocs(
+        query(
+          collection(targetDb, 'comments'),
+          where('postId', '==', postId),
+          orderBy('createdAt', 'asc')
+        )
+      );
+      return snap.docs.map((d) => ({
+        id: d.id,
+        authorName: d.data().author || d.data().authorName || 'Anonymous',
+        text: d.data().body || d.data().text || '',
+        createdAt: safeEpochMs(d.data().createdAt),
+        parentId: null,
+      }));
+    } catch (e) {
+      return [];
+    }
   }
 
   const post = findPostAnywhere(postId);
