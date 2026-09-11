@@ -11,7 +11,7 @@ interface SimulatedPostItem {
   possibleComments: string[];
 }
 
-// Bumped to v12 for 50 initial posts, 100 max cap & 12-minute drip interval
+// Bumped version key to refresh simulated pool
 const USED_POST_IDS_KEY = 'openconfess_used_post_registry_v12';
 const LIVE_SIMULATED_POSTS_KEY = 'openconfess_live_simulated_posts_v12';
 const LAST_SIMULATION_TIMESTAMP_KEY = 'openconfess_last_drip_post_time_v12';
@@ -20,183 +20,136 @@ const FALLBACK_LIGHTWEIGHT_JPEG =
   'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=';
 
 // =========================================================================
-// 20+ BALANCED DIVERSE CONFESSIONS (Bangla, Hindi, Urban & Global English)
+// CURATED CONFESSIONS POOL (Mixed lengths including 100-300 word stories)
 // =========================================================================
 const CURATED_POST_POOL: SimulatedPostItem[] = [
-  // 1. Bangla (Kolkata & Bangladesh)
+  // --- LONG CONFESSIONS (100 - 300 Words: Bangla, Hindi, English) ---
   {
-    id: 'bn_post_1',
+    id: 'bn_long_1',
     category: 'deep',
     city: 'Kolkata',
     country: 'India',
-    author: 'সৌম্যদ্বীপ সেনগুপ্ত',
+    author: 'অনির্বাণ মুখোপাধ্যায়',
     rawImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=700&q=75',
-    text: "সবাই ভাবে আমি খুব হাসিখুশি, সফল আর জীবনে কোনো আক্ষেপ নেই। কলকাতায় আমার একটা সুন্দর সাজানো ফ্ল্যাট আছে, একটা নামী আইটি কোম্পানিতে চাকরি আছে, আর উইকেন্ডে বন্ধুদের সাথে ক্যাফেতে আড্ডাও দিই। কিন্তু সত্যিটা হলো, ছয় বছর আগের সেই একটা অহংকারী সিদ্ধান্তের বোঝা আমি আজও রোজ রাতে একলা বয়ে বেড়াই। সেই মানুষটা যখন আমাকে অনুরোধ করেছিল আর মাত্র একবার বসে কথা বলে ভুল বোঝাবুঝি মিটিয়ে নেওয়ার জন্য, আমি আমার অন্ধ রাগের কারণে মুখের ওপর সব সম্পর্কের ইতি টেনে দিয়েছিলাম।",
+    text: "কলকাতার এক সাধারণ মধ্যবিত্ত পরিবারে আমার বেড়ে ওঠা। ছোটবেলা থেকেই বাবার ভাঙা পুরনো স্কুটার আর মায়ের তালি দেওয়া শাড়ির আঁচল দেখে বড় হয়েছি। মনের ভেতর একটাই তীব্র জেদ ছিল—আমাকে অনেক বড় কোনো বহুজাতিক সংস্থায় প্রতিষ্ঠিত হতে হবে, পরিবারের সব অভাব আর টানাটানি এক লহমায় মুছে দিতে হবে। বহু বিনিদ্র রাত আর কঠোর পরিশ্রমের পর আজ সল্টলেকের সেক্টর ফাইভে আমার একটা শীতাতপ নিয়ন্ত্রিত কাঁচের কেবিন হয়েছে, ব্যাংকে মোটা অঙ্কের স্যালারি ঢোকে প্রতি মাসের প্রথম দিনে, বন্ধুদের সাথে উইকেন্ডে দামি ক্যাফেতে আড্ডাও দিই। কিন্তু এক ভয়ানক অদ্ভুত শূন্যতা রোজ রাতে আমাকে তাড়া করে ফেরে। যে মানুষগুলোর মুখে একটু নিশ্চিন্তির হাসি ফোটানোর জন্য দিনরাত এক করে লড়েছিলাম, সেই মা-বাবাই আজ বার্ধক্যের এমন এক নিঃসঙ্গ পর্যায়ে পৌঁছে গেছেন যেখানে নামী রেস্তোরাঁর খাবার কিংবা ব্যান্ডের জামাকাপড় তাদের মনে কোনো আনন্দ জাগায় না। সময় এত দ্রুত বালির মতো হাত গলে বেরিয়ে গেল যে সফল হতে হতে প্রিয় মানুষগুলোর পাশে দুটো শান্ত কথা বলার সময়টাই হারিয়ে ফেললাম। আজ এই শীতাতপ নিয়ন্ত্রিত ঘরের বিলাসবহুল একাকিত্বে বসে মনে হয়, জীবনের সেরা সময়গুলো আমরা আসলে কীসের পেছনে ছুড়ে ফেলে দিলাম?",
     possibleComments: [
-      'কথাগুলো একদম মনের গভীরে গিয়ে লাগলো। আপনার প্রতি অনেক শ্রদ্ধা।',
-      'অহংকার ক্ষণিকের স্বস্তি দেয়, কিন্তু অনুশোচনা সারাজীবন তাড়িয়ে বেড়ায়।'
+      'পড়ে মনটা ভিজে গেল। সময় চলে গেলে টাকা দিয়েও প্রিয়জনের হারানো মুহূর্ত ফেরানো যায় না।',
+      'আমাদের প্রজন্মের সবচেয়ে বড় ট্র্যাজেডি এটাই।'
     ]
   },
   {
-    id: 'bn_post_2',
+    id: 'hi_long_1',
+    category: 'deep',
+    city: 'Bengaluru',
+    country: 'India',
+    author: 'मयंक त्रिपाठी',
+    rawImage: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=700&q=75',
+    text: "बचपन में लगता था कि बड़े होकर जब अपनी कमाई होगी और अपनी मर्जी से जीने की पूरी छूट मिलेगी, तो वो जिंदगी का सबसे खूबसूरत दौर होगा। आज बेंगलुरु के एक पॉश हाई-राइज 2BHK फ्लैट की बालकनी में खड़ा होकर रात के ढाई बजे ये सब सोच रहा हूं। हाथ में महंगे सिरेमिक मग की गर्माहट है, पर सीने के अंदर एक अजीब सी बर्फ जमी हुई है। वो मां की डांट, आंगन में शाम को दोस्तों के साथ धूल उड़ाते हुए गली क्रिकेट खेलना, और दस रुपये की पॉकेट मनी में पूरी दुनिया जीत लेने का जो बेफिक्र सुकून था, वो आज इस चालीस लाख के पैकेज में कहीं बहुत दूर छूट गया है। हम सब बड़े तो हो गए, समाज की नजरों में कामयाब भी बन गए, लेकिन उस बड़प्पन की कीमत हमने अपनी मासूम बेपरवाह हंसी बेचकर चुकाई है। अब बस दिनभर लैपटॉप की नीली स्क्रीन, क्लाइंट्स की डेडलाइन्स और रात को अकेलेपन की सन्नाटेदार चादर रह गई है। फोन में सैकड़ों कॉन्टैक्ट्स हैं, पर जब दिल भारी होता है तो कॉल लगाने के लिए एक भी नाम ऐसा नहीं दिखता जिसे बिना सोचे-समझे अपनी तकलीफ बता सकूं।",
+    possibleComments: [
+      'हर उस इंसान की कहानी जो अपने घर से दूर किसी अनजान शहर में खुद को ढूंढ रहा है।',
+      'करियर की दौड़ में हमने जिंदगी जीना ही छोड़ दिया।'
+    ]
+  },
+  {
+    id: 'en_long_1',
+    category: 'deep',
+    city: 'Mumbai',
+    country: 'India',
+    author: 'Radhika Sen',
+    rawImage: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=700&q=75',
+    text: "From the outside, my life looks like a perfectly curated aesthetic dream. A thriving design consultancy in Bandra, regular invites to upscale networking dinners, and an apartment filled with bespoke art and monstera plants. But nobody sees what happens when the door locks shut behind me at midnight. I have spent the last seven years perfecting the art of emotional camouflage. When my engagement abruptly fell apart two years ago, I didn't take a single mental health day; instead, I took on twice the workload to ensure I was too exhausted to feel the void. People constantly tell me how inspired they are by my independence and emotional composure, unaware that being constantly praised for being 'unbreakable' is a private prison. When you teach everyone that you never break down, they gradually stop asking if you're hurting. Sometimes the heaviest burden in this world isn't failure—it is the quiet, chronic exhaustion of having to maintain the myth of your own effortless strength.",
+    possibleComments: [
+      'Being the strong one is the loneliest role in any family or circle.',
+      'This spoke directly to the core of what so many of us hide.'
+    ]
+  },
+  {
+    id: 'hi_long_2',
+    category: 'incident',
+    city: 'Lucknow',
+    country: 'India',
+    author: 'आकाश रस्तोगी',
+    rawImage: 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=700&q=75',
+    text: "तीन साल पहले कॉलेज के आखिरी साल में एक ऐसी गलती कर बैठा था जिसका बोझ आज भी मेरे दिल को कचोटता है। हमारे हॉस्टल में एक बेहद सीधा और गरीब लड़का था जो ट्यूशन पढ़ाकर अपनी फीस भरता था। एक दिन दोस्तों के साथ बेवजह की शरारत में हमने उसके कमरे में छिपकर उसका पुराना टूटा हुआ फोन गायब कर दिया और सोचा कि थोड़ी देर बाद लौटाकर खूब हंसेंगे। लेकिन उस फोन में उसकी बीमार मां की आखिरी कुछ वॉइस रिकॉर्डिंग्स और अस्पताल की दवाइयों की डिटेल्स थीं। जब वह घबराकर पागलों की तरह हॉस्टल के गलियारे में रोने लगा और उसकी हालत देखकर वॉर्डन आने लगे, तो हम सब अपने डर की वजह से चुप रह गए और डरपोक बनकर वह फोन कभी लौटा ही नहीं पाए। उसने अगले हफ्ते हॉस्टल छोड़ दिया और कॉलेज से भी नाम कटवा लिया। आज जब भी मुझे कोई नई कामयाबी मिलती है, मुझे उस लड़के की बेबस रोती हुई आंखें याद आ जाती हैं। इंसान की एक सेकंड की कायरता किसी दूसरे की पूरी जिंदगी पर कितना गहरा घाव छोड़ सकती है, यह मुझे उस दिन समझ आया।",
+    possibleComments: [
+      'गलती मान लेना ही पछतावे की पहली सीढ़ी है भाई।',
+      'कुछ गलतियां उम्र भर इंसान का पीछा नहीं छोड़तीं।'
+    ]
+  },
+  {
+    id: 'bn_long_2',
     category: 'deep',
     city: 'Dhaka',
     country: 'Bangladesh',
-    author: 'তানভীর হাসান',
+    author: 'ফারহানা ইসলাম',
     rawImage: 'https://images.unsplash.com/photo-1477959858617-67f30bc75b82?auto=format&fit=crop&w=700&q=75',
-    text: "গ্রামের ধুলোমাখা পথ ছেড়ে যখন প্রথম ঢাকায় পা রেখেছিলাম, বুকের ভেতর একটাই জেদ ছিল—আমাকে প্রতিষ্ঠিত হতে হবে। বাবা যখন অসুস্থ শরীর নিয়ে গ্রামে কৃষিকাজ করতেন, তখন মনে মনে পণ করেছিলাম বাবার শেষ বয়সটা সুখের বানিয়ে দেব। আজ ধানমন্ডিতে ফ্ল্যাট আছে, গাড়ি আছে। কিন্তু যে বাবার জন্য এই লড়াইটা লড়লাম, সেই বাবাই সাফল্য দেখার মাত্র দুই মাস আগে চলে গেলেন। এখন এই সাফল্যের ওজন পৃথিবীর সবচেয়ে ভারী বোঝা বলে মনে হয়।",
+    text: "ঢাকার এক ব্যস্ত হাসপাতালের আইসিইউ-র বাইরে বসে এই কথাগুলো লিখছি। মানুষের জীবনের মূল্য যে কত পলকা, তা এই করিডোরে কয়েক ঘণ্টা না কাটালে কোনোদিন উপলব্ধি করা সম্ভব নয়। আমরা মাসের পর মাস ছোটখাটো অহংকার, মান-অভিমান আর হিংসা নিয়ে প্রিয়জনদের সাথে কথা বলা বন্ধ করে রাখি। ভাবি অহংকার বজায় রাখাটাই বুঝি ব্যক্তিত্বের সবচেয়ে বড় পরিচয়। অথচ এই দেয়ালগুলোর ওপারে যখন কোনো একজন মানুষের মনিটরের হৃদস্পন্দন হঠাৎ সরলরেখা হয়ে যায়, তখন আমাদের সমস্ত অহংকার, রাগ আর যুক্তি ধুলোয় মিশে যায়। যে মানুষটির সাথে কাল রাতেও তুচ্ছ বিষয়ে রাগ করে খাবার না খেয়ে উঠে গিয়েছিলাম, আজ তার নিঃশ্বাসটুকুর জন্য সমস্ত পৃথিবী দান করে দিতে ইচ্ছে করছে। প্রিয়জনকে ভালোবাসার কথা জানাতে কোনো বিশেষ দিনের অপেক্ষা করবেন না। জীবনের শেষ মুহূর্তগুলো কখনো নোটিশ দিয়ে আসে না।",
     possibleComments: [
-      'পড়ে চোখে জল চলে এলো ভাই। বাবা ওপর থেকেই আপনার জন্য গর্ব করছেন।',
-      'সাফল্য তখনই সুন্দর যখন ভাগ করে নেওয়ার মানুষ পাশে থাকে।'
+      'চোখ খুলে দেওয়ার মতো লেখা আপু। আপনার পরিবারের জন্য অনেক প্রার্থনা রইল।',
+      'অহংকার ক্ষণিকের, কিন্তু প্রিয়জন হারানোর শোক আজীবনের।'
     ]
   },
   {
-    id: 'bn_post_3',
+    id: 'en_long_2',
+    category: 'finance',
+    city: 'Seattle',
+    country: 'USA',
+    author: 'David Vance',
+    rawImage: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=700&q=75',
+    text: "I spent the majority of my twenties convinced that reaching a $400k total compensation package in Big Tech would solve every underlying anxiety I inherited from a turbulent childhood. I optimized every single waking minute—tracked my productivity in Notion dashboards, outsourced my grocery shopping to save 45 minutes a week, and treated personal relationships like transactional quarterly networking check-ins. When I finally hit the compensation target and bought the panoramic condo overlooking Puget Sound, the psychological relief lasted exactly forty-eight hours. The following Monday, the exact same void opened up again, demanding the next promotion, the next RSUs tranche, the next arbitrary status milestone. Corporate consumerism is a brilliantly designed psychological hamster wheel; it convinces you that happiness is always just one salary band away, keeping you tethered until your prime years have quietly evaporated.",
+    possibleComments: [
+      'The hedonic treadmill is real. Peace of mind is the only true wealth.',
+      'Spot on. We trade our youth for numbers on a screen.'
+    ]
+  },
+  {
+    id: 'hi_long_3',
+    category: 'motivational',
+    city: 'Patna',
+    country: 'India',
+    author: 'संजय वर्मा',
+    rawImage: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=700&q=75',
+    text: "बत्तीस साल की उम्र में जब मैंने अपनी सरकारी नौकरी की तैयारी छोड़कर कोडिंग और वेब डेवलपमेंट की दुनिया में कदम रखा, तो मेरे अपने रिश्तेदारों ने मेरे पिता से कह दिया था कि आपके बेटे का मानसिक संतुलन बिगड़ चुका है। शुरुआती डेढ़ साल इतने अंधेरे भरे थे कि रोज रात को कंप्यूटर स्क्रीन पर एरर देखते-देखते आंखें भर आती थीं। बचत खत्म हो रही थी और शादी के रिश्ते टूटने लगे थे। लेकिन सीने में एक जिद थी कि समाज द्वारा तय की गई टाइमलाइन पर अपनी जिंदगी बर्बाद नहीं करूंगा। आज जब मैं एक रिमोट टेक कंपनी के लिए काम करता हूं और अपने कमरे में बैठकर डॉलर में कमाता हूं, तो वही रिश्तेदार अपने बच्चों को मेरे पास करियर गाइडेंस के लिए भेजते हैं। दुनिया सिर्फ आपका नतीजा देखती है, उन नतीजों के पीछे की काली रातों की तपस्या नहीं। अगर आपके सपनों पर आपका खुद का यकीन पक्का है, तो दुनिया के तानों को सिर्फ बैकग्राउंड नॉइज़ समझकर आगे बढ़ते रहिए।",
+    possibleComments: [
+      'बहुत ही शानदार और हिम्मत देने वाला सफर भाई!',
+      'लोग सिर्फ उगते सूरज को सलाम करते हैं।'
+    ]
+  },
+  {
+    id: 'bn_long_3',
+    category: 'intelligent',
+    city: 'Kolkata',
+    country: 'India',
+    author: 'দেবাশিস মুখোপাধ্যায়',
+    rawImage: 'https://images.unsplash.com/photo-1491841573634-28140fc7ced7?auto=format&fit=crop&w=700&q=75',
+    text: "বর্তমান বাঙালি সমাজ এমন এক অদ্ভুত আত্মপ্রবঞ্চনার মধ্য দিয়ে যাচ্ছে যেখানে সোশ্যাল মিডিয়ার ভার্চুয়াল লাইক মানুষের প্রকৃত যোগ্যতার একমাত্র মানদণ্ড হয়ে দাঁড়িয়েছে। বইমেলার ভিড়ে মানুষ বই কেনার চেয়ে সেলফি তুলতে বেশি ব্যস্ত, আর বাড়ি ফিরে ঘণ্টার পর ঘণ্টা শর্টস আর রিলস দেখে নিজের মেধা নষ্ট করছে। ফেসবুকের কমেন্ট বক্সে যুক্তি দিয়ে তর্ক জেতা হয়তো খুব সহজ, কিন্তু বাস্তবের উঠোনে নেমে রক্ত-মাংসের সম্পর্ক টিকিয়ে রাখার জন্য যুক্তির চেয়ে নিঃশব্দ সহমর্মিতা আর ক্ষমার অনেক বেশি প্রয়োজন হয়। আমরা নিজেদের আধুনিক ভাবছি ঠিকই, কিন্তু মানসিক উদারতা আর পারস্পরিক শ্রদ্ধাবোধের দিক থেকে দিন দিন চরম সংকীর্ণতার শিকার হচ্ছি।",
+    possibleComments: [
+      'অত্যন্ত সময়োপযোগী এবং খাঁটি বাস্তব কথা দেবাশিসদা।',
+      'আমাদের শিকড় আর গভীরতা ফিরে পাওয়া খুব জরুরি।'
+    ]
+  },
+
+  // --- CORE CONCISE & MEDIUM CONFESSIONS ---
+  {
+    id: 'bn_post_1',
     category: 'funny',
     city: 'Kolkata',
     country: 'India',
     author: 'শুভঙ্কর চক্রবর্তী',
     rawImage: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=700&q=75',
     text: "সল্টলেকের অফিসে যখনই কোনো জটিল ডেডলাইন আসে বা ক্লায়েন্ট মিটিং ডাকে, টিমের সবাই টেনশন করে, আর আমি একটা মাস্টারস্ট্রোক চালাই। ল্যাপটপের ওয়াইফাই বন্ধ করে টার্মিনালে বিদঘুটে স্ক্রিপ্ট খুলে কপালে হাত দিয়ে বসি! গত সপ্তাহে প্রজেক্ট ডিরেক্টর এসে বললেন, 'শুভঙ্কর তোমার ডেডিকেশন শিক্ষণীয়' বলে স্পেশাল কফি খাইয়ে গেলেন! অথচ আমি ভেতরে ভেতরে হাসতে হাসতে শেষ!",
-    possibleComments: [
-      'ভাইরে ভাই! আপনি তো কর্পোরেট অস্কার পাওয়ার দাবিদার 😂',
-      'কাল থেকে আমিও ট্রাই করব ভাবছি!'
-    ]
+    possibleComments: ['ভাইরে ভাই! আপনি তো কর্পোরেট অস্কার পাওয়ার দাবিদার 😂', 'কাল থেকে আমিও ট্রাই করব!']
   },
-  {
-    id: 'bn_post_4',
-    category: 'incident',
-    city: 'Chittagong',
-    country: 'Bangladesh',
-    author: 'রাকিবুল হাসান',
-    rawImage: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=700&q=75',
-    text: "আত্মীয়ের বিয়েতে কাচ্চির পর মিষ্টির শোকেসে গিয়ে দেখি স্পেশাল ক্ষীরসা সাধারণ মেহমানদের জন্য বন্ধ। আমি রাশভারি গলায় সাফারি ঠিক করে বললাম, 'লন্ডন থেকে বরের চাচা আসছেন, চার প্লেট ভিআইপি কর্নারে পাঠান।' ছেলেটা এমন স্যালুট দিল যেন আমি ভিআইপি অফিসার! পেট পুরে খেয়ে বের হলাম, অথচ আমি বরের দূর সম্পর্কের পাড়ার প্রতিবেশীর বন্ধু!",
-    possibleComments: [
-      'কনফিডেন্স লেভেল ইনফিনিটি! সেরা টেকনিক 😂',
-      'বিয়েবাড়ির স্পেশাল মিষ্টি খাওয়ার টেকনিক দারুণ।'
-    ]
-  },
-  {
-    id: 'bn_post_5',
-    category: 'intelligent',
-    city: 'Kolkata',
-    country: 'India',
-    author: 'দেবাশিস মুখোপাধ্যায়',
-    rawImage: 'https://images.unsplash.com/photo-1491841573634-28140fc7ced7?auto=format&fit=crop&w=700&q=75',
-    text: "বর্তমান বাঙালি সমাজ এমন এক অদ্ভুত জায়গায় যাচ্ছে যেখানে সোশ্যাল মিডিয়ার ভার্চুয়াল লাইক মানুষের যোগ্যতার মাপকাঠি। বইমেলার ভিড়ে সেলফি হয়, কিন্তু বাড়ি ফিরে ঘণ্টার পর ঘণ্টা রিলস দেখে সময় কাটে। যুক্তি দিয়ে ফেসবুকে তর্ক জেতা সহজ, কিন্তু জীবনে সম্পর্ক টিকিয়ে রাখার জন্য যুক্তির চেয়ে নিঃশব্দ সহমর্মিতা অনেক বেশি দামী।",
-    possibleComments: [
-      'অত্যন্ত সময়োপযোগী এবং খাঁটি বাস্তব কথা দেবাশিসদা।',
-      'সোশ্যাল মিডিয়ার সস্তা চাকচিক্য আমাদের শিকড় নষ্ট করছে।'
-    ]
-  },
-  {
-    id: 'bn_post_6',
-    category: 'motivational',
-    city: 'Kolkata',
-    country: 'India',
-    author: 'প্রীতম ঘোষ',
-    rawImage: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=700&q=75',
-    text: "পরাজয় মানে জীবনের সমাপ্তি নয়; পরাজয় হলো আরও প্রস্তুতি নিয়ে মাঠে নামার ডাক। সমাজে ২৫-এ প্রতিষ্ঠিত হতে হবে, ৩০-এ বাড়ি বানাতে হবে—এই কৃত্রিম টাইমলাইন জীবনকে বিষাক্ত করে। কালবৈশাখীতে ন্যাড়া হওয়া বটগাছও বসন্তে নতুন পাতায় ভরে ওঠে। নিজের স্বপ্নের প্রতি ভরসা রাখুন, খারাপ সময় চিরকাল থাকে না।",
-    possibleComments: [
-      'আজকের ক্লান্ত দিনে এই লেখাটা খুব দরকার ছিল। ধন্যবাদ।',
-      'শিকড় শক্ত থাকলে কোনো ঝড়ই শেষ করতে পারে না।'
-    ]
-  },
-
-  // 2. Hindi (India)
   {
     id: 'hi_post_1',
-    category: 'deep',
-    city: 'Mumbai',
-    country: 'India',
-    author: 'रोहन शर्मा',
-    rawImage: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=700&q=75',
-    text: "छोटे शहर से जब मुंबई आया था तो लगता था कि देर रात तक घर आना ही असली आजादी है। पर कल रात 2 बजे जब तेज बुखार में चक्कर खाकर फर्श पर गिरा, तो फोन में 600 कॉन्टैक्ट्स होने के बाद भी एक ऐसा इंसान नहीं था जिसे कह सकूं कि 'यार एक गोली लाकर दे दे।' समझ आया कि जिसे आत्मनिर्भरता कहते हैं, वो कई बार सिर्फ अकेलेपन का दूसरा नाम होती है।",
-    possibleComments: [
-      'महानगरों की यही कड़वी सच्चाई है भाई, लाखों की भीड़ में इंसान अकेला है।',
-      'दवा हमेशा कमरे में पहले से रखा कीजिए दोस्त।'
-    ]
-  },
-  {
-    id: 'hi_post_2',
     category: 'funny',
     city: 'Delhi',
     country: 'India',
     author: 'अमित कुमार सिंह',
     rawImage: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=700&q=75',
     text: "नई टीम लीडर सुबह 8:30 बजे कॉल करती थी। मैंने पूरी टीम को बोल दिया कि मुझे 'सर्कैडियन हियरिंग डिसऑर्डर' है जिससे 11 बजे से पहले फोन की घंटी बजने पर चक्कर आते हैं। अब लीडर ने ऑफिशियल मेल कर दिया कि 'अमित को 11:05 से पहले कोई कॉल न करे।' पूरी दुनिया 9 बजे से खट रही होती है और मैं चाय की चुस्की के साथ अखबार पढ़ता हूं!",
-    possibleComments: [
-      'अमित भाई, 200 IQ मूव! पेटेंट करवा लो 😂🔥',
-      'गजब दिमाग लगाया भाई साहब!'
-    ]
+    possibleComments: ['अमित भाई, 200 IQ मूव! पेटेंट करवा लो 😂🔥', 'गजब दिमाग लगाया भाई साहब!']
   },
-  {
-    id: 'hi_post_3',
-    category: 'deep',
-    city: 'Pune',
-    country: 'India',
-    author: 'अदिति कुलकर्णी',
-    rawImage: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=700&q=75',
-    text: "मैंने सालों सबको ये यकीन दिलाने में बिता दिए कि मैं बहुत मजबूत हूं और कभी रोती नहीं। हर किसी के दुख में खड़ी रही। पर जब आप सबको यकीन दिला देते हैं कि आप कभी टूट नहीं सकते, तो लोग पूछना ही बंद कर देते हैं कि आप अंदर से कैसे हैं। कल कार में अकेले फूट-फूटकर रोई, किसी बात का दुख नहीं था, बस हमेशा मजबूत बने रहने की भारी थकान थी।",
-    possibleComments: [
-      'कमजोर होना कोई गुनाह नहीं है अदिति, कभी-कभी रो लेना चाहिए।',
-      'हमेशा मजबूत रहने का मुखौटा बहुत भारी होता है।'
-    ]
-  },
-  {
-    id: 'hi_post_4',
-    category: 'funny',
-    city: 'Lucknow',
-    country: 'India',
-    author: 'विकास श्रीवास्तव',
-    rawImage: 'https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=700&q=75',
-    text: "घरवाले पिछले 6 महीने से पूरे खानदान में तारीफ कर रहे हैं कि विकास शाम को पार्क में डेढ़ घंटे कड़ी रनिंग करता है। सच्चाई यह है कि मैं पार्क के पिछले गेट से निकलकर चाट-कचौड़ी और समोसे उड़ाता हूं, फिर पार्क आकर पसीना पोंछते हुए हांफता हूं। वजन 2 किलो बढ़ा तो सबको बोला कि 'ये फैट नहीं, हैवी मसल्स का वजन है!'",
-    possibleComments: [
-      'हैवी मसल्स का वजन! सिर्फ लखनऊ वाले ही ऐसा कह सकते हैं 😂',
-      'समोसे के आगे मैराथन फेल है भाई!'
-    ]
-  },
-  {
-    id: 'hi_post_5',
-    category: 'incident',
-    city: 'Agra',
-    country: 'India',
-    author: 'दीपक यादव',
-    rawImage: 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=700&q=75',
-    text: "यमुना एक्सप्रेसवे पर रात 2 बजे बाइक पंक्चर हो गई। कड़ाके की ठंड और जीरो नेटवर्क में हाथ कांप रहे थे। तभी एक पुराना ट्रक रुका, ड्राइवर ने उतरकर बिना सवाल किए 20 मिनट में टायर ठीक किया, गर्म चाय पिलाई। जब पैसे दिए तो मुस्कुराकर बोला—'बाबूजी, सफर में इंसान ही इंसान के काम आता है, बस घर पहुंचकर मां को फोन कर देना।' इंसानियत आज भी जिंदा है।",
-    possibleComments: [
-      'उस ड्राइवर भाई को दिल से सलाम।',
-      'हाईवे पर ऐसे फरिश्ते मिलना बहुत बड़ी बात है।'
-    ]
-  },
-  {
-    id: 'hi_post_6',
-    category: 'motivational',
-    city: 'Patna',
-    country: 'India',
-    author: 'संजय वर्मा',
-    rawImage: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=700&q=75',
-    text: "35 की उम्र में सुरक्षित नौकरी छोड़कर कोडिंग सीखने का रिस्क लिया था। रिश्तेदारों ने कहा दिमाग खराब हो गया है। शुरुआती 1.5 साल इतने मुश्किल थे कि एरर देखकर रोना आता था। पर मैंने मैदान नहीं छोड़ा। आज जब ग्लोबल टेक कंपनी में हूं, तो वही लोग कहते हैं 'संजय की किस्मत अच्छी थी।' दुनिया सिर्फ नतीजा देखती है, रातों की तपस्या नहीं।",
-    possibleComments: [
-      '35 में ऐसा साहस दिखाना बहुत बड़ी बात है। प्रेरणादायक!',
-      'लोग प्रोसेस नहीं रिजल्ट देखते हैं।'
-    ]
-  },
-  {
-    id: 'hi_post_7',
-    category: 'intelligent',
-    city: 'Varanasi',
-    country: 'India',
-    author: 'समीक्षा त्रिवेदी',
-    rawImage: 'https://images.unsplash.com/photo-1457369804613-52c61a468e7d?auto=format&fit=crop&w=700&q=75',
-    text: "काशी के घाटों पर बैठकर जब चिताओं और बहती गंगा को देखते हैं, तो जीवन की सारी भागदौड़ का घमंड उतर जाता है। हम जवानी मकान, पद और बैंक बैलेंस जोड़ने में झोंक देते हैं, पर जब तक जीने की पूरी तैयारी होती है, रंगमंच से पर्दा गिरने का वक्त आ जाता है। समझदारी इसमें है कि आप पीछे कितनी शांति छोड़ कर जाते हैं।",
-    possibleComments: [
-      'मणिकर्णिका घाट का यही शाश्वत सत्य है।',
-      'अहंकार राख होने में एक पल लगता है।'
-    ]
-  },
-
-  // 3. Indian Urban & Corporate English
   {
     id: 'ind_en_post_1',
     category: 'finance',
@@ -205,90 +158,17 @@ const CURATED_POST_POOL: SimulatedPostItem[] = [
     author: 'Vikram Razdan',
     rawImage: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=700&q=75',
     text: "Working in Bengaluru startups taught me how early-stage founders exploit 23-year-olds with LinkedIn buzzwords. I worked 15-hour shifts believing the 'we are a family' pitch. The moment Series-B funding stalled, a 4-minute mass Meet call fired 40% of us without warning. Your cervical spine and undisturbed dinner are worth more than unvested phantom equity.",
-    possibleComments: [
-      'Health before hustle. Startups are business, not a family.',
-      'The moment funding drops, loyalty disappears.'
-    ]
+    possibleComments: ['Health before hustle. Startups are business, not a family.', 'The moment funding drops, loyalty disappears.']
   },
-  {
-    id: 'ind_en_post_2',
-    category: 'finance',
-    city: 'Hyderabad',
-    country: 'India',
-    author: 'Arjun Rao',
-    rawImage: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=700&q=75',
-    text: "Earning in USD working remotely from Hyderabad while my batchmates battle 3-hour Hitec City traffic. I cook fresh meals with my mother and write Go microservices in shorts. Traditional 9-to-6 office attendance was never about productivity; it was about middle management surveillance. Owning your calendar is true wealth.",
-    possibleComments: [
-      'Commute drains your life force. Remote work is freedom.',
-      'True wealth is owning your daily calendar.'
-    ]
-  },
-  {
-    id: 'ind_en_post_3',
-    category: 'deep',
-    city: 'Mumbai',
-    country: 'India',
-    author: 'Ananya Deshmukh',
-    rawImage: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=700&q=75',
-    text: "Attended my 12-year school reunion in Bandra. Within 5 minutes everyone reduced life to apartment sizes, mutual funds, and toddler curricula. Nobody asked: 'Are you at peace? Do you still laugh from the belly?' We didn't grow up; we just traded report cards for net-worth spreadsheets.",
-    possibleComments: [
-      'Reunions are just glorified status auctions now.',
-      'Trading report cards for spreadsheets hit straight home.'
-    ]
-  },
-
-  // 4. Global Worldwide English
   {
     id: 'world_post_1',
-    category: 'finance',
-    city: 'Seattle',
-    country: 'USA',
-    author: 'David Chen',
-    rawImage: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=700&q=75',
-    text: "Pulling $375k in Big Tech looks glamorous until 42% vanishes in taxes and $4,800/mo goes to a 6.8% mortgage. Next morning 300 engineers get automated layoff emails. High salary with constant dread isn't financial independence—it's just a luxury panic room with golden handcuffs.",
-    possibleComments: [
-      'Golden handcuffs are real. Zero debt beats a huge stressed salary.',
-      'Corporate loyalty is an engineered myth.'
-    ]
-  },
-  {
-    id: 'world_post_2',
-    category: 'finance',
-    city: 'London',
-    country: 'United Kingdom',
-    author: 'Charlotte Evans',
-    rawImage: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=700&q=75',
-    text: "London's housing inflation has turned our generation into high-earning hostages. I'm an actuarial consultant in the Square Mile, yet over half my pay goes to a draughty Peckham flatshare with a rattling radiator. We drink flat whites pretending we're thriving cosmopolitan pros, but rent anxiety never stops.",
-    possibleComments: [
-      'Generational wealth gap in London is wild.',
-      'Renting dignity in London is completely exhausting.'
-    ]
-  },
-  {
-    id: 'world_post_3',
-    category: 'finance',
-    city: 'Singapore',
-    country: 'Singapore',
-    author: 'Marcus Tan',
-    rawImage: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=700&q=75',
-    text: "I run a remote cloud DevOps consultancy while telling extended family I'm a broke freelancer. The moment relatives smell US dollars, Lunar New Year becomes a predatory circus of unsolicited investment pitches. Stealth wealth is peace. Drive a modest car, invest quietly, live without drama.",
-    possibleComments: [
-      'Stealth wealth is the true superpower in Asia.',
-      'Loud wealth attracts drama; quiet wealth gives serenity.'
-    ]
-  },
-  {
-    id: 'world_post_4',
     category: 'funny',
     city: 'Chicago',
     country: 'USA',
     author: 'Natalie Gallagher',
     rawImage: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=700&q=75',
     text: "Friday 4:45 PM my manager dropped an impromptu slide deck review. Having concert tickets at 6:30, I unmuted, opened and closed my mouth in silence while tapping a pen to fake packet loss. Chat lit up: 'Natalie your audio is fried, go enjoy your weekend!' Slacking secret: let tech fail for you.",
-    possibleComments: [
-      'The pen-tapping packet loss simulation is elite comedy 😂',
-      'Stealing this for our mandatory Friday retrospective.'
-    ]
+    possibleComments: ['The pen-tapping packet loss simulation is elite comedy 😂', 'Stealing this for our mandatory Friday retrospective.']
   }
 ];
 
@@ -388,7 +268,7 @@ function updateSimulatedPostProgression(posts: Confession[]): Confession[] {
   const now = Date.now();
 
   return posts.map((post: any) => {
-    const poolItem = CURATED_POST_POOL.find((p) => post.id.startsWith(p.id));
+    const poolItem = CURATED_POST_POOL.find((p) => p.id === post.id);
     if (!poolItem) return post;
 
     const postTime = typeof post.createdAt === 'number' ? post.createdAt : new Date(post.createdAt).getTime() || now;
@@ -433,11 +313,11 @@ function updateSimulatedPostProgression(posts: Confession[]): Confession[] {
   });
 }
 
-async function buildInitialConfession(item: SimulatedPostItem, timestamp: number, customId?: string): Promise<Confession> {
+async function buildInitialConfession(item: SimulatedPostItem, timestamp: number): Promise<Confession> {
   const compressedImageJpg = await compressUrlToUnder50KB(item.rawImage);
 
   return {
-    id: customId || item.id,
+    id: item.id,
     authorName: item.author,
     text: item.text,
     body: item.text,
@@ -458,10 +338,10 @@ async function buildInitialConfession(item: SimulatedPostItem, timestamp: number
 }
 
 /**
- * FAST BOOTSTRAP TO 50 POSTS + 12-MINUTE DRIP UP TO 100 POSTS
+ * FAST BOOTSTRAP TO 20 POSTS + NORMAL DRIP SWITCH
  */
 export async function syncSimulatedActivity(existingPosts: Confession[]): Promise<Confession[]> {
-  // Purge older cache keys
+  // Purge older v10/v11 caches
   const OUTDATED_KEYS = [
     'openconfess_used_post_registry_v11',
     'openconfess_live_simulated_posts_v11',
@@ -469,11 +349,6 @@ export async function syncSimulatedActivity(existingPosts: Confession[]): Promis
     'openconfess_used_post_registry_v10',
     'openconfess_live_simulated_posts_v10',
     'openconfess_last_drip_post_time_v10',
-    'openconfess_used_post_registry_v9',
-    'openconfess_live_simulated_posts_v9',
-    'openconfess_last_drip_post_time_v9',
-    'openconfess_simulated_feed_pool_v2',
-    'openconfess_live_simulated_posts_v8'
   ];
   OUTDATED_KEYS.forEach((key) => {
     try {
@@ -485,45 +360,37 @@ export async function syncSimulatedActivity(existingPosts: Confession[]): Promis
   const usedIds = getUsedPostIds();
   const now = Date.now();
 
-  const INITIAL_POST_TARGET = 50;
-  const MAX_DAILY_CAP = 100;
-  const DRIP_INTERVAL = 12 * 60 * 1000; // Har 12 minute me 1 post
+  // 1. FAST GENERATION: Seed initial posts
+  if (livePosts.length < 20) {
+    const needed = 20 - livePosts.length;
+    const available = CURATED_POST_POOL.filter((p) => !usedIds.has(p.id)).slice(0, needed);
 
-  // 1. FAST GENERATION: Bootstrap seed up to 50 realistic posts
-  if (livePosts.length < INITIAL_POST_TARGET) {
-    const needed = INITIAL_POST_TARGET - livePosts.length;
-
-    for (let idx = 0; idx < needed; idx++) {
-      const template = CURATED_POST_POOL[idx % CURATED_POST_POOL.length];
-      const cycle = Math.floor(idx / CURATED_POST_POOL.length);
-      const uniqueId = cycle === 0 ? template.id : `${template.id}_cycle_${cycle}_${idx}`;
-
-      if (!usedIds.has(uniqueId)) {
-        // Realistic staggered times over earlier hours
-        const pastTime = now - (idx + 1) * (14 * 60 * 1000);
-        const post = await buildInitialConfession(template, pastTime, uniqueId);
-        livePosts.push(post);
-        recordUsedPostId(uniqueId);
-      }
+    for (let idx = 0; idx < available.length; idx++) {
+      const item = available[idx];
+      const pastTime = now - (idx + 1) * (2.8 * 60 * 1000);
+      const post = await buildInitialConfession(item, pastTime);
+      livePosts.push(post);
+      recordUsedPostId(item.id);
     }
 
     saveLiveSimulatedPosts(livePosts);
     localStorage.setItem(LAST_SIMULATION_TIMESTAMP_KEY, String(now));
   }
 
-  // 2. 12-MINUTE DRIP MODE: After 50 posts, drip 1 post every 12 mins up to 100 posts
+  // 2. NORMAL DRIP MODE: 1 post every 22 minutes
   const lastPostTime = Number(localStorage.getItem(LAST_SIMULATION_TIMESTAMP_KEY) || 0);
+  const DRIP_INTERVAL = 22 * 60 * 1000;
 
-  if (livePosts.length >= INITIAL_POST_TARGET && livePosts.length < MAX_DAILY_CAP && now - lastPostTime >= DRIP_INTERVAL) {
-    const currentCount = livePosts.length;
-    const template = CURATED_POST_POOL[currentCount % CURATED_POST_POOL.length];
-    const dripUniqueId = `${template.id}_drip_${Date.now()}`;
-
-    const newDripPost = await buildInitialConfession(template, now, dripUniqueId);
-    livePosts.unshift(newDripPost);
-    recordUsedPostId(dripUniqueId);
-    saveLiveSimulatedPosts(livePosts);
-    localStorage.setItem(LAST_SIMULATION_TIMESTAMP_KEY, String(now));
+  if (livePosts.length >= 20 && now - lastPostTime >= DRIP_INTERVAL) {
+    const freshAvailable = CURATED_POST_POOL.filter((p) => !usedIds.has(p.id));
+    if (freshAvailable.length > 0) {
+      const nextItem = freshAvailable[0];
+      const newDripPost = await buildInitialConfession(nextItem, now);
+      livePosts.unshift(newDripPost);
+      recordUsedPostId(nextItem.id);
+      saveLiveSimulatedPosts(livePosts);
+      localStorage.setItem(LAST_SIMULATION_TIMESTAMP_KEY, String(now));
+    }
   }
 
   livePosts = updateSimulatedPostProgression(livePosts);
@@ -532,7 +399,6 @@ export async function syncSimulatedActivity(existingPosts: Confession[]): Promis
   const existingIdSet = new Set(existingPosts.map((p) => String(p.id)));
   const filteredSimulated = livePosts.filter((p) => !existingIdSet.has(String(p.id)));
 
-  // Combine and sort strictly by Newest First
   const allPosts = [...existingPosts, ...filteredSimulated];
   return allPosts.sort((a, b) => {
     const timeA = typeof a.createdAt === 'number' ? a.createdAt : new Date(a.createdAt).getTime() || 0;
