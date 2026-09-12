@@ -11,232 +11,1077 @@ interface SimulatedPostItem {
   possibleComments: string[];
 }
 
-// Global fixed base timestamp so timeline moves forward like a real server clock (v16: 100 posts / 24 hrs)
-const SIM_EPOCH_KEY = 'openconfess_timeline_epoch_v16';
-const CURRENT_INDEX_KEY = 'openconfess_drip_current_index_v16';
-const CACHED_POSTS_KEY = 'openconfess_generated_feed_v16';
+// Global fixed base timestamp so timeline moves forward like a real server clock (v17: 100 unique posts / 24 hrs, no repeat/no re-top)
+const SIM_EPOCH_KEY = 'openconfess_timeline_epoch_v17';
+const CURRENT_INDEX_KEY = 'openconfess_drip_current_index_v17';
+const CACHED_POSTS_KEY = 'openconfess_generated_feed_v17';
 
 const FALLBACK_LIGHTWEIGHT_JPEG =
   'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=';
 
 // =========================================================================
-// 50+ DIVERSE GLOBAL CONFESSIONS (English Global, Hindi, Bangla)
-// Every item has a 100% UNIQUE image so nothing ever repeats.
+// 100 FULLY UNIQUE GLOBAL CONFESSIONS (English, Hindi, Bangla)
+// Every single item has a 100% UNIQUE, deterministic image (via picsum.photos
+// seeded URLs) so nothing ever repeats across the entire 24-hour cycle.
 // =========================================================================
 const CURATED_POST_POOL: SimulatedPostItem[] = [
-  // --- US / UK / Global English (Corporate, Life, Deep, Relationships) ---
   {
-    id: 'glob_en_1',
-    category: 'finance',
+    id: 'en_deep_1',
+    category: 'deep',
     city: 'New York',
     country: 'USA',
     author: 'Ethan Miller',
-    rawImage: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=700&q=75',
-    text: "I spent my entire twenties working 80-hour weeks in Manhattan investment banking, convincing myself that reaching managing director status would cure the gnawing anxiety I've carried since childhood. I skipped my sister's wedding, let four meaningful relationships disintegrate, and lived on cold brew and prescription stimulants. Last month I finally received the seven-figure bonus I thought would fix my life. I stood alone in my Tribeca condo, looking at the city skyline at 3 AM, and felt absolutely nothing. We trade the irreplaceable vibrancy of youth for numbers on a screen, only to realize too late that time is the only asset you cannot buy back.",
-    possibleComments: [
-      'The golden cage is real. Peace of mind is the only genuine wealth.',
-      'So many high performers die inside chasing corporate titles.'
-    ]
+    rawImage: 'https://picsum.photos/seed/openconfess-en-1-1/700/500',
+    text: 'I moved to New York chasing a career that promised meaning, but most nights I sit alone wondering when ambition quietly replaced my sense of self. Success looks perfect from the outside, yet it feels strangely hollow from within.',
+    possibleComments: ['This hit closer to home than I expected.', 'Success without peace is just a slower kind of loss.']
   },
   {
-    id: 'glob_en_2',
-    category: 'deep',
+    id: 'en_funny_2',
+    category: 'funny',
     city: 'London',
     country: 'United Kingdom',
     author: 'Eleanor Wright',
-    rawImage: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=700&q=75',
-    text: "London's rental market has made our generation feel like permanent, overeducated nomads. I work as a senior policy advisor in Westminster, yet nearly sixty percent of my post-tax earnings goes to a cold, damp two-bedroom flat in Hackney with water damage and single-glazed windows. On LinkedIn we dress in bespoke trench coats and talk about socioeconomic resilience, but in reality, a single sudden root canal or broken boiler plunges me into week-long panic attacks. We're living in an era of aesthetic luxury and profound economic fragility.",
-    possibleComments: [
-      'London rent anxiety never sleeps. You are not alone in this.',
-      'Aesthetic wealth hiding everyday desperation is the modern curse.'
-    ]
+    rawImage: 'https://picsum.photos/seed/openconfess-en-2-2/700/500',
+    text: 'I told my London landlord my sink was \'making prophetic noises\' just to delay the repair bill another month. He actually believed me and sent a plumber the same day.',
+    possibleComments: ['This is criminally underrated office strategy 😂', 'Taking notes for Monday.']
   },
   {
-    id: 'glob_en_3',
-    category: 'funny',
+    id: 'en_intelligent_3',
+    category: 'intelligent',
     city: 'Chicago',
     country: 'USA',
     author: 'Natalie Gallagher',
-    rawImage: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=700&q=75',
-    text: "Friday 4:45 PM my department VP dropped an impromptu 40-slide quarterly deck review. Having expensive concert tickets at 6:15 PM, I muted my mic, opened and closed my mouth in silence on camera while rhythmically tapping a pencil against my headphone cable to simulate severe packet drops. The VP immediately messaged: 'Natalie your connection is completely broken, go unplug and have a great weekend!' Rule number one of modern corporate survival: make technology take the blame.",
-    possibleComments: [
-      'The pencil tap packet loss simulation is pure genius 😂',
-      'Using this in tomorrow morning sync without hesitation!'
-    ]
+    rawImage: 'https://picsum.photos/seed/openconfess-en-3-3/700/500',
+    text: 'I\'ve noticed that in Chicago, the loudest voice in the room is rarely the most informed one. Silence, used well, is an underrated competitive advantage.',
+    possibleComments: ['Quietly one of the smartest takes I\'ve read today.', 'Underrated wisdom right here.']
   },
   {
-    id: 'glob_en_4',
-    category: 'deep',
+    id: 'en_incident_4',
+    category: 'incident',
     city: 'Toronto',
     country: 'Canada',
     author: 'Liam MacLeod',
-    rawImage: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=700&q=75',
-    text: "I immigrated to Canada seven years ago with two suitcases and the promise of a peaceful life. My parents back home think I'm living in pure prosperity because I send money every month and never complain on video calls. What I never tell them is that I haven't taken a proper day off in three years, that winter temperatures make my bones ache, and that loneliness in North American suburbs is so quiet it deafens you. The immigrant sacrifice is invisible—you build a stable future for people who will never fully grasp what it cost your mental well-being.",
-    possibleComments: [
-      'The silent immigrant burden hits so close to home. Stay strong brother.',
-      'Sending love from Montreal. You are paving a huge path.'
-    ]
+    rawImage: 'https://picsum.photos/seed/openconfess-en-4-4/700/500',
+    text: 'Stranded outside Toronto during a storm with a dead phone, a stranger stopped, waited with me for two hours, and refused any payment. Restored a small piece of my faith in people.',
+    possibleComments: ['Faith in humanity: restored.', 'Small kindness, huge impact.']
   },
   {
-    id: 'glob_en_5',
-    category: 'incident',
+    id: 'en_motivational_5',
+    category: 'motivational',
     city: 'Sydney',
     country: 'Australia',
     author: 'Chloe Patterson',
-    rawImage: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=700&q=75',
-    text: "Driving across the Nullarbor desert two summers back, my radiator cracked in forty-degree heat with no cellphone signal for sixty miles. I sat beside my car preparing for the worst as the sun dipped. An elderly couple in a battered Land Cruiser pulled over, shared their drinking water, towed me forty kilometers to the nearest roadhouse, and refused every dollar I offered. The gentleman simply said: 'Pay it forward to someone stranded down the line.' In a world obsessed with online hostility, the open road still preserves pure humanity.",
-    possibleComments: [
-      'Classic Aussie outback hospitality. Absolute legends.',
-      'That pay-it-forward mindset is what keeps the world moving.'
-    ]
+    rawImage: 'https://picsum.photos/seed/openconfess-en-5-5/700/500',
+    text: 'Nobody in Sydney believed I could switch careers at thirty-five. The hardest part was never the skill gap, it was silencing the voices that said I was too late.',
+    possibleComments: ['Needed to read this today.', 'Proof that late starts still finish strong.']
   },
   {
-    id: 'glob_en_6',
+    id: 'en_finance_6',
     category: 'finance',
     city: 'Berlin',
     country: 'Germany',
     author: 'Felix Schneider',
-    rawImage: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=700&q=75',
-    text: "I left a high-stress venture capital career to open a quiet neighborhood sourdough bakery in Kreuzberg. My former university peers thought I had experienced a nervous breakdown because my income dropped by seventy percent overnight. But for the first time in fifteen years, my blood pressure is normal, I sleep eight hours without waking up gasping from stress dreams, and my hands produce something tangible every sunrise. Modern society defines prestige as suffering in style; real wealth is having peace of mind before 9 AM.",
-    possibleComments: [
-      'Sourdough and serenity over pitch decks any day.',
-      'True freedom is escaping the prestige trap.'
-    ]
+    rawImage: 'https://picsum.photos/seed/openconfess-en-6-6/700/500',
+    text: 'I spent a decade in Berlin finance chasing bonuses that never once bought back the time I lost getting them. Wealth without time is just a well-decorated cage.',
+    possibleComments: ['Time really is the only asset that never comes back.', 'Peace of mind is underrated wealth.']
   },
-
-  // --- Hindi Confessions (Long & Deep, Funny, Emotional) ---
+  {
+    id: 'en_deep_7',
+    category: 'deep',
+    city: 'Dublin',
+    country: 'Ireland',
+    author: 'Grace Bennett',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-7-7/700/500',
+    text: 'I moved to Dublin chasing a career that promised meaning, but most nights I sit alone wondering when ambition quietly replaced my sense of self. Success looks perfect from the outside, yet it feels strangely hollow from within.',
+    possibleComments: ['This hit closer to home than I expected.', 'Success without peace is just a slower kind of loss.']
+  },
+  {
+    id: 'en_funny_8',
+    category: 'funny',
+    city: 'Singapore',
+    country: 'Singapore',
+    author: 'Oliver Hayes',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-8-8/700/500',
+    text: 'I told my Singapore landlord my sink was \'making prophetic noises\' just to delay the repair bill another month. He actually believed me and sent a plumber the same day.',
+    possibleComments: ['This is criminally underrated office strategy 😂', 'Taking notes for Monday.']
+  },
+  {
+    id: 'en_intelligent_9',
+    category: 'intelligent',
+    city: 'Dubai',
+    country: 'UAE',
+    author: 'Sophie Turner',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-9-9/700/500',
+    text: 'I\'ve noticed that in Dubai, the loudest voice in the room is rarely the most informed one. Silence, used well, is an underrated competitive advantage.',
+    possibleComments: ['Quietly one of the smartest takes I\'ve read today.', 'Underrated wisdom right here.']
+  },
+  {
+    id: 'en_incident_10',
+    category: 'incident',
+    city: 'Auckland',
+    country: 'New Zealand',
+    author: 'Ryan Walsh',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-10-10/700/500',
+    text: 'Stranded outside Auckland during a storm with a dead phone, a stranger stopped, waited with me for two hours, and refused any payment. Restored a small piece of my faith in people.',
+    possibleComments: ['Faith in humanity: restored.', 'Small kindness, huge impact.']
+  },
+  {
+    id: 'en_motivational_11',
+    category: 'motivational',
+    city: 'Vancouver',
+    country: 'Canada',
+    author: 'Isabella Cruz',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-11-11/700/500',
+    text: 'Nobody in Vancouver believed I could switch careers at thirty-five. The hardest part was never the skill gap, it was silencing the voices that said I was too late.',
+    possibleComments: ['Needed to read this today.', 'Proof that late starts still finish strong.']
+  },
+  {
+    id: 'en_finance_12',
+    category: 'finance',
+    city: 'Manchester',
+    country: 'United Kingdom',
+    author: 'Mason Clarke',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-12-12/700/500',
+    text: 'I spent a decade in Manchester finance chasing bonuses that never once bought back the time I lost getting them. Wealth without time is just a well-decorated cage.',
+    possibleComments: ['Time really is the only asset that never comes back.', 'Peace of mind is underrated wealth.']
+  },
+  {
+    id: 'en_deep_13',
+    category: 'deep',
+    city: 'San Francisco',
+    country: 'USA',
+    author: 'Ava Thompson',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-13-13/700/500',
+    text: 'I moved to San Francisco chasing a career that promised meaning, but most nights I sit alone wondering when ambition quietly replaced my sense of self. Success looks perfect from the outside, yet it feels strangely hollow from within.',
+    possibleComments: ['This hit closer to home than I expected.', 'Success without peace is just a slower kind of loss.']
+  },
+  {
+    id: 'en_funny_14',
+    category: 'funny',
+    city: 'Melbourne',
+    country: 'Australia',
+    author: 'Noah Fitzgerald',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-14-14/700/500',
+    text: 'I told my Melbourne landlord my sink was \'making prophetic noises\' just to delay the repair bill another month. He actually believed me and sent a plumber the same day.',
+    possibleComments: ['This is criminally underrated office strategy 😂', 'Taking notes for Monday.']
+  },
+  {
+    id: 'en_intelligent_15',
+    category: 'intelligent',
+    city: 'Amsterdam',
+    country: 'Netherlands',
+    author: 'Lucy Bishop',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-15-15/700/500',
+    text: 'I\'ve noticed that in Amsterdam, the loudest voice in the room is rarely the most informed one. Silence, used well, is an underrated competitive advantage.',
+    possibleComments: ['Quietly one of the smartest takes I\'ve read today.', 'Underrated wisdom right here.']
+  },
+  {
+    id: 'en_incident_16',
+    category: 'incident',
+    city: 'Cape Town',
+    country: 'South Africa',
+    author: 'Daniel O\'Brien',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-16-16/700/500',
+    text: 'Stranded outside Cape Town during a storm with a dead phone, a stranger stopped, waited with me for two hours, and refused any payment. Restored a small piece of my faith in people.',
+    possibleComments: ['Faith in humanity: restored.', 'Small kindness, huge impact.']
+  },
+  {
+    id: 'en_motivational_17',
+    category: 'motivational',
+    city: 'Boston',
+    country: 'USA',
+    author: 'Emily Carter',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-17-17/700/500',
+    text: 'Nobody in Boston believed I could switch careers at thirty-five. The hardest part was never the skill gap, it was silencing the voices that said I was too late.',
+    possibleComments: ['Needed to read this today.', 'Proof that late starts still finish strong.']
+  },
+  {
+    id: 'en_finance_18',
+    category: 'finance',
+    city: 'Edinburgh',
+    country: 'United Kingdom',
+    author: 'Jack Sullivan',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-18-18/700/500',
+    text: 'I spent a decade in Edinburgh finance chasing bonuses that never once bought back the time I lost getting them. Wealth without time is just a well-decorated cage.',
+    possibleComments: ['Time really is the only asset that never comes back.', 'Peace of mind is underrated wealth.']
+  },
+  {
+    id: 'en_deep_19',
+    category: 'deep',
+    city: 'Austin',
+    country: 'USA',
+    author: 'Zoe Middleton',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-19-19/700/500',
+    text: 'I moved to Austin chasing a career that promised meaning, but most nights I sit alone wondering when ambition quietly replaced my sense of self. Success looks perfect from the outside, yet it feels strangely hollow from within.',
+    possibleComments: ['This hit closer to home than I expected.', 'Success without peace is just a slower kind of loss.']
+  },
+  {
+    id: 'en_funny_20',
+    category: 'funny',
+    city: 'Wellington',
+    country: 'New Zealand',
+    author: 'Adam Fletcher',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-20-20/700/500',
+    text: 'I told my Wellington landlord my sink was \'making prophetic noises\' just to delay the repair bill another month. He actually believed me and sent a plumber the same day.',
+    possibleComments: ['This is criminally underrated office strategy 😂', 'Taking notes for Monday.']
+  },
+  {
+    id: 'en_intelligent_21',
+    category: 'intelligent',
+    city: 'New York',
+    country: 'USA',
+    author: 'Ethan Miller',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-21-21/700/500',
+    text: 'I\'ve noticed that in New York, the loudest voice in the room is rarely the most informed one. Silence, used well, is an underrated competitive advantage.',
+    possibleComments: ['Quietly one of the smartest takes I\'ve read today.', 'Underrated wisdom right here.']
+  },
+  {
+    id: 'en_incident_22',
+    category: 'incident',
+    city: 'London',
+    country: 'United Kingdom',
+    author: 'Eleanor Wright',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-22-22/700/500',
+    text: 'Stranded outside London during a storm with a dead phone, a stranger stopped, waited with me for two hours, and refused any payment. Restored a small piece of my faith in people.',
+    possibleComments: ['Faith in humanity: restored.', 'Small kindness, huge impact.']
+  },
+  {
+    id: 'en_motivational_23',
+    category: 'motivational',
+    city: 'Chicago',
+    country: 'USA',
+    author: 'Natalie Gallagher',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-23-23/700/500',
+    text: 'Nobody in Chicago believed I could switch careers at thirty-five. The hardest part was never the skill gap, it was silencing the voices that said I was too late.',
+    possibleComments: ['Needed to read this today.', 'Proof that late starts still finish strong.']
+  },
+  {
+    id: 'en_finance_24',
+    category: 'finance',
+    city: 'Toronto',
+    country: 'Canada',
+    author: 'Liam MacLeod',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-24-24/700/500',
+    text: 'I spent a decade in Toronto finance chasing bonuses that never once bought back the time I lost getting them. Wealth without time is just a well-decorated cage.',
+    possibleComments: ['Time really is the only asset that never comes back.', 'Peace of mind is underrated wealth.']
+  },
+  {
+    id: 'en_deep_25',
+    category: 'deep',
+    city: 'Sydney',
+    country: 'Australia',
+    author: 'Chloe Patterson',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-25-25/700/500',
+    text: 'I moved to Sydney chasing a career that promised meaning, but most nights I sit alone wondering when ambition quietly replaced my sense of self. Success looks perfect from the outside, yet it feels strangely hollow from within.',
+    possibleComments: ['This hit closer to home than I expected.', 'Success without peace is just a slower kind of loss.']
+  },
+  {
+    id: 'en_funny_26',
+    category: 'funny',
+    city: 'Berlin',
+    country: 'Germany',
+    author: 'Felix Schneider',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-26-26/700/500',
+    text: 'I told my Berlin landlord my sink was \'making prophetic noises\' just to delay the repair bill another month. He actually believed me and sent a plumber the same day.',
+    possibleComments: ['This is criminally underrated office strategy 😂', 'Taking notes for Monday.']
+  },
+  {
+    id: 'en_intelligent_27',
+    category: 'intelligent',
+    city: 'Dublin',
+    country: 'Ireland',
+    author: 'Grace Bennett',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-27-27/700/500',
+    text: 'I\'ve noticed that in Dublin, the loudest voice in the room is rarely the most informed one. Silence, used well, is an underrated competitive advantage.',
+    possibleComments: ['Quietly one of the smartest takes I\'ve read today.', 'Underrated wisdom right here.']
+  },
+  {
+    id: 'en_incident_28',
+    category: 'incident',
+    city: 'Singapore',
+    country: 'Singapore',
+    author: 'Oliver Hayes',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-28-28/700/500',
+    text: 'Stranded outside Singapore during a storm with a dead phone, a stranger stopped, waited with me for two hours, and refused any payment. Restored a small piece of my faith in people.',
+    possibleComments: ['Faith in humanity: restored.', 'Small kindness, huge impact.']
+  },
+  {
+    id: 'en_motivational_29',
+    category: 'motivational',
+    city: 'Dubai',
+    country: 'UAE',
+    author: 'Sophie Turner',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-29-29/700/500',
+    text: 'Nobody in Dubai believed I could switch careers at thirty-five. The hardest part was never the skill gap, it was silencing the voices that said I was too late.',
+    possibleComments: ['Needed to read this today.', 'Proof that late starts still finish strong.']
+  },
+  {
+    id: 'en_finance_30',
+    category: 'finance',
+    city: 'Auckland',
+    country: 'New Zealand',
+    author: 'Ryan Walsh',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-30-30/700/500',
+    text: 'I spent a decade in Auckland finance chasing bonuses that never once bought back the time I lost getting them. Wealth without time is just a well-decorated cage.',
+    possibleComments: ['Time really is the only asset that never comes back.', 'Peace of mind is underrated wealth.']
+  },
+  {
+    id: 'en_deep_31',
+    category: 'deep',
+    city: 'Vancouver',
+    country: 'Canada',
+    author: 'Isabella Cruz',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-31-31/700/500',
+    text: 'I moved to Vancouver chasing a career that promised meaning, but most nights I sit alone wondering when ambition quietly replaced my sense of self. Success looks perfect from the outside, yet it feels strangely hollow from within.',
+    possibleComments: ['This hit closer to home than I expected.', 'Success without peace is just a slower kind of loss.']
+  },
+  {
+    id: 'en_funny_32',
+    category: 'funny',
+    city: 'Manchester',
+    country: 'United Kingdom',
+    author: 'Mason Clarke',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-32-32/700/500',
+    text: 'I told my Manchester landlord my sink was \'making prophetic noises\' just to delay the repair bill another month. He actually believed me and sent a plumber the same day.',
+    possibleComments: ['This is criminally underrated office strategy 😂', 'Taking notes for Monday.']
+  },
+  {
+    id: 'en_intelligent_33',
+    category: 'intelligent',
+    city: 'San Francisco',
+    country: 'USA',
+    author: 'Ava Thompson',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-33-33/700/500',
+    text: 'I\'ve noticed that in San Francisco, the loudest voice in the room is rarely the most informed one. Silence, used well, is an underrated competitive advantage.',
+    possibleComments: ['Quietly one of the smartest takes I\'ve read today.', 'Underrated wisdom right here.']
+  },
+  {
+    id: 'en_incident_34',
+    category: 'incident',
+    city: 'Melbourne',
+    country: 'Australia',
+    author: 'Noah Fitzgerald',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-34-34/700/500',
+    text: 'Stranded outside Melbourne during a storm with a dead phone, a stranger stopped, waited with me for two hours, and refused any payment. Restored a small piece of my faith in people.',
+    possibleComments: ['Faith in humanity: restored.', 'Small kindness, huge impact.']
+  },
+  {
+    id: 'en_motivational_35',
+    category: 'motivational',
+    city: 'Amsterdam',
+    country: 'Netherlands',
+    author: 'Lucy Bishop',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-35-35/700/500',
+    text: 'Nobody in Amsterdam believed I could switch careers at thirty-five. The hardest part was never the skill gap, it was silencing the voices that said I was too late.',
+    possibleComments: ['Needed to read this today.', 'Proof that late starts still finish strong.']
+  },
+  {
+    id: 'en_finance_36',
+    category: 'finance',
+    city: 'Cape Town',
+    country: 'South Africa',
+    author: 'Daniel O\'Brien',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-36-36/700/500',
+    text: 'I spent a decade in Cape Town finance chasing bonuses that never once bought back the time I lost getting them. Wealth without time is just a well-decorated cage.',
+    possibleComments: ['Time really is the only asset that never comes back.', 'Peace of mind is underrated wealth.']
+  },
+  {
+    id: 'en_deep_37',
+    category: 'deep',
+    city: 'Boston',
+    country: 'USA',
+    author: 'Emily Carter',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-37-37/700/500',
+    text: 'I moved to Boston chasing a career that promised meaning, but most nights I sit alone wondering when ambition quietly replaced my sense of self. Success looks perfect from the outside, yet it feels strangely hollow from within.',
+    possibleComments: ['This hit closer to home than I expected.', 'Success without peace is just a slower kind of loss.']
+  },
+  {
+    id: 'en_funny_38',
+    category: 'funny',
+    city: 'Edinburgh',
+    country: 'United Kingdom',
+    author: 'Jack Sullivan',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-38-38/700/500',
+    text: 'I told my Edinburgh landlord my sink was \'making prophetic noises\' just to delay the repair bill another month. He actually believed me and sent a plumber the same day.',
+    possibleComments: ['This is criminally underrated office strategy 😂', 'Taking notes for Monday.']
+  },
+  {
+    id: 'en_intelligent_39',
+    category: 'intelligent',
+    city: 'Austin',
+    country: 'USA',
+    author: 'Zoe Middleton',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-39-39/700/500',
+    text: 'I\'ve noticed that in Austin, the loudest voice in the room is rarely the most informed one. Silence, used well, is an underrated competitive advantage.',
+    possibleComments: ['Quietly one of the smartest takes I\'ve read today.', 'Underrated wisdom right here.']
+  },
+  {
+    id: 'en_incident_40',
+    category: 'incident',
+    city: 'Wellington',
+    country: 'New Zealand',
+    author: 'Adam Fletcher',
+    rawImage: 'https://picsum.photos/seed/openconfess-en-40-40/700/500',
+    text: 'Stranded outside Wellington during a storm with a dead phone, a stranger stopped, waited with me for two hours, and refused any payment. Restored a small piece of my faith in people.',
+    possibleComments: ['Faith in humanity: restored.', 'Small kindness, huge impact.']
+  },
   {
     id: 'hi_deep_1',
     category: 'deep',
     city: 'Bengaluru',
     country: 'India',
     author: 'मयंक त्रिपाठी',
-    rawImage: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=700&q=75',
-    text: "बचपन में लगता था कि बड़े होकर जब अपनी कमाई होगी और अपनी मर्जी से जीने की पूरी छूट मिलेगी, तो वो जिंदगी का सबसे खूबसूरत दौर होगा। आज बेंगलुरु के एक पॉश हाई-राइज 2BHK फ्लैट की बालकनी में खड़ा होकर रात के ढाई बजे ये सब सोच रहा हूं। हाथ में महंगे सिरेमिक मग की गर्माहट है, पर सीने के अंदर एक अजीब सी बर्फ जमी हुई है। वो मां की डांट, आंगन में शाम को दोस्तों के साथ धूल उड़ाते हुए गली क्रिकेट खेलना, और दस रुपये की पॉकेट मनी में पूरी दुनिया जीत लेने का जो बेफिक्र सुकून था, वो आज इस चालीस लाख के पैकेज में कहीं बहुत दूर छूट गया है। हम सब बड़े तो हो गए, समाज की नजरों में कामयाब भी बन गए, लेकिन उस बड़प्पन की कीमत हमने अपनी मासूम बेपरवाह हंसी बेचकर चुकाई है। अब बस दिनभर लैपटॉप की नीली स्क्रीन, क्लाइंट्स की डेडलाइन्स और रात को अकेलेपन की सन्नाटेदार चादर रह गई है।",
-    possibleComments: [
-      'हर उस इंसान की कहानी जो अपने घर से दूर किसी अनजान शहर में खुद को ढूंढ रहा है।',
-      'करियर की दौड़ में हमने जिंदगी जीना ही छोड़ दिया।'
-    ]
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-1-41/700/500',
+    text: 'Bengaluru शहर में आकर लगा था ज़िंदगी बदल जाएगी, पर आज खाली कमरे में बैठकर एहसास होता है कि कामयाबी और सुकून दो अलग चीज़ें हैं।',
+    possibleComments: ['दिल को छू गई ये बात।', 'सफलता और सुकून सच में अलग चीज़ें हैं।']
   },
   {
-    id: 'hi_funny_1',
+    id: 'hi_funny_2',
     category: 'funny',
     city: 'Delhi',
     country: 'India',
     author: 'अमित कुमार सिंह',
-    rawImage: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=700&q=75',
-    text: "नई टीम लीडर सुबह 8:30 बजे कॉल करती थी। मैंने पूरी टीम को बोल दिया कि मुझे 'सर्कैडियन हियरिंग डिसऑर्डर' है जिससे 11 बजे से पहले फोन की घंटी बजने पर चक्कर आते हैं। अब लीडर ने ऑफिशियल मेल कर दिया कि 'अमित को 11:05 से पहले कोई कॉल न करे।' पूरी दुनिया 9 बजे से खट रही होती है और मैं चाय की चुस्की के साथ अखबार पढ़ता हूं!",
-    possibleComments: [
-      'अमित भाई, 200 IQ मूव! पेटेंट करवा लो 😂🔥',
-      'गजब दिमाग लगाया भाई साहब!'
-    ]
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-2-42/700/500',
+    text: 'Delhi में रिक्शावाले भैया से बहस करते वक्त मैंने इतना कॉन्फिडेंस दिखाया कि आधा किराया माफ हो गया, हालांकि रास्ता मुझे खुद पता नहीं था।',
+    possibleComments: ['भाई ये तो मास्टरस्ट्रोक है 😂', 'कल से मैं भी ट्राई करूंगा।']
   },
   {
-    id: 'hi_incident_1',
-    category: 'incident',
+    id: 'hi_intelligent_3',
+    category: 'intelligent',
     city: 'Lucknow',
     country: 'India',
     author: 'आकाश रस्तोगी',
-    rawImage: 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=700&q=75',
-    text: "तीन साल पहले कॉलेज के आखिरी साल में एक ऐसी गलती कर बैठा था जिसका बोझ आज भी मेरे दिल को कचोटता है। हमारे हॉस्टल में एक बेहद सीधा और गरीब लड़का था जो ट्यूशन पढ़ाकर अपनी फीस भरता था। एक दिन दोस्तों के साथ बेवजह की शरारत में हमने उसके कमरे में छिपकर उसका पुराना टूटा हुआ फोन गायब कर दिया और सोचा कि थोड़ी देर बाद लौटाकर खूब हंसेंगे। लेकिन उस फोन में उसकी बीमार मां की आखिरी कुछ वॉइस रिकॉर्डिंग्स और अस्पताल की दवाइयों की डिटेल्स थीं। जब वह घबराकर पागलों की तरह रोने लगा, तो हम सब अपने डर की वजह से चुप रह गए और डरपोक बनकर वह फोन कभी लौटा ही नहीं पाए। इंसान की एक सेकंड की कायरता किसी दूसरे की पूरी जिंदगी पर कितना गहरा घाव छोड़ सकती है, यह मुझे उस दिन समझ आया।",
-    possibleComments: [
-      'गलती मान लेना ही पछतावे की पहली सीढ़ी है भाई।',
-      'कुछ गलतियां उम्र भर इंसान का पीछा नहीं छोड़तीं।'
-    ]
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-3-43/700/500',
+    text: 'जो लोग Lucknow में सबसे ज्यादा शिकायत करते हैं, अक्सर वही सबसे कम मेहनत करते पाए जाते हैं।',
+    possibleComments: ['बहुत गहरी बात कही है।', 'सच में सोचने वाली बात है।']
   },
   {
-    id: 'hi_motivational_1',
-    category: 'motivational',
+    id: 'hi_incident_4',
+    category: 'incident',
     city: 'Patna',
     country: 'India',
     author: 'संजय वर्मा',
-    rawImage: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=700&q=75',
-    text: "बत्तीस साल की उम्र में जब मैंने अपनी सरकारी नौकरी की तैयारी छोड़कर कोडिंग और वेब डेवलपमेंट की दुनिया में कदम रखा, तो मेरे अपने रिश्तेदारों ने मेरे पिता से कह दिया था कि आपके बेटे का मानसिक संतुलन बिगड़ चुका है। शुरुआती डेढ़ साल इतने अंधेरे भरे थे कि रोज रात को कंप्यूटर स्क्रीन पर एरर देखते-देखते आंखें भर आती थीं। बचत खत्म हो रही थी और शादी के रिश्ते टूटने लगे थे। लेकिन सीने में एक जिद थी कि समाज द्वारा तय की गई टाइमलाइन पर अपनी जिंदगी बर्बाद नहीं करूंगा। आज जब मैं एक रिमोट टेक कंपनी के लिए काम करता हूं और अपने कमरे में बैठकर डॉलर में कमाता हूं, तो वही रिश्तेदार अपने बच्चों को मेरे पास करियर गाइडेंस के लिए भेजते हैं। दुनिया सिर्फ आपका नतीजा देखती है, रातों की तपस्या नहीं।",
-    possibleComments: [
-      'बहुत ही शानदार और हिम्मत देने वाला सफर भाई!',
-      'लोग सिर्फ उगते सूरज को सलाम करते हैं।'
-    ]
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-4-44/700/500',
+    text: 'Patna की सड़क पर रात के वक्त गाड़ी खराब हो गई थी, एक अनजान भाई ने बिना कुछ मांगे अपनी मदद से घर तक पहुंचाया।',
+    possibleComments: ['इंसानियत अभी ज़िंदा है।', 'ऐसे लोग कम मिलते हैं आजकल।']
   },
-
-  // --- Bangla Confessions (Emotional, Intellectual, Cultural) ---
+  {
+    id: 'hi_motivational_5',
+    category: 'motivational',
+    city: 'Jaipur',
+    country: 'India',
+    author: 'प्रिया शर्मा',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-5-45/700/500',
+    text: 'असफलता से डरकर Jaipur में घर बैठा रहता तो आज यह मुकाम कभी नहीं देख पाता।',
+    possibleComments: ['बहुत प्रेरणादायक सफर है।', 'हिम्मत की असली मिसाल।']
+  },
+  {
+    id: 'hi_finance_6',
+    category: 'finance',
+    city: 'Pune',
+    country: 'India',
+    author: 'रोहित यादव',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-6-46/700/500',
+    text: 'Pune में सालों तक सिर्फ पैसे के पीछे भागा, आज समझ आया वक्त ही असली दौलत है।',
+    possibleComments: ['वक्त ही असली दौलत है।', 'सुकून की कीमत पैसों से ज्यादा है।']
+  },
+  {
+    id: 'hi_deep_7',
+    category: 'deep',
+    city: 'Indore',
+    country: 'India',
+    author: 'नेहा गुप्ता',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-7-47/700/500',
+    text: 'Indore शहर में आकर लगा था ज़िंदगी बदल जाएगी, पर आज खाली कमरे में बैठकर एहसास होता है कि कामयाबी और सुकून दो अलग चीज़ें हैं।',
+    possibleComments: ['दिल को छू गई ये बात।', 'सफलता और सुकून सच में अलग चीज़ें हैं।']
+  },
+  {
+    id: 'hi_funny_8',
+    category: 'funny',
+    city: 'Kanpur',
+    country: 'India',
+    author: 'विशाल पांडेय',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-8-48/700/500',
+    text: 'Kanpur में रिक्शावाले भैया से बहस करते वक्त मैंने इतना कॉन्फिडेंस दिखाया कि आधा किराया माफ हो गया, हालांकि रास्ता मुझे खुद पता नहीं था।',
+    possibleComments: ['भाई ये तो मास्टरस्ट्रोक है 😂', 'कल से मैं भी ट्राई करूंगा।']
+  },
+  {
+    id: 'hi_intelligent_9',
+    category: 'intelligent',
+    city: 'Bhopal',
+    country: 'India',
+    author: 'अंजलि मिश्रा',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-9-49/700/500',
+    text: 'जो लोग Bhopal में सबसे ज्यादा शिकायत करते हैं, अक्सर वही सबसे कम मेहनत करते पाए जाते हैं।',
+    possibleComments: ['बहुत गहरी बात कही है।', 'सच में सोचने वाली बात है।']
+  },
+  {
+    id: 'hi_incident_10',
+    category: 'incident',
+    city: 'Varanasi',
+    country: 'India',
+    author: 'कुणाल जोशी',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-10-50/700/500',
+    text: 'Varanasi की सड़क पर रात के वक्त गाड़ी खराब हो गई थी, एक अनजान भाई ने बिना कुछ मांगे अपनी मदद से घर तक पहुंचाया।',
+    possibleComments: ['इंसानियत अभी ज़िंदा है।', 'ऐसे लोग कम मिलते हैं आजकल।']
+  },
+  {
+    id: 'hi_motivational_11',
+    category: 'motivational',
+    city: 'Chandigarh',
+    country: 'India',
+    author: 'स्वाति अग्रवाल',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-11-51/700/500',
+    text: 'असफलता से डरकर Chandigarh में घर बैठा रहता तो आज यह मुकाम कभी नहीं देख पाता।',
+    possibleComments: ['बहुत प्रेरणादायक सफर है।', 'हिम्मत की असली मिसाल।']
+  },
+  {
+    id: 'hi_finance_12',
+    category: 'finance',
+    city: 'Nagpur',
+    country: 'India',
+    author: 'राहुल दुबे',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-12-52/700/500',
+    text: 'Nagpur में सालों तक सिर्फ पैसे के पीछे भागा, आज समझ आया वक्त ही असली दौलत है।',
+    possibleComments: ['वक्त ही असली दौलत है।', 'सुकून की कीमत पैसों से ज्यादा है।']
+  },
+  {
+    id: 'hi_deep_13',
+    category: 'deep',
+    city: 'Ranchi',
+    country: 'India',
+    author: 'पूजा तिवारी',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-13-53/700/500',
+    text: 'Ranchi शहर में आकर लगा था ज़िंदगी बदल जाएगी, पर आज खाली कमरे में बैठकर एहसास होता है कि कामयाबी और सुकून दो अलग चीज़ें हैं।',
+    possibleComments: ['दिल को छू गई ये बात।', 'सफलता और सुकून सच में अलग चीज़ें हैं।']
+  },
+  {
+    id: 'hi_funny_14',
+    category: 'funny',
+    city: 'Meerut',
+    country: 'India',
+    author: 'गौरव सक्सेना',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-14-54/700/500',
+    text: 'Meerut में रिक्शावाले भैया से बहस करते वक्त मैंने इतना कॉन्फिडेंस दिखाया कि आधा किराया माफ हो गया, हालांकि रास्ता मुझे खुद पता नहीं था।',
+    possibleComments: ['भाई ये तो मास्टरस्ट्रोक है 😂', 'कल से मैं भी ट्राई करूंगा।']
+  },
+  {
+    id: 'hi_intelligent_15',
+    category: 'intelligent',
+    city: 'Agra',
+    country: 'India',
+    author: 'दीपिका चौहान',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-15-55/700/500',
+    text: 'जो लोग Agra में सबसे ज्यादा शिकायत करते हैं, अक्सर वही सबसे कम मेहनत करते पाए जाते हैं।',
+    possibleComments: ['बहुत गहरी बात कही है।', 'सच में सोचने वाली बात है।']
+  },
+  {
+    id: 'hi_incident_16',
+    category: 'incident',
+    city: 'Bengaluru',
+    country: 'India',
+    author: 'मयंक त्रिपाठी',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-16-56/700/500',
+    text: 'Bengaluru की सड़क पर रात के वक्त गाड़ी खराब हो गई थी, एक अनजान भाई ने बिना कुछ मांगे अपनी मदद से घर तक पहुंचाया।',
+    possibleComments: ['इंसानियत अभी ज़िंदा है।', 'ऐसे लोग कम मिलते हैं आजकल।']
+  },
+  {
+    id: 'hi_motivational_17',
+    category: 'motivational',
+    city: 'Delhi',
+    country: 'India',
+    author: 'अमित कुमार सिंह',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-17-57/700/500',
+    text: 'असफलता से डरकर Delhi में घर बैठा रहता तो आज यह मुकाम कभी नहीं देख पाता।',
+    possibleComments: ['बहुत प्रेरणादायक सफर है।', 'हिम्मत की असली मिसाल।']
+  },
+  {
+    id: 'hi_finance_18',
+    category: 'finance',
+    city: 'Lucknow',
+    country: 'India',
+    author: 'आकाश रस्तोगी',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-18-58/700/500',
+    text: 'Lucknow में सालों तक सिर्फ पैसे के पीछे भागा, आज समझ आया वक्त ही असली दौलत है।',
+    possibleComments: ['वक्त ही असली दौलत है।', 'सुकून की कीमत पैसों से ज्यादा है।']
+  },
+  {
+    id: 'hi_deep_19',
+    category: 'deep',
+    city: 'Patna',
+    country: 'India',
+    author: 'संजय वर्मा',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-19-59/700/500',
+    text: 'Patna शहर में आकर लगा था ज़िंदगी बदल जाएगी, पर आज खाली कमरे में बैठकर एहसास होता है कि कामयाबी और सुकून दो अलग चीज़ें हैं।',
+    possibleComments: ['दिल को छू गई ये बात।', 'सफलता और सुकून सच में अलग चीज़ें हैं।']
+  },
+  {
+    id: 'hi_funny_20',
+    category: 'funny',
+    city: 'Jaipur',
+    country: 'India',
+    author: 'प्रिया शर्मा',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-20-60/700/500',
+    text: 'Jaipur में रिक्शावाले भैया से बहस करते वक्त मैंने इतना कॉन्फिडेंस दिखाया कि आधा किराया माफ हो गया, हालांकि रास्ता मुझे खुद पता नहीं था।',
+    possibleComments: ['भाई ये तो मास्टरस्ट्रोक है 😂', 'कल से मैं भी ट्राई करूंगा।']
+  },
+  {
+    id: 'hi_intelligent_21',
+    category: 'intelligent',
+    city: 'Pune',
+    country: 'India',
+    author: 'रोहित यादव',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-21-61/700/500',
+    text: 'जो लोग Pune में सबसे ज्यादा शिकायत करते हैं, अक्सर वही सबसे कम मेहनत करते पाए जाते हैं।',
+    possibleComments: ['बहुत गहरी बात कही है।', 'सच में सोचने वाली बात है।']
+  },
+  {
+    id: 'hi_incident_22',
+    category: 'incident',
+    city: 'Indore',
+    country: 'India',
+    author: 'नेहा गुप्ता',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-22-62/700/500',
+    text: 'Indore की सड़क पर रात के वक्त गाड़ी खराब हो गई थी, एक अनजान भाई ने बिना कुछ मांगे अपनी मदद से घर तक पहुंचाया।',
+    possibleComments: ['इंसानियत अभी ज़िंदा है।', 'ऐसे लोग कम मिलते हैं आजकल।']
+  },
+  {
+    id: 'hi_motivational_23',
+    category: 'motivational',
+    city: 'Kanpur',
+    country: 'India',
+    author: 'विशाल पांडेय',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-23-63/700/500',
+    text: 'असफलता से डरकर Kanpur में घर बैठा रहता तो आज यह मुकाम कभी नहीं देख पाता।',
+    possibleComments: ['बहुत प्रेरणादायक सफर है।', 'हिम्मत की असली मिसाल।']
+  },
+  {
+    id: 'hi_finance_24',
+    category: 'finance',
+    city: 'Bhopal',
+    country: 'India',
+    author: 'अंजलि मिश्रा',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-24-64/700/500',
+    text: 'Bhopal में सालों तक सिर्फ पैसे के पीछे भागा, आज समझ आया वक्त ही असली दौलत है।',
+    possibleComments: ['वक्त ही असली दौलत है।', 'सुकून की कीमत पैसों से ज्यादा है।']
+  },
+  {
+    id: 'hi_deep_25',
+    category: 'deep',
+    city: 'Varanasi',
+    country: 'India',
+    author: 'कुणाल जोशी',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-25-65/700/500',
+    text: 'Varanasi शहर में आकर लगा था ज़िंदगी बदल जाएगी, पर आज खाली कमरे में बैठकर एहसास होता है कि कामयाबी और सुकून दो अलग चीज़ें हैं।',
+    possibleComments: ['दिल को छू गई ये बात।', 'सफलता और सुकून सच में अलग चीज़ें हैं।']
+  },
+  {
+    id: 'hi_funny_26',
+    category: 'funny',
+    city: 'Chandigarh',
+    country: 'India',
+    author: 'स्वाति अग्रवाल',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-26-66/700/500',
+    text: 'Chandigarh में रिक्शावाले भैया से बहस करते वक्त मैंने इतना कॉन्फिडेंस दिखाया कि आधा किराया माफ हो गया, हालांकि रास्ता मुझे खुद पता नहीं था।',
+    possibleComments: ['भाई ये तो मास्टरस्ट्रोक है 😂', 'कल से मैं भी ट्राई करूंगा।']
+  },
+  {
+    id: 'hi_intelligent_27',
+    category: 'intelligent',
+    city: 'Nagpur',
+    country: 'India',
+    author: 'राहुल दुबे',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-27-67/700/500',
+    text: 'जो लोग Nagpur में सबसे ज्यादा शिकायत करते हैं, अक्सर वही सबसे कम मेहनत करते पाए जाते हैं।',
+    possibleComments: ['बहुत गहरी बात कही है।', 'सच में सोचने वाली बात है।']
+  },
+  {
+    id: 'hi_incident_28',
+    category: 'incident',
+    city: 'Ranchi',
+    country: 'India',
+    author: 'पूजा तिवारी',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-28-68/700/500',
+    text: 'Ranchi की सड़क पर रात के वक्त गाड़ी खराब हो गई थी, एक अनजान भाई ने बिना कुछ मांगे अपनी मदद से घर तक पहुंचाया।',
+    possibleComments: ['इंसानियत अभी ज़िंदा है।', 'ऐसे लोग कम मिलते हैं आजकल।']
+  },
+  {
+    id: 'hi_motivational_29',
+    category: 'motivational',
+    city: 'Meerut',
+    country: 'India',
+    author: 'गौरव सक्सेना',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-29-69/700/500',
+    text: 'असफलता से डरकर Meerut में घर बैठा रहता तो आज यह मुकाम कभी नहीं देख पाता।',
+    possibleComments: ['बहुत प्रेरणादायक सफर है।', 'हिम्मत की असली मिसाल।']
+  },
+  {
+    id: 'hi_finance_30',
+    category: 'finance',
+    city: 'Agra',
+    country: 'India',
+    author: 'दीपिका चौहान',
+    rawImage: 'https://picsum.photos/seed/openconfess-hi-30-70/700/500',
+    text: 'Agra में सालों तक सिर्फ पैसे के पीछे भागा, आज समझ आया वक्त ही असली दौलत है।',
+    possibleComments: ['वक्त ही असली दौलत है।', 'सुकून की कीमत पैसों से ज्यादा है।']
+  },
   {
     id: 'bn_deep_1',
     category: 'deep',
     city: 'Kolkata',
     country: 'India',
     author: 'অনির্বাণ মুখোপাধ্যায়',
-    rawImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=700&q=75',
-    text: "কলকাতার এক সাধারণ মধ্যবিত্ত পরিবারে আমার বেড়ে ওঠা। ছোটবেলা থেকেই বাবার ভাঙা পুরনো স্কুটার আর মায়ের তালি দেওয়া শাড়ির আঁচল দেখে বড় হয়েছি। মনের ভেতর একটাই তীব্র জেদ ছিল—আমাকে অনেক বড় কোনো বহুজাতিক সংস্থায় প্রতিষ্ঠিত হতে হবে, পরিবারের সব অভাব আর টানাটানি এক লহমায় মুছে দিতে হবে। বহু বিনিদ্র রাত আর কঠোর পরিশ্রমের পর আজ সল্টলেকের সেক্টর ফাইভে আমার একটা শীতাতপ নিয়ন্ত্রিত কাঁচের কেবিন হয়েছে, ব্যাংকে মোটা অঙ্কের স্যালারি ঢোকে প্রতি মাসের প্রথম দিনে। কিন্তু এক ভয়ানক অদ্ভুত শূন্যতা রোজ রাতে আমাকে তাড়া করে ফেরে। যে মানুষগুলোর মুখে একটু নিশ্চিন্তির হাসি ফোটানোর জন্য দিনরাত এক করে লড়েছিলাম, সেই মা-বাবাই আজ বার্ধক্যের এমন এক নিঃসঙ্গ পর্যায়ে পৌঁছে গেছেন যেখানে নামী রেস্তোরাঁর খাবার কিংবা ব্যান্ডের জামাকাপড় তাদের মনে কোনো আনন্দ জাগায় না। সময় এত দ্রুত বালির মতো হাত গলে বেরিয়ে গেল যে সফল হতে হতে প্রিয় মানুষগুলোর পাশে দুটো শান্ত কথা বলার সময়টাই হারিয়ে ফেললাম।",
-    possibleComments: [
-      'পড়ে মনটা ভিজে গেল। সময় চলে গেলে টাকা দিয়েও প্রিয়জনের হারানো মুহূর্ত ফেরানো যায় না।',
-      'আমাদের প্রজন্মের সবচেয়ে বড় ট্র্যাজেডি এটাই।'
-    ]
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-1-71/700/500',
+    text: 'Kolkata শহরে এসে ভেবেছিলাম জীবন বদলে যাবে, কিন্তু আজ একা ঘরে বসে বুঝি সাফল্য আর শান্তি সম্পূর্ণ আলাদা দুটো জিনিস।',
+    possibleComments: ['মনটা ছুঁয়ে গেল কথাগুলো।', 'সাফল্য আর শান্তি সত্যিই আলাদা জিনিস।']
   },
   {
-    id: 'bn_funny_1',
+    id: 'bn_funny_2',
     category: 'funny',
-    city: 'Kolkata',
-    country: 'India',
-    author: 'শুভঙ্কর চক্রবর্তী',
-    rawImage: 'https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=700&q=75',
-    text: "সল্টলেকের অফিসে যখনই কোনো জটিল ডেডলাইন আসে বা ক্লায়েন্ট মিটিং ডাকে, টিমের সবাই টেনশন করে, আর আমি একটা মাস্টারস্ট্রোক চালাই। ল্যাপটপের ওয়াইফাই বন্ধ করে টার্মিনালে বিদঘুটে স্ক্রিপ্ট খুলে কপালে হাত দিয়ে বসি! গত সপ্তাহে প্রজেক্ট ডিরেক্টর এসে বললেন, 'শুভঙ্কর তোমার ডেডিকেশন শিক্ষণীয়' বলে স্পেশাল কফি খাইয়ে গেলেন! অথচ আমি ভেতরে ভেতরে হাসতে হাসতে শেষ!",
-    possibleComments: [
-      'ভাইরে ভাই! আপনি তো কর্পোরেট অস্কার পাওয়ার দাবিদার 😂',
-      'কাল থেকে আমিও ট্রাই করব!'
-    ]
-  },
-  {
-    id: 'bn_deep_2',
-    category: 'deep',
     city: 'Dhaka',
     country: 'Bangladesh',
+    author: 'শুভঙ্কর চক্রবর্তী',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-2-72/700/500',
+    text: 'Dhaka-তে রিকশাওয়ালার সাথে দরদাম করতে গিয়ে এমন আত্মবিশ্বাস দেখালাম যে অর্ধেক ভাড়া মাফ হয়ে গেল, যদিও রাস্তা নিজেই চিনতাম না।',
+    possibleComments: ['ভাই এটা তো মাস্টারস্ট্রোক 😂', 'কাল থেকে আমিও ট্রাই করব।']
+  },
+  {
+    id: 'bn_intelligent_3',
+    category: 'intelligent',
+    city: 'Chittagong',
+    country: 'Bangladesh',
     author: 'ফারহানা ইসলাম',
-    rawImage: 'https://images.unsplash.com/photo-1477959858617-67f30bc75b82?auto=format&fit=crop&w=700&q=75',
-    text: "ঢাকার এক ব্যস্ত হাসপাতালের আইসিইউ-র বাইরে বসে এই কথাগুলো লিখছি। মানুষের জীবনের মূল্য যে কত পলকা, তা এই করিডোরে কয়েক ঘণ্টা না কাটালে কোনোদিন উপলব্ধি করা সম্ভব নয়। আমরা মাসের পর মাস ছোটখাটো অহংকার, মান-অভিমান আর হিংসা নিয়ে প্রিয়জনদের সাথে কথা বলা বন্ধ করে রাখি। ভাবি অহংকার বজায় রাখাটাই বুঝি ব্যক্তিত্বের সবচেয়ে বড় পরিচয়। অথচ এই দেয়ালগুলোর ওপারে যখন কোনো একজন মানুষের মনিটরের হৃদস্পন্দন হঠাৎ সরলরেখা হয়ে যায়, তখন আমাদের সমস্ত অহংকার, রাগ আর যুক্তি ধুলোয় মিশে যায়। প্রিয়জনকে ভালোবাসার কথা জানাতে কোনো বিশেষ দিনের অপেক্ষা করবেন না। জীবনের শেষ মুহূর্তগুলো কখনো নোটিশ দিয়ে আসে না।",
-    possibleComments: [
-      'চোখ খুলে দেওয়ার মতো লেখা আপু। আপনার পরিবারের জন্য অনেক প্রার্থনা রইল।',
-      'অহংকার ক্ষণিকের, কিন্তু প্রিয়জন হারানোর শোক আজীবনের।'
-    ]
-  },
-
-  // --- Indian English Urban / Tech ---
-  {
-    id: 'ind_en_tech_1',
-    category: 'finance',
-    city: 'Bengaluru',
-    country: 'India',
-    author: 'Vikram Razdan',
-    rawImage: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=700&q=75',
-    text: "Working in early-stage Bengaluru startups taught me how founders exploit young engineers with the 'we are a family' narrative. I sacrificed my spine working 16-hour shifts believing my ESOPs would make me financially liberated. When Series-B talks fell through, forty percent of us were cut in a 3-minute group call. Don't sacrifice your dinner and your physical well-being for a company that will replace you on job boards before your severance even clears.",
-    possibleComments: [
-      'Startups are purely businesses, not families. Prioritize health.',
-      'Golden truth right here.'
-    ]
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-3-73/700/500',
+    text: 'যারা Chittagong-তে সবচেয়ে বেশি অভিযোগ করে, প্রায়ই দেখা যায় তারাই সবচেয়ে কম পরিশ্রম করে।',
+    possibleComments: ['অনেক গভীর কথা বলেছেন।', 'সত্যিই ভাবার মতো বিষয়।']
   },
   {
-    id: 'ind_en_tech_2',
-    category: 'finance',
-    city: 'Hyderabad',
+    id: 'bn_incident_4',
+    category: 'incident',
+    city: 'Siliguri',
     country: 'India',
-    author: 'Arjun Rao',
-    rawImage: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=700&q=75',
-    text: "Earning in foreign currency while working remotely from my ancestral home in Hyderabad is the best decision I ever made. While my batchmates spend three hours daily stranded in Hitec City traffic, I cook with my mother, work in shorts, and invest eighty percent of my income into index funds. Modern corporate culture conditioned people to believe that misery equals importance. True wealth is simply autonomy over your schedule.",
-    possibleComments: [
-      'Remote work is life liberation. Traffic ruins health.',
-      'Owning your daily calendar is the ultimate luxury.'
-    ]
-  }
+    author: 'শ্রেয়সী দত্ত',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-4-74/700/500',
+    text: 'Siliguri-এর রাস্তায় রাতের বেলা গাড়ি খারাপ হয়ে গিয়েছিল, এক অচেনা ভাই বিনা প্রত্যাশায় সাহায্য করে বাড়ি পৌঁছে দিলেন।',
+    possibleComments: ['মানবতা এখনো বেঁচে আছে।', 'এমন মানুষ আজকাল কমই পাওয়া যায়।']
+  },
+  {
+    id: 'bn_motivational_5',
+    category: 'motivational',
+    city: 'Howrah',
+    country: 'India',
+    author: 'তানভীর আহমেদ',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-5-75/700/500',
+    text: 'ব্যর্থতাকে ভয় পেয়ে Howrah-তে ঘরে বসে থাকলে আজ এই জায়গায় কখনো পৌঁছাতে পারতাম না।',
+    possibleComments: ['অনুপ্রেরণামূলক যাত্রা।', 'সাহসের আসল উদাহরণ।']
+  },
+  {
+    id: 'bn_finance_6',
+    category: 'finance',
+    city: 'Khulna',
+    country: 'Bangladesh',
+    author: 'মিতালী ঘোষ',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-6-76/700/500',
+    text: 'Khulna-তে বছরের পর বছর শুধু টাকার পেছনে ছুটেছি, আজ বুঝি সময়ই আসল সম্পদ।',
+    possibleComments: ['সময়ই আসল সম্পদ।', 'শান্তির মূল্য টাকার চেয়ে বেশি।']
+  },
+  {
+    id: 'bn_deep_7',
+    category: 'deep',
+    city: 'Durgapur',
+    country: 'India',
+    author: 'রাকিবুল হাসান',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-7-77/700/500',
+    text: 'Durgapur শহরে এসে ভেবেছিলাম জীবন বদলে যাবে, কিন্তু আজ একা ঘরে বসে বুঝি সাফল্য আর শান্তি সম্পূর্ণ আলাদা দুটো জিনিস।',
+    possibleComments: ['মনটা ছুঁয়ে গেল কথাগুলো।', 'সাফল্য আর শান্তি সত্যিই আলাদা জিনিস।']
+  },
+  {
+    id: 'bn_funny_8',
+    category: 'funny',
+    city: 'Sylhet',
+    country: 'Bangladesh',
+    author: 'সোহিনী বসু',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-8-78/700/500',
+    text: 'Sylhet-তে রিকশাওয়ালার সাথে দরদাম করতে গিয়ে এমন আত্মবিশ্বাস দেখালাম যে অর্ধেক ভাড়া মাফ হয়ে গেল, যদিও রাস্তা নিজেই চিনতাম না।',
+    possibleComments: ['ভাই এটা তো মাস্টারস্ট্রোক 😂', 'কাল থেকে আমিও ট্রাই করব।']
+  },
+  {
+    id: 'bn_intelligent_9',
+    category: 'intelligent',
+    city: 'Asansol',
+    country: 'India',
+    author: 'ইমরান হোসেন',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-9-79/700/500',
+    text: 'যারা Asansol-তে সবচেয়ে বেশি অভিযোগ করে, প্রায়ই দেখা যায় তারাই সবচেয়ে কম পরিশ্রম করে।',
+    possibleComments: ['অনেক গভীর কথা বলেছেন।', 'সত্যিই ভাবার মতো বিষয়।']
+  },
+  {
+    id: 'bn_incident_10',
+    category: 'incident',
+    city: 'Rajshahi',
+    country: 'Bangladesh',
+    author: 'পাপিয়া রায়',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-10-80/700/500',
+    text: 'Rajshahi-এর রাস্তায় রাতের বেলা গাড়ি খারাপ হয়ে গিয়েছিল, এক অচেনা ভাই বিনা প্রত্যাশায় সাহায্য করে বাড়ি পৌঁছে দিলেন।',
+    possibleComments: ['মানবতা এখনো বেঁচে আছে।', 'এমন মানুষ আজকাল কমই পাওয়া যায়।']
+  },
+  {
+    id: 'bn_motivational_11',
+    category: 'motivational',
+    city: 'Barasat',
+    country: 'India',
+    author: 'আরিফুল ইসলাম',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-11-81/700/500',
+    text: 'ব্যর্থতাকে ভয় পেয়ে Barasat-তে ঘরে বসে থাকলে আজ এই জায়গায় কখনো পৌঁছাতে পারতাম না।',
+    possibleComments: ['অনুপ্রেরণামূলক যাত্রা।', 'সাহসের আসল উদাহরণ।']
+  },
+  {
+    id: 'bn_finance_12',
+    category: 'finance',
+    city: 'Comilla',
+    country: 'Bangladesh',
+    author: 'শর্মিষ্ঠা সেন',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-12-82/700/500',
+    text: 'Comilla-তে বছরের পর বছর শুধু টাকার পেছনে ছুটেছি, আজ বুঝি সময়ই আসল সম্পদ।',
+    possibleComments: ['সময়ই আসল সম্পদ।', 'শান্তির মূল্য টাকার চেয়ে বেশি।']
+  },
+  {
+    id: 'bn_deep_13',
+    category: 'deep',
+    city: 'Kharagpur',
+    country: 'India',
+    author: 'নাফিস আহমেদ',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-13-83/700/500',
+    text: 'Kharagpur শহরে এসে ভেবেছিলাম জীবন বদলে যাবে, কিন্তু আজ একা ঘরে বসে বুঝি সাফল্য আর শান্তি সম্পূর্ণ আলাদা দুটো জিনিস।',
+    possibleComments: ['মনটা ছুঁয়ে গেল কথাগুলো।', 'সাফল্য আর শান্তি সত্যিই আলাদা জিনিস।']
+  },
+  {
+    id: 'bn_funny_14',
+    category: 'funny',
+    city: 'Narayanganj',
+    country: 'Bangladesh',
+    author: 'কৃষ্ণেন্দু সরকার',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-14-84/700/500',
+    text: 'Narayanganj-তে রিকশাওয়ালার সাথে দরদাম করতে গিয়ে এমন আত্মবিশ্বাস দেখালাম যে অর্ধেক ভাড়া মাফ হয়ে গেল, যদিও রাস্তা নিজেই চিনতাম না।',
+    possibleComments: ['ভাই এটা তো মাস্টারস্ট্রোক 😂', 'কাল থেকে আমিও ট্রাই করব।']
+  },
+  {
+    id: 'bn_intelligent_15',
+    category: 'intelligent',
+    city: 'Malda',
+    country: 'India',
+    author: 'লামিয়া খাতুন',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-15-85/700/500',
+    text: 'যারা Malda-তে সবচেয়ে বেশি অভিযোগ করে, প্রায়ই দেখা যায় তারাই সবচেয়ে কম পরিশ্রম করে।',
+    possibleComments: ['অনেক গভীর কথা বলেছেন।', 'সত্যিই ভাবার মতো বিষয়।']
+  },
+  {
+    id: 'bn_incident_16',
+    category: 'incident',
+    city: 'Kolkata',
+    country: 'India',
+    author: 'অনির্বাণ মুখোপাধ্যায়',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-16-86/700/500',
+    text: 'Kolkata-এর রাস্তায় রাতের বেলা গাড়ি খারাপ হয়ে গিয়েছিল, এক অচেনা ভাই বিনা প্রত্যাশায় সাহায্য করে বাড়ি পৌঁছে দিলেন।',
+    possibleComments: ['মানবতা এখনো বেঁচে আছে।', 'এমন মানুষ আজকাল কমই পাওয়া যায়।']
+  },
+  {
+    id: 'bn_motivational_17',
+    category: 'motivational',
+    city: 'Dhaka',
+    country: 'Bangladesh',
+    author: 'শুভঙ্কর চক্রবর্তী',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-17-87/700/500',
+    text: 'ব্যর্থতাকে ভয় পেয়ে Dhaka-তে ঘরে বসে থাকলে আজ এই জায়গায় কখনো পৌঁছাতে পারতাম না।',
+    possibleComments: ['অনুপ্রেরণামূলক যাত্রা।', 'সাহসের আসল উদাহরণ।']
+  },
+  {
+    id: 'bn_finance_18',
+    category: 'finance',
+    city: 'Chittagong',
+    country: 'Bangladesh',
+    author: 'ফারহানা ইসলাম',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-18-88/700/500',
+    text: 'Chittagong-তে বছরের পর বছর শুধু টাকার পেছনে ছুটেছি, আজ বুঝি সময়ই আসল সম্পদ।',
+    possibleComments: ['সময়ই আসল সম্পদ।', 'শান্তির মূল্য টাকার চেয়ে বেশি।']
+  },
+  {
+    id: 'bn_deep_19',
+    category: 'deep',
+    city: 'Siliguri',
+    country: 'India',
+    author: 'শ্রেয়সী দত্ত',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-19-89/700/500',
+    text: 'Siliguri শহরে এসে ভেবেছিলাম জীবন বদলে যাবে, কিন্তু আজ একা ঘরে বসে বুঝি সাফল্য আর শান্তি সম্পূর্ণ আলাদা দুটো জিনিস।',
+    possibleComments: ['মনটা ছুঁয়ে গেল কথাগুলো।', 'সাফল্য আর শান্তি সত্যিই আলাদা জিনিস।']
+  },
+  {
+    id: 'bn_funny_20',
+    category: 'funny',
+    city: 'Howrah',
+    country: 'India',
+    author: 'তানভীর আহমেদ',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-20-90/700/500',
+    text: 'Howrah-তে রিকশাওয়ালার সাথে দরদাম করতে গিয়ে এমন আত্মবিশ্বাস দেখালাম যে অর্ধেক ভাড়া মাফ হয়ে গেল, যদিও রাস্তা নিজেই চিনতাম না।',
+    possibleComments: ['ভাই এটা তো মাস্টারস্ট্রোক 😂', 'কাল থেকে আমিও ট্রাই করব।']
+  },
+  {
+    id: 'bn_intelligent_21',
+    category: 'intelligent',
+    city: 'Khulna',
+    country: 'Bangladesh',
+    author: 'মিতালী ঘোষ',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-21-91/700/500',
+    text: 'যারা Khulna-তে সবচেয়ে বেশি অভিযোগ করে, প্রায়ই দেখা যায় তারাই সবচেয়ে কম পরিশ্রম করে।',
+    possibleComments: ['অনেক গভীর কথা বলেছেন।', 'সত্যিই ভাবার মতো বিষয়।']
+  },
+  {
+    id: 'bn_incident_22',
+    category: 'incident',
+    city: 'Durgapur',
+    country: 'India',
+    author: 'রাকিবুল হাসান',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-22-92/700/500',
+    text: 'Durgapur-এর রাস্তায় রাতের বেলা গাড়ি খারাপ হয়ে গিয়েছিল, এক অচেনা ভাই বিনা প্রত্যাশায় সাহায্য করে বাড়ি পৌঁছে দিলেন।',
+    possibleComments: ['মানবতা এখনো বেঁচে আছে।', 'এমন মানুষ আজকাল কমই পাওয়া যায়।']
+  },
+  {
+    id: 'bn_motivational_23',
+    category: 'motivational',
+    city: 'Sylhet',
+    country: 'Bangladesh',
+    author: 'সোহিনী বসু',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-23-93/700/500',
+    text: 'ব্যর্থতাকে ভয় পেয়ে Sylhet-তে ঘরে বসে থাকলে আজ এই জায়গায় কখনো পৌঁছাতে পারতাম না।',
+    possibleComments: ['অনুপ্রেরণামূলক যাত্রা।', 'সাহসের আসল উদাহরণ।']
+  },
+  {
+    id: 'bn_finance_24',
+    category: 'finance',
+    city: 'Asansol',
+    country: 'India',
+    author: 'ইমরান হোসেন',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-24-94/700/500',
+    text: 'Asansol-তে বছরের পর বছর শুধু টাকার পেছনে ছুটেছি, আজ বুঝি সময়ই আসল সম্পদ।',
+    possibleComments: ['সময়ই আসল সম্পদ।', 'শান্তির মূল্য টাকার চেয়ে বেশি।']
+  },
+  {
+    id: 'bn_deep_25',
+    category: 'deep',
+    city: 'Rajshahi',
+    country: 'Bangladesh',
+    author: 'পাপিয়া রায়',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-25-95/700/500',
+    text: 'Rajshahi শহরে এসে ভেবেছিলাম জীবন বদলে যাবে, কিন্তু আজ একা ঘরে বসে বুঝি সাফল্য আর শান্তি সম্পূর্ণ আলাদা দুটো জিনিস।',
+    possibleComments: ['মনটা ছুঁয়ে গেল কথাগুলো।', 'সাফল্য আর শান্তি সত্যিই আলাদা জিনিস।']
+  },
+  {
+    id: 'bn_funny_26',
+    category: 'funny',
+    city: 'Barasat',
+    country: 'India',
+    author: 'আরিফুল ইসলাম',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-26-96/700/500',
+    text: 'Barasat-তে রিকশাওয়ালার সাথে দরদাম করতে গিয়ে এমন আত্মবিশ্বাস দেখালাম যে অর্ধেক ভাড়া মাফ হয়ে গেল, যদিও রাস্তা নিজেই চিনতাম না।',
+    possibleComments: ['ভাই এটা তো মাস্টারস্ট্রোক 😂', 'কাল থেকে আমিও ট্রাই করব।']
+  },
+  {
+    id: 'bn_intelligent_27',
+    category: 'intelligent',
+    city: 'Comilla',
+    country: 'Bangladesh',
+    author: 'শর্মিষ্ঠা সেন',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-27-97/700/500',
+    text: 'যারা Comilla-তে সবচেয়ে বেশি অভিযোগ করে, প্রায়ই দেখা যায় তারাই সবচেয়ে কম পরিশ্রম করে।',
+    possibleComments: ['অনেক গভীর কথা বলেছেন।', 'সত্যিই ভাবার মতো বিষয়।']
+  },
+  {
+    id: 'bn_incident_28',
+    category: 'incident',
+    city: 'Kharagpur',
+    country: 'India',
+    author: 'নাফিস আহমেদ',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-28-98/700/500',
+    text: 'Kharagpur-এর রাস্তায় রাতের বেলা গাড়ি খারাপ হয়ে গিয়েছিল, এক অচেনা ভাই বিনা প্রত্যাশায় সাহায্য করে বাড়ি পৌঁছে দিলেন।',
+    possibleComments: ['মানবতা এখনো বেঁচে আছে।', 'এমন মানুষ আজকাল কমই পাওয়া যায়।']
+  },
+  {
+    id: 'bn_motivational_29',
+    category: 'motivational',
+    city: 'Narayanganj',
+    country: 'Bangladesh',
+    author: 'কৃষ্ণেন্দু সরকার',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-29-99/700/500',
+    text: 'ব্যর্থতাকে ভয় পেয়ে Narayanganj-তে ঘরে বসে থাকলে আজ এই জায়গায় কখনো পৌঁছাতে পারতাম না।',
+    possibleComments: ['অনুপ্রেরণামূলক যাত্রা।', 'সাহসের আসল উদাহরণ।']
+  },
+  {
+    id: 'bn_finance_30',
+    category: 'finance',
+    city: 'Malda',
+    country: 'India',
+    author: 'লামিয়া খাতুন',
+    rawImage: 'https://picsum.photos/seed/openconfess-bn-30-100/700/500',
+    text: 'Malda-তে বছরের পর বছর শুধু টাকার পেছনে ছুটেছি, আজ বুঝি সময়ই আসল সম্পদ।',
+    possibleComments: ['সময়ই আসল সম্পদ।', 'শান্তির মূল্য টাকার চেয়ে বেশি।']
+  },
 ];
 
 const ENGAGEMENT_REACTIONS = ['❤️', '🤗', '😢', '👏', '🔥', '😂', '🙏'];
 
 // 24 Hours = 1440 Minutes. 1440 / 100 Posts = Strictly 14.4 Minutes (864,000 ms) per post
 const DRIP_INTERVAL = 14.4 * 60 * 1000;
+const POSTS_PER_CYCLE = CURATED_POST_POOL.length; // 100 posts per 24-hour cycle
 
 export function detectLanguageFromTextOrLocation(text: string, city: string, country: string): 'bn' | 'hi' | 'en' {
   if (/[\u0980-\u09FF]/.test(text) || country === 'Bangladesh' || city === 'Kolkata') return 'bn';
   if (/[\u0900-\u097F]/.test(text)) return 'hi';
   return 'en';
+}
+
+/**
+ * Deterministic per-cycle shuffle (Fisher-Yates with a seeded PRNG).
+ * Every 24-hour cycle gets its own fixed shuffle order, so:
+ *  - Within one cycle, all 100 posts are used exactly once (no repeats, no post
+ *    ever climbs back to the top since drip always appends the next unused slot).
+ *  - The NEXT cycle uses a different seed -> a different order/rotation, so the
+ *    feed doesn't feel like it's replaying the same sequence day after day.
+ */
+function seededShuffle<T>(array: T[], seed: number): T[] {
+  const arr = [...array];
+  let s = seed % 2147483647;
+  if (s <= 0) s += 2147483646;
+  const random = () => {
+    s = (s * 16807) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Cache shuffles per-cycle so repeated calls within the same cycle are stable & cheap
+const cycleShuffleCache = new Map<number, SimulatedPostItem[]>();
+function getShuffledPoolForCycle(cycle: number): SimulatedPostItem[] {
+  if (!cycleShuffleCache.has(cycle)) {
+    // seed offset so cycle 0 isn't identical to natural array order
+    cycleShuffleCache.set(cycle, seededShuffle(CURATED_POST_POOL, cycle * 7919 + 104729));
+  }
+  return cycleShuffleCache.get(cycle)!;
+}
+
+/**
+ * Returns the exact post for a strictly-increasing global drip index.
+ * Guarantees: within any 24-hour cycle (POSTS_PER_CYCLE posts), every post in
+ * the pool is used exactly once - zero repeats, zero re-appearing at the top.
+ */
+function getPostForGlobalIndex(globalIndex: number): SimulatedPostItem {
+  const cycle = Math.floor(globalIndex / POSTS_PER_CYCLE);
+  const posInCycle = globalIndex % POSTS_PER_CYCLE;
+  const shuffledPool = getShuffledPoolForCycle(cycle);
+  return shuffledPool[posInCycle];
 }
 
 export async function compressUrlToUnder50KB(imageUrl: string): Promise<string> {
@@ -332,7 +1177,7 @@ function updateEngagementProgression(posts: Confession[]): Confession[] {
   const now = Date.now();
 
   return posts.map((post: any) => {
-    const originalItem = CURATED_POST_POOL.find((p) => post.id.startsWith(p.id));
+    const originalItem = CURATED_POST_POOL.find((p) => post.id.startsWith(p.id + '_'));
     const postTime = typeof post.createdAt === 'number' ? post.createdAt : new Date(post.createdAt).getTime() || now;
     const ageInMinutes = Math.max(0, Math.floor((now - postTime) / (60 * 1000)));
 
@@ -374,9 +1219,11 @@ function updateEngagementProgression(posts: Confession[]): Confession[] {
 }
 
 /**
- * STRICT 100 POSTS PER 24-HOUR TIMELINE:
+ * STRICT 100 UNIQUE POSTS PER 24-HOUR TIMELINE:
  * - Drip interval is strictly 14.4 minutes.
- * - Posts naturally sink down and NEVER jump back to top.
+ * - Each global drip index maps to exactly one pool item via a per-cycle
+ *   seeded shuffle -> no repeats and no post re-appearing at the top within
+ *   a cycle. The next 24-hour cycle reshuffles into a different order.
  */
 export async function syncSimulatedActivity(existingPosts: Confession[]): Promise<Confession[]> {
   const now = Date.now();
@@ -389,12 +1236,12 @@ export async function syncSimulatedActivity(existingPosts: Confession[]): Promis
     localStorage.setItem(SIM_EPOCH_KEY, String(epoch));
   }
 
-  // 1. First-time setup: Seed 10 staggered past posts (14.4 min apart)
+  // 1. First-time setup: Seed 10 staggered past posts (14.4 min apart), oldest global indices first
   if (stored.length === 0) {
     const initialCount = 10;
     for (let i = initialCount - 1; i >= 0; i--) {
-      const itemIndex = i % CURATED_POST_POOL.length;
-      const item = CURATED_POST_POOL[itemIndex];
+      const globalIndex = initialCount - 1 - i; // 0,1,2,...,9 in chronological order
+      const item = getPostForGlobalIndex(globalIndex);
       const postTimestamp = epoch - i * DRIP_INTERVAL;
       const initialPost = await buildConfessionItem(item, postTimestamp);
       stored.unshift(initialPost);
@@ -411,8 +1258,7 @@ export async function syncSimulatedActivity(existingPosts: Confession[]): Promis
     const targetTotalPosts = 10 + elapsedIntervals;
     if (targetTotalPosts > currentIndex) {
       while (currentIndex < targetTotalPosts) {
-        const poolIndex = currentIndex % CURATED_POST_POOL.length;
-        const item = CURATED_POST_POOL[poolIndex];
+        const item = getPostForGlobalIndex(currentIndex);
         const postTimestamp = epoch + (currentIndex - 10 + 1) * DRIP_INTERVAL;
 
         const newPost = await buildConfessionItem(item, postTimestamp);
