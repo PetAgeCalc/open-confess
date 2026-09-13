@@ -1,7 +1,5 @@
 import { useState, useRef, ChangeEvent, useMemo } from 'react';
 import { X, Image as ImageIcon, Loader2 } from 'lucide-react';
-import { compressImageToUnder50KB } from '../lib/imageCompressor';
-import { uploadImageToCloudinary } from '../lib/cloudinary';
 import { createConfession } from '../lib/confessionService';
 import { Confession } from '../types';
 import { WORLD_LOCATIONS } from '../data/locations';
@@ -12,6 +10,60 @@ interface CreateConfessionModalProps {
 }
 
 const WORD_LIMIT = 2000;
+const CLOUD_NAME = (import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string) || 'xjdv4l6v';
+const UPLOAD_PRESET = (import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string) || 'confess_preset';
+
+// Image ko upload hone se pehle strictly ~45KB-50KB JPG compress karta hai
+async function compressImageUnder50KB(file: File): Promise<Blob> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 550;
+        const scaleSize = Math.min(1, MAX_WIDTH / img.width);
+        canvas.width = img.width * scaleSize;
+        canvas.height = img.height * scaleSize;
+
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob(
+          (blob) => {
+            resolve(blob || file);
+          },
+          'image/jpeg',
+          0.7
+        );
+      };
+    };
+  });
+}
+
+// Direct reliable Cloudinary upload
+async function uploadToCloudinary(file: Blob | File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', UPLOAD_PRESET);
+
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+    {
+      method: 'POST',
+      body: formData,
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error('Image upload failed. Please verify internet or Cloudinary settings.');
+  }
+
+  const data = await res.json();
+  return data.secure_url || data.url;
+}
 
 export default function CreateConfessionModal({ onClose, onCreated }: CreateConfessionModalProps) {
   const [text, setText] = useState('');
@@ -19,7 +71,7 @@ export default function CreateConfessionModal({ onClose, onCreated }: CreateConf
   const [country, setCountry] = useState('');
   const [city, setCity] = useState('');
   const [customCity, setCustomCity] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageFile, setImageFile] = useState<Blob | File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [compressing, setCompressing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -30,7 +82,6 @@ export default function CreateConfessionModal({ onClose, onCreated }: CreateConf
   const charCount = text.length;
   const overLimit = wordCount > WORD_LIMIT;
 
-  // Selected country ki cities list
   const availableCities = useMemo(() => {
     if (!country) return [];
     const found = WORLD_LOCATIONS.find(
@@ -67,7 +118,7 @@ export default function CreateConfessionModal({ onClose, onCreated }: CreateConf
     setError(null);
     setCompressing(true);
     try {
-      const compressed = await compressImageToUnder50KB(file);
+      const compressed = await compressImageUnder50KB(file);
       setImageFile(compressed);
       setImagePreview(URL.createObjectURL(compressed));
     } catch (err) {
@@ -102,12 +153,12 @@ export default function CreateConfessionModal({ onClose, onCreated }: CreateConf
     try {
       let imageUrl: string | null = null;
       if (imageFile) {
-        imageUrl = await uploadImageToCloudinary(imageFile);
+        imageUrl = await uploadToCloudinary(imageFile);
       }
       const confession = await createConfession({
-        authorName: authorName.trim(),
+        authorName: authorName.trim() || 'Anonymous',
         text: text.trim(),
-        imageUrl,
+        imageUrl: imageUrl || undefined,
         country: country.trim(),
         city: city.trim(),
       });
@@ -143,7 +194,7 @@ export default function CreateConfessionModal({ onClose, onCreated }: CreateConf
               onChange={(e) => setText(e.target.value)}
               placeholder="What's something you've never told anyone?"
               rows={7}
-              className="w-full text-base leading-relaxed text-gray-900 rounded-xl border border-gray-200 p-3.5 outline-none focus:border-blush-300 resize-none"
+              className="w-full text-base leading-relaxed text-gray-900 rounded-xl border border-gray-200 p-3.5 outline-none focus:border-rose-400 resize-none"
             />
             <div className="flex justify-between text-xs mt-1.5">
               <span className={overLimit ? 'text-red-500 font-medium' : 'text-gray-400'}>
@@ -157,17 +208,16 @@ export default function CreateConfessionModal({ onClose, onCreated }: CreateConf
             value={authorName}
             onChange={(e) => setAuthorName(e.target.value)}
             placeholder="Anonymous (leave blank to stay anonymous)"
-            className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-blush-300"
+            className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-rose-400"
           />
 
           {/* Dynamic Global Location Selection */}
           <div className="space-y-2">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Country Select */}
               <select
                 value={country}
                 onChange={handleCountryChange}
-                className="text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-blush-300 bg-white text-gray-800"
+                className="text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-rose-400 bg-white text-gray-800"
               >
                 <option value="">Select Country</option>
                 {WORLD_LOCATIONS.map((loc) => (
@@ -177,13 +227,12 @@ export default function CreateConfessionModal({ onClose, onCreated }: CreateConf
                 ))}
               </select>
 
-              {/* City Select */}
               {!customCity ? (
                 <select
                   value={city}
                   onChange={handleCityChange}
                   disabled={!country}
-                  className="text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-blush-300 bg-white text-gray-800 disabled:bg-gray-50 disabled:text-gray-400"
+                  className="text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-rose-400 bg-white text-gray-800 disabled:bg-gray-50 disabled:text-gray-400"
                 >
                   <option value="">
                     {country ? 'Select City / State' : 'Select Country First'}
@@ -202,7 +251,7 @@ export default function CreateConfessionModal({ onClose, onCreated }: CreateConf
                     onChange={(e) => setCity(e.target.value)}
                     placeholder="Type city name"
                     autoFocus
-                    className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-blush-300 pr-8"
+                    className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-gray-200 outline-none focus:border-rose-400 pr-8"
                   />
                   <button
                     type="button"
@@ -236,7 +285,7 @@ export default function CreateConfessionModal({ onClose, onCreated }: CreateConf
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={compressing}
-                className="w-full flex items-center justify-center gap-2 text-sm text-gray-500 border-2 border-dashed border-gray-200 rounded-xl py-4 hover:border-blush-300 hover:text-blush-600 transition-colors"
+                className="w-full flex items-center justify-center gap-2 text-sm text-gray-500 border-2 border-dashed border-gray-200 rounded-xl py-4 hover:border-rose-300 hover:text-rose-600 transition-colors"
               >
                 {compressing ? (
                   <>
@@ -246,7 +295,7 @@ export default function CreateConfessionModal({ onClose, onCreated }: CreateConf
                 ) : (
                   <>
                     <ImageIcon className="w-4 h-4" />
-                    Add one photo (optional)
+                    Add one photo (compressed to ~50KB)
                   </>
                 )}
               </button>
@@ -267,7 +316,7 @@ export default function CreateConfessionModal({ onClose, onCreated }: CreateConf
           <button
             onClick={handleSubmit}
             disabled={submitting || compressing || !text.trim() || overLimit}
-            className="w-full py-3 rounded-full bg-gradient-to-r from-blush-500 to-plum-500 text-white font-semibold text-sm disabled:opacity-40 transition-opacity flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-full bg-gradient-to-r from-[#f95738] to-[#ee4266] text-white font-semibold text-sm disabled:opacity-40 transition-opacity flex items-center justify-center gap-2 cursor-pointer shadow-md"
           >
             {submitting ? (
               <>
