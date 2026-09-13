@@ -180,6 +180,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   const [cursor, setCursor] = useState<FeedPage['cursor']>(null);
   const [hasMore, setHasMore] = useState(true);
 
+  // Cached posts maujood hone par spinner shuru se hi false rahega
   const [loading, setLoading] = useState<boolean>(() => posts.length === 0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [activePost, setActivePost] = useState<any | null>(null);
@@ -239,54 +240,47 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   };
 
   const loadInitial = useCallback(async () => {
-    if (posts.length === 0) {
-      setLoading(true);
-    }
+    let active = true;
+
+    // Hard safety guard: 2 second se zyada loading indicator kabhi active nahi rahega
+    const safetyTimer = setTimeout(() => {
+      if (active) setLoading(false);
+    }, 2000);
 
     try {
       const page = await fetchInitialFeed(regionFilter ?? undefined);
-
-      // Instant Auto-Seed Trigger: Agar database me posts kam hain to turant background me naye posts generate karo
-      if (page.posts.length < 3) {
-        generateAndPublishConfession()
-          .then((newlyCreated) => {
-            if (newlyCreated) {
-              setPosts((current) => {
-                const updated = sortPostsByRecent([newlyCreated, ...current]);
-                try {
-                  localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(updated.slice(0, 16)));
-                } catch {}
-                return updated;
-              });
-            }
-          })
-          .catch(console.warn);
-      }
-
-      let blended = page.posts;
-      try {
-        blended = await syncSimulatedActivity(page.posts);
-      } catch (err) {
-        console.warn('Simulator sync bypassed:', err);
-      }
-
-      const merged = applySavedActivity(blended);
+      const merged = applySavedActivity(page.posts);
       const sorted = sortPostsByRecent(merged);
 
-      setPosts(sorted);
-      setCursor(page.cursor);
-      setHasMore(page.hasMore);
-      setVisibleCount(POSTS_PER_PAGE);
+      if (active) {
+        setPosts(sorted);
+        setCursor(page.cursor);
+        setHasMore(page.hasMore);
+        setVisibleCount(POSTS_PER_PAGE);
+        setLoading(false);
 
-      try {
-        localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(sorted.slice(0, 16)));
-      } catch {}
+        try {
+          localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(sorted.slice(0, 16)));
+        } catch {}
+      }
+
+      // Background AI simulation trigger bina render ko pause kiye
+      setTimeout(() => {
+        syncSimulatedActivity(sorted).catch(() => {});
+      }, 500);
+
     } catch (err) {
       console.error('Error in loadInitial:', err);
     } finally {
-      setLoading(false);
+      clearTimeout(safetyTimer);
+      if (active) setLoading(false);
     }
-  }, [regionFilter, posts.length]);
+
+    return () => {
+      active = false;
+      clearTimeout(safetyTimer);
+    };
+  }, [regionFilter]);
 
   useEffect(() => {
     loadInitial();
