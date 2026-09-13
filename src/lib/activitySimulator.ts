@@ -125,6 +125,7 @@ function saveHash(hash: string) {
 }
 
 function isDuplicate(text: string): boolean {
+  if (!text) return true;
   const cleanSnippet = text.trim().slice(0, 45).toLowerCase();
   const hashes = getStoredHashes();
   return hashes.includes(cleanSnippet);
@@ -151,43 +152,50 @@ Requirements:
 1. Post text: EXACTLY 90 to 100 words. Natural, raw, authentic conversational tone.
 2. No greetings, no concluding moral slogans, no hashtags.
 3. Matching Comments: Provide 4 realistic comments strictly matching the language, tone, and specific topic of the post.
-4. Output STRICTLY a valid JSON:
+4. Output STRICTLY a valid JSON with no markdown wrapping:
 {
   "author": "Realistic username (e.g., SilentReader, NeonShadow, QuietDrifter)",
   "confession": "The 90-100 word story.",
-  "imageVisualPrompt": "4-5 descriptive visual keywords matching the context (e.g., lonely metro station lights night bokeh, cinematic 8k)",
+  "imageVisualPrompt": "4-5 descriptive visual keywords matching the context (e.g., lonely metro station lights night bokeh, cinematic)",
   "comments": [
-    {"author": "CuriousWanderer", "text": "Comment matching topic..."},
-    {"author": "Anonymous", "text": "Another contextual response..."},
-    {"author": "Realist_99", "text": "Thoughtful reaction..."},
-    {"author": "MidnightMind", "text": "Relatable take..."}
+    {"author": "CuriousWanderer", "text": "Realistic response..."},
+    {"author": "Anonymous", "text": "Another contextual reaction..."},
+    {"author": "Realist_99", "text": "Thoughtful take..."},
+    {"author": "MidnightMind", "text": "Relatable reply..."}
   ]
 }`;
 
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.95,
-            responseMimeType: 'application/json',
-          },
-        }),
-      }
-    );
+    // Primary: gemini-1.5-flash
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.95,
+          responseMimeType: 'application/json',
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      console.warn('Gemini HTTP Error:', res.status, res.statusText);
+      return null;
+    }
 
     const data = await res.json();
-    const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!rawJson) return null;
+    let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawText) return null;
 
-    const parsed = JSON.parse(rawJson);
+    // Sanitize any potential markdown blocks like ```json ... ```
+    rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+    const parsed = JSON.parse(rawText);
     return {
-      body: parsed.confession,
-      imagePrompt: parsed.imageVisualPrompt,
+      body: parsed.confession || parsed.text || '',
+      imagePrompt: parsed.imageVisualPrompt || parsed.imagePrompt || `${topic} candid photography`,
       author: parsed.author || 'Anonymous',
       category: category,
       contextualComments: Array.isArray(parsed.comments) ? parsed.comments : []
@@ -201,8 +209,9 @@ Requirements:
 // Generates ~50KB compressed JPG image via dimensions & quality capping
 function createCompressedMatchingImageUrl(visualPrompt: string): string {
   const seed = `${Date.now()}_${Math.floor(Math.random() * 10000000)}`;
+  const cleanKeyword = visualPrompt.replace(/[^a-zA-Z0-9 ]/g, ' ').trim();
   const cleanPrompt = encodeURIComponent(
-    `${visualPrompt}, editorial candid photography, documentary aesthetic, natural lighting, sharp focus`
+    `${cleanKeyword}, editorial candid photography, documentary aesthetic, natural lighting, sharp focus`
   );
   // width=600&height=380 ensures lightweight JPG transfer (~45-55KB)
   return `https://image.pollinations.ai/prompt/${cleanPrompt}?width=600&height=380&seed=${seed}&nologo=true`;
@@ -260,7 +269,7 @@ export async function generateAndPublishConfession(): Promise<Confession | null>
   const randomLoc = GLOBAL_LOCATIONS[Math.floor(Math.random() * GLOBAL_LOCATIONS.length)];
 
   const generated = await generateDiverseStory(selectedGroup.category, randomTopic);
-  if (!generated || isDuplicate(generated.body)) {
+  if (!generated || !generated.body || isDuplicate(generated.body)) {
     return null;
   }
 
@@ -294,16 +303,19 @@ export async function syncSimulatedActivity(existingPosts: Confession[]): Promis
     // Gradual interaction progression for existing posts
     applyOrganicGradualEngagement(existingPosts).catch(() => {});
 
-    // AUTO-SEED: Agar feed me 3 se kam posts bache hain to turant generate karo
-    if (existingPosts.length < 3) {
+    // COLD-START AUTO-FILL: Feed me posts kam hain to turant trigger karo
+    if (!existingPosts || existingPosts.length < 3) {
       localStorage.setItem(SIMULATOR_SCHEDULE_KEY, String(now));
-      generateAndPublishConfession().catch((err) => {
-        console.warn('Cold start generator error:', err);
-      });
+      generateAndPublishConfession()
+        .then(() => {
+          // Thode delay ke baad ek aur post banao taaki feed empty na lage
+          setTimeout(() => generateAndPublishConfession().catch(() => {}), 3000);
+        })
+        .catch((err) => console.warn('Cold start generator error:', err));
       return existingPosts;
     }
 
-    // NORMAL SCHEDULE: Every 14.4 minutes publish 1 fresh confession (100 posts/day)
+    // NORMAL SCHEDULE: 14.4 minute har post (~100 posts rozana)
     if (now - lastRun > 14 * 60 * 1000) {
       localStorage.setItem(SIMULATOR_SCHEDULE_KEY, String(now));
       generateAndPublishConfession().catch((err) => {
