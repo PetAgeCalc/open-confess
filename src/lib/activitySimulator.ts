@@ -1,7 +1,7 @@
 import { createConfession, setReaction, addComment } from './confessionService';
 import { Confession, ReactionEmoji } from '../types';
-// Cloudinary upload function ko import karein (aapke cloudinary.ts se)
-import { uploadToCloudinary } from './cloudinary';
+// Cloudinary ke exact exported function name ke sath match kiya gaya
+import { uploadImageToCloudinary } from './cloudinary';
 
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || '';
 const POSTED_HASHES_KEY = 'open_confess_posted_hashes_v8';
@@ -132,7 +132,6 @@ function getAppropriateUsername(lang: 'Bengali' | 'Hindi' | 'English'): string {
 // IMAGE GENERATION + AUTO 50KB JPG COMPRESSION + CLOUDINARY UPLOAD
 // -------------------------------------------------------------
 
-// Helper to convert Image to Compressed 50KB JPG File
 async function compressImageToJpgFile(imageUrl: string): Promise<File> {
   const response = await fetch(imageUrl);
   const blob = await response.blob();
@@ -144,7 +143,7 @@ async function compressImageToJpgFile(imageUrl: string): Promise<File> {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
 
-      // 600x800 resolution keeps aspect ratio sharp while targeting ~40-50KB JPG
+      // 600px width par scale karke image size ~40-50KB JPG banta hai
       const targetWidth = 600;
       const targetHeight = Math.round((img.height / img.width) * targetWidth);
 
@@ -157,7 +156,7 @@ async function compressImageToJpgFile(imageUrl: string): Promise<File> {
 
       ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
-      // Quality 0.65 yields crisp ~40-50KB JPG output
+      // Quality 0.65 se crisp output aur light weight file milti hai
       canvas.toBlob(
         (compressedBlob) => {
           if (compressedBlob) {
@@ -178,7 +177,6 @@ async function compressImageToJpgFile(imageUrl: string): Promise<File> {
   });
 }
 
-// Generates, compresses to ~50KB JPG and uploads directly to Cloudinary
 async function generateAndUploadCompressedImage(
   confessionText: string,
   isBengaliContext: boolean
@@ -211,11 +209,11 @@ async function generateAndUploadCompressedImage(
   const rawGeneratedUrl = `https://image.pollinations.ai/prompt/${prompt}?width=768&height=1024&seed=${uniqueSeed}&nologo=true&model=flux`;
 
   try {
-    // 1. Fetch & compress to ~50KB JPG File
+    // 1. Fetch aur compress karein (~50KB JPG)
     const compressedJpgFile = await compressImageToJpgFile(rawGeneratedUrl);
 
-    // 2. Upload to your Cloudinary storage
-    const cloudinaryUrl = await uploadToCloudinary(compressedJpgFile);
+    // 2. Cloudinary me direct upload
+    const cloudinaryUrl = await uploadImageToCloudinary(compressedJpgFile);
 
     if (cloudinaryUrl) {
       return cloudinaryUrl;
@@ -224,7 +222,7 @@ async function generateAndUploadCompressedImage(
     console.warn('Cloudinary compression/upload fallback:', err);
   }
 
-  // Fallback if Cloudinary is temporarily unreachable
+  // Network ya Cloudinary issue aane par fallback URL
   return rawGeneratedUrl;
 }
 
@@ -253,7 +251,7 @@ function isDuplicate(text: string): boolean {
   return hashes.includes(cleanSnippet);
 }
 
-// Generates highly realistic context-aware replies matched to post language & meaning
+// Post ki language aur emotion ke hisaab se natural reader comment generate karta hai
 async function generateSmartMatchingComment(postText: string, lang: 'Bengali' | 'Hindi' | 'English'): Promise<string> {
   if (!GROQ_API_KEY || !GROQ_API_KEY.startsWith('gsk_')) {
     if (lang === 'Bengali') return 'কথাগুলো বুক ছুঁয়ে গেল, শক্ত থেকো।';
@@ -399,9 +397,7 @@ function generateDynamicFallback(lang: 'Bengali' | 'Hindi' | 'English', city: st
   };
 }
 
-// Gradual Organic Growth Engine:
-// - Delayed start (first reaction/comment strictly after 6-10 minutes)
-// - Slow, steady compounding up to 100+ reactions (heavy ❤️ bias) and 50+ smart comments
+// Organic Growth: Delayed start (6-10 min) + slow batches reaching 100+ reacts and 50+ comments
 async function applyOrganicGradualEngagement(posts: Confession[]) {
   try {
     const rawTracker = localStorage.getItem(ENGAGEMENT_TRACKER_KEY);
@@ -415,17 +411,17 @@ async function applyOrganicGradualEngagement(posts: Confession[]) {
 
       const elapsedMinutes = Math.floor((now - createdAt) / (60 * 1000));
 
-      // Rule: Pehle 6 minute tak ZERO activity (organic pacing)
+      // Initial buffer: pehle 6 minutes bilkul quiet
       if (elapsedMinutes < 6) continue;
 
       const record = tracker[post.id] || { commentsCount: 0, reactionsCount: 0, lastActivity: 0 };
 
-      // Spacing: Har 5-8 minute me ek ek wave
+      // Spacing: har 5-8 minute me ek ek wave
       if (now - record.lastActivity < 5 * 60 * 1000) continue;
 
       const postLang = detectPostLanguage(post.text, (post as any).city);
 
-      // Reactions Growth -> 100+ target
+      // Reactions compounding (100+ limit)
       if (record.reactionsCount < 120) {
         const reactsToAdd = Math.floor(Math.random() * 3) + 1;
         for (let i = 0; i < reactsToAdd; i++) {
@@ -435,7 +431,7 @@ async function applyOrganicGradualEngagement(posts: Confession[]) {
         record.reactionsCount += reactsToAdd;
       }
 
-      // Comments Growth -> 50+ target
+      // Comments compounding (50+ limit)
       if (record.commentsCount < 60) {
         const smartComment = await generateSmartMatchingComment(post.text, postLang);
         const randomUser = getAppropriateUsername(postLang);
@@ -470,7 +466,7 @@ export async function generateAndPublishConfession(): Promise<Confession | null>
     story = generateDynamicFallback(targetLang, randomLoc.city);
   }
 
-  // 50KB JPG compress hokar direct Cloudinary me upload hogi
+  // 50KB JPG compress hokar Cloudinary me upload
   const imageUrl = await generateAndUploadCompressedImage(story.body, isBengaliContext);
 
   const newPost = await createConfession({
