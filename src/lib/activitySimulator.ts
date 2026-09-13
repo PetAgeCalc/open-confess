@@ -166,7 +166,6 @@ Requirements:
 }`;
 
   try {
-    // Primary: gemini-1.5-flash
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
     const res = await fetch(url, {
       method: 'POST',
@@ -189,7 +188,6 @@ Requirements:
     let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!rawText) return null;
 
-    // Sanitize any potential markdown blocks like ```json ... ```
     rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
 
     const parsed = JSON.parse(rawText);
@@ -213,7 +211,6 @@ function createCompressedMatchingImageUrl(visualPrompt: string): string {
   const cleanPrompt = encodeURIComponent(
     `${cleanKeyword}, editorial candid photography, documentary aesthetic, natural lighting, sharp focus`
   );
-  // width=600&height=380 ensures lightweight JPG transfer (~45-55KB)
   return `https://image.pollinations.ai/prompt/${cleanPrompt}?width=600&height=380&seed=${seed}&nologo=true`;
 }
 
@@ -231,25 +228,18 @@ async function applyOrganicGradualEngagement(posts: Confession[]) {
       const elapsedMinutes = Math.floor((now - createdAt) / (60 * 1000));
       const currentStage = tracker[post.id] || 0;
 
-      // Stage 1: ~10 minutes
       if (elapsedMinutes >= 10 && currentStage < 1) {
         tracker[post.id] = 1;
         setReaction(post.id, null, '❤️').catch(() => {});
       }
-
-      // Stage 2: ~20 minutes
       if (elapsedMinutes >= 20 && currentStage < 2) {
         tracker[post.id] = 2;
         setReaction(post.id, null, '❤️').catch(() => {});
       }
-
-      // Stage 3: ~30 minutes
       if (elapsedMinutes >= 30 && currentStage < 3) {
         tracker[post.id] = 3;
         setReaction(post.id, null, '❤️').catch(() => {});
       }
-
-      // Stage 4: ~50 minutes
       if (elapsedMinutes >= 50 && currentStage < 4) {
         tracker[post.id] = 4;
         setReaction(post.id, null, '❤️').catch(() => {});
@@ -284,7 +274,6 @@ export async function generateAndPublishConfession(): Promise<Confession | null>
     category: generated.category,
   });
 
-  // Attach first instant matching comment to ignite discussions
   if (newPost && generated.contextualComments.length > 0) {
     const firstComment = generated.contextualComments[0];
     addComment(newPost.id, firstComment.author, firstComment.text).catch(() => {});
@@ -294,37 +283,23 @@ export async function generateAndPublishConfession(): Promise<Confession | null>
   return newPost;
 }
 
-// Periodic simulator trigger (~100 posts / 24 hours + auto-fill if empty)
+// Detached asynchronous simulator trigger (~100 posts / 24 hours)
 export async function syncSimulatedActivity(existingPosts: Confession[]): Promise<Confession[]> {
-  try {
-    const now = Date.now();
-    const lastRun = Number(localStorage.getItem(SIMULATOR_SCHEDULE_KEY) || 0);
+  setTimeout(async () => {
+    try {
+      const now = Date.now();
+      const lastRun = Number(localStorage.getItem(SIMULATOR_SCHEDULE_KEY) || 0);
 
-    // Gradual interaction progression for existing posts
-    applyOrganicGradualEngagement(existingPosts).catch(() => {});
+      applyOrganicGradualEngagement(existingPosts).catch(() => {});
 
-    // COLD-START AUTO-FILL: Feed me posts kam hain to turant trigger karo
-    if (!existingPosts || existingPosts.length < 3) {
-      localStorage.setItem(SIMULATOR_SCHEDULE_KEY, String(now));
-      generateAndPublishConfession()
-        .then(() => {
-          // Thode delay ke baad ek aur post banao taaki feed empty na lage
-          setTimeout(() => generateAndPublishConfession().catch(() => {}), 3000);
-        })
-        .catch((err) => console.warn('Cold start generator error:', err));
-      return existingPosts;
+      if (!existingPosts || existingPosts.length < 3 || now - lastRun > 14 * 60 * 1000) {
+        localStorage.setItem(SIMULATOR_SCHEDULE_KEY, String(now));
+        await generateAndPublishConfession();
+      }
+    } catch (e) {
+      console.warn('Simulation routine bypassed:', e);
     }
-
-    // NORMAL SCHEDULE: 14.4 minute har post (~100 posts rozana)
-    if (now - lastRun > 14 * 60 * 1000) {
-      localStorage.setItem(SIMULATOR_SCHEDULE_KEY, String(now));
-      generateAndPublishConfession().catch((err) => {
-        console.warn('Background auto-post generation error:', err);
-      });
-    }
-  } catch (e) {
-    console.warn('Simulation routine failed:', e);
-  }
+  }, 0);
 
   return existingPosts;
 }
