@@ -124,14 +124,13 @@ async function fetchFirestorePage(
     : query(colRef, ...constraints);
 
   const snap = await getDocs(q);
-  const posts: Confession[] = [];
+  const targetDb = interactionsDb || postsDb;
 
-  for (const docSnap of snap.docs) {
+  const postsPromises = snap.docs.map(async (docSnap) => {
     const data = docSnap.data();
-    if (regionFilter && data.region && data.region !== regionFilter) continue;
+    if (regionFilter && data.region && data.region !== regionFilter) return null;
 
     let reactionData: any = null;
-    const targetDb = interactionsDb || postsDb;
     if (targetDb) {
       try {
         const reactionSnap = await getDoc(doc(targetDb, 'reactions', docSnap.id));
@@ -141,7 +140,7 @@ async function fetchFirestorePage(
       } catch (e) {}
     }
 
-    posts.push({
+    return {
       id: docSnap.id,
       authorName: data.authorName || data.author || 'Anonymous',
       text: data.body || data.text || data.content || '',
@@ -154,8 +153,11 @@ async function fetchFirestorePage(
       likesCount: Number(reactionData?.likesCount ?? data.likesCount ?? 0),
       reactions: reactionData?.reactions ?? emptyReactions(),
       comments: [],
-    });
-  }
+    } as Confession;
+  });
+
+  const resolvedPosts = await Promise.all(postsPromises);
+  const posts = resolvedPosts.filter((post): post is Confession => post !== null);
 
   posts.sort((a, b) => safeEpochMs(b.createdAt) - safeEpochMs(a.createdAt));
   const lastDoc = snap.docs[snap.docs.length - 1] ?? null;
