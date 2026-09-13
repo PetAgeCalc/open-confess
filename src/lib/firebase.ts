@@ -9,18 +9,18 @@ import {
 /**
  * Dual Firebase architecture:
  *  - postsApp / postsDb        -> stores the `confessions` collection (text, images, location, meta)
- *  - interactionsApp / interactionsDb -> stores `post_interactions` (likes/reactions) and their
- *    `comments` sub-collection.
+ *  - interactionsApp / interactionsDb -> stores `reactions` and `comments`
  */
 
-// 1. POSTS DATABASE (open-confees)
+// 1. POSTS DATABASE (open-confees) - Ab ye complete key ke sath hai
 const postsConfig = {
-  apiKey: import.meta.env.VITE_POSTS_FIREBASE_API_KEY || "AIzaSyDa-wzQxXm1q5lE8vI4q2Fq...", // Fallback to env if present
+  apiKey: "AIzaSyApMJTBvr7zbzJTP85xZAb994NfLWUBSz8",
   authDomain: "open-confees.firebaseapp.com",
   projectId: "open-confees",
   storageBucket: "open-confees.firebasestorage.app",
-  messagingSenderId: "729352945763",
-  appId: "1:729352945763:web:9c97793fc3e0d8cb3fdfc7",
+  messagingSenderId: "516455021498",
+  appId: "1:516455021498:web:7e97a52d0fbd1088a1fb83",
+  measurementId: "G-DR6LPC8RS2",
 };
 
 // 2. INTERACTIONS DATABASE (ageless-lamp-461817-i8)
@@ -31,13 +31,16 @@ const interactionsConfig = {
   storageBucket: "ageless-lamp-461817-i8.firebasestorage.app",
   messagingSenderId: "990239046881",
   appId: "1:990239046881:web:b0f47572c499a0f0120ba0",
+  measurementId: "G-ZHMZ54PBCD",
 };
 
 function isConfigComplete(config: Record<string, unknown>): boolean {
-  return Object.values(config).every((v) => typeof v === 'string' && v.length > 0 && !v.includes('...'));
+  return Object.values(config).every(
+    (v) => typeof v === 'string' && v.length > 0 && !v.includes('...')
+  );
 }
 
-export const isPostsFirebaseConfigured = isConfigComplete(postsConfig) || Boolean(import.meta.env.VITE_POSTS_FIREBASE_API_KEY);
+export const isPostsFirebaseConfigured = isConfigComplete(postsConfig);
 export const isInteractionsFirebaseConfigured = isConfigComplete(interactionsConfig);
 export const isFirebaseConfigured = isPostsFirebaseConfigured && isInteractionsFirebaseConfigured;
 
@@ -46,13 +49,9 @@ let interactionsApp: FirebaseApp | null = null;
 export let postsDb: Firestore | null = null;
 export let interactionsDb: Firestore | null = null;
 
-// Initialize Posts Project with Local Cache
+// Initialize Posts Project with Fast Offline Cache
 try {
-  const finalPostsConfig = {
-    ...postsConfig,
-    apiKey: import.meta.env.VITE_POSTS_FIREBASE_API_KEY || postsConfig.apiKey,
-  };
-  postsApp = initializeApp(finalPostsConfig as Record<string, string>, 'postsApp');
+  postsApp = initializeApp(postsConfig as Record<string, string>, 'postsApp');
   postsDb = initializeFirestore(postsApp, {
     localCache: persistentLocalCache({
       tabManager: persistentMultipleTabManager(),
@@ -62,7 +61,7 @@ try {
   console.error("Error initializing posts Firebase:", e);
 }
 
-// Initialize Interactions Project with Local Cache
+// Initialize Interactions Project with Fast Offline Cache
 try {
   interactionsApp = initializeApp(interactionsConfig as Record<string, string>, 'interactionsApp');
   interactionsDb = initializeFirestore(interactionsApp, {
