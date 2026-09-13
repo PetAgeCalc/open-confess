@@ -1,19 +1,14 @@
-const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string | undefined;
-const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string | undefined;
+const CLOUD_NAME = (import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string) || 'xjdv4l6v';
+const UPLOAD_PRESET = (import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string) || 'confess_preset';
 
 export function isCloudinaryConfigured(): boolean {
   return Boolean(CLOUD_NAME && UPLOAD_PRESET);
 }
 
-export async function uploadImageToCloudinary(file: File): Promise<string> {
-  if (!isCloudinaryConfigured()) {
-    console.error('Cloudinary Environment variables missing:', { CLOUD_NAME, UPLOAD_PRESET });
-    throw new Error('Cloudinary not configured! Please add VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET.');
-  }
-
+export async function uploadImageToCloudinary(file: File | Blob): Promise<string> {
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('upload_preset', UPLOAD_PRESET as string);
+  formData.append('upload_preset', UPLOAD_PRESET);
 
   const response = await fetch(
     `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
