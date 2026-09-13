@@ -222,25 +222,25 @@ async function applyOrganicGradualEngagement(posts: Confession[]) {
       const elapsedMinutes = Math.floor((now - createdAt) / (60 * 1000));
       const currentStage = tracker[post.id] || 0;
 
-      // Stage 1: ~10 minutes (Initial likes trickle in)
+      // Stage 1: ~10 minutes
       if (elapsedMinutes >= 10 && currentStage < 1) {
         tracker[post.id] = 1;
         setReaction(post.id, null, '❤️').catch(() => {});
       }
 
-      // Stage 2: ~20 minutes (Another heart + community interaction)
+      // Stage 2: ~20 minutes
       if (elapsedMinutes >= 20 && currentStage < 2) {
         tracker[post.id] = 2;
         setReaction(post.id, null, '❤️').catch(() => {});
       }
 
-      // Stage 3: ~30 minutes (Follow-up reaction)
+      // Stage 3: ~30 minutes
       if (elapsedMinutes >= 30 && currentStage < 3) {
         tracker[post.id] = 3;
         setReaction(post.id, null, '❤️').catch(() => {});
       }
 
-      // Stage 4: ~50 minutes (Matured engagement)
+      // Stage 4: ~50 minutes
       if (elapsedMinutes >= 50 && currentStage < 4) {
         tracker[post.id] = 4;
         setReaction(post.id, null, '❤️').catch(() => {});
@@ -285,7 +285,7 @@ export async function generateAndPublishConfession(): Promise<Confession | null>
   return newPost;
 }
 
-// Periodic simulator trigger (~100 posts / 24 hours + gradual activity progression)
+// Periodic simulator trigger (~100 posts / 24 hours + auto-fill if empty)
 export async function syncSimulatedActivity(existingPosts: Confession[]): Promise<Confession[]> {
   try {
     const now = Date.now();
@@ -294,7 +294,16 @@ export async function syncSimulatedActivity(existingPosts: Confession[]): Promis
     // Gradual interaction progression for existing posts
     applyOrganicGradualEngagement(existingPosts).catch(() => {});
 
-    // Every 14.4 minutes publish 1 fresh confession (100 posts/day)
+    // AUTO-SEED: Agar feed me 3 se kam posts bache hain to turant generate karo
+    if (existingPosts.length < 3) {
+      localStorage.setItem(SIMULATOR_SCHEDULE_KEY, String(now));
+      generateAndPublishConfession().catch((err) => {
+        console.warn('Cold start generator error:', err);
+      });
+      return existingPosts;
+    }
+
+    // NORMAL SCHEDULE: Every 14.4 minutes publish 1 fresh confession (100 posts/day)
     if (now - lastRun > 14 * 60 * 1000) {
       localStorage.setItem(SIMULATOR_SCHEDULE_KEY, String(now));
       generateAndPublishConfession().catch((err) => {
