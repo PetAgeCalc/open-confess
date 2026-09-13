@@ -3,7 +3,7 @@ import { Plus, Loader2, X, Heart, MessageCircle, MapPin, Send, User, Share2, Cop
 import { Confession } from '../types';
 import { fetchInitialFeed, fetchNextPage, FeedPage, setReaction, addComment } from '../lib/confessionService';
 import CreateConfessionModal from '../components/CreateConfessionModal';
-import { syncSimulatedActivity, scheduleEngagementForNewPost } from '../lib/activitySimulator';
+import { syncSimulatedActivity, scheduleEngagementForNewPost, generateAndPublishConfession } from '../lib/activitySimulator';
 
 interface HomePageProps {
   regionFilter: string | null;
@@ -167,7 +167,6 @@ function normalizeComment(c: any, index: number): CommentItem {
 }
 
 export default function HomePage({ regionFilter }: HomePageProps) {
-  // Read immediate cached posts for instant zero-wait render
   const [posts, setPosts] = useState<Confession[]>(() => {
     try {
       const cached = localStorage.getItem(FEED_CACHE_KEY);
@@ -180,8 +179,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
   const [cursor, setCursor] = useState<FeedPage['cursor']>(null);
   const [hasMore, setHasMore] = useState(true);
-  
-  // Show spinner only on the very first cold visit when cache is completely empty
+
   const [loading, setLoading] = useState<boolean>(() => posts.length === 0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [activePost, setActivePost] = useState<any | null>(null);
@@ -241,13 +239,29 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   };
 
   const loadInitial = useCallback(async () => {
-    // Only trigger full-screen spinner if there are no posts on screen
     if (posts.length === 0) {
       setLoading(true);
     }
 
     try {
       const page = await fetchInitialFeed(regionFilter ?? undefined);
+
+      // Instant Auto-Seed Trigger: Agar database me posts kam hain to turant background me naye posts generate karo
+      if (page.posts.length < 3) {
+        generateAndPublishConfession()
+          .then((newlyCreated) => {
+            if (newlyCreated) {
+              setPosts((current) => {
+                const updated = sortPostsByRecent([newlyCreated, ...current]);
+                try {
+                  localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(updated.slice(0, 16)));
+                } catch {}
+                return updated;
+              });
+            }
+          })
+          .catch(console.warn);
+      }
 
       let blended = page.posts;
       try {
@@ -264,7 +278,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       setHasMore(page.hasMore);
       setVisibleCount(POSTS_PER_PAGE);
 
-      // Save fresh posts to cache for subsequent zero-wait reloads
       try {
         localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(sorted.slice(0, 16)));
       } catch {}
