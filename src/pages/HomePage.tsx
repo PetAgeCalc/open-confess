@@ -31,6 +31,7 @@ const EMOJI_LIST = [
 
 const STORAGE_KEY = 'open_confess_user_activity_v1';
 const POSTS_PER_PAGE = 8;
+const FEED_CACHE_KEY = 'open_confess_feed_cache_instant_v1';
 
 function parseTimeToHuman(rawTime: any): string {
   if (!rawTime) return 'Just now';
@@ -166,10 +167,22 @@ function normalizeComment(c: any, index: number): CommentItem {
 }
 
 export default function HomePage({ regionFilter }: HomePageProps) {
-  const [posts, setPosts] = useState<Confession[]>([]);
+  // Read immediate cached posts for instant zero-wait render
+  const [posts, setPosts] = useState<Confession[]>(() => {
+    try {
+      const cached = localStorage.getItem(FEED_CACHE_KEY);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch {}
+    return [];
+  });
+
   const [cursor, setCursor] = useState<FeedPage['cursor']>(null);
   const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(true);
+  
+  // Show spinner only on the very first cold visit when cache is completely empty
+  const [loading, setLoading] = useState<boolean>(() => posts.length === 0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [activePost, setActivePost] = useState<any | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -228,17 +241,14 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   };
 
   const loadInitial = useCallback(async () => {
-    setLoading(true);
-    let isMounted = true;
-
-    // Safety fallback: 4 second se zyada kabhi loader ghoomne nahi dega
-    const safetyTimer = setTimeout(() => {
-      if (isMounted) setLoading(false);
-    }, 4000);
+    // Only trigger full-screen spinner if there are no posts on screen
+    if (posts.length === 0) {
+      setLoading(true);
+    }
 
     try {
       const page = await fetchInitialFeed(regionFilter ?? undefined);
-      
+
       let blended = page.posts;
       try {
         blended = await syncSimulatedActivity(page.posts);
@@ -248,27 +258,22 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
       const merged = applySavedActivity(blended);
       const sorted = sortPostsByRecent(merged);
-      
-      if (isMounted) {
-        setPosts(sorted);
-        setCursor(page.cursor);
-        setHasMore(page.hasMore);
-        setVisibleCount(POSTS_PER_PAGE);
-      }
+
+      setPosts(sorted);
+      setCursor(page.cursor);
+      setHasMore(page.hasMore);
+      setVisibleCount(POSTS_PER_PAGE);
+
+      // Save fresh posts to cache for subsequent zero-wait reloads
+      try {
+        localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(sorted.slice(0, 16)));
+      } catch {}
     } catch (err) {
       console.error('Error in loadInitial:', err);
     } finally {
-      clearTimeout(safetyTimer);
-      if (isMounted) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
-
-    return () => {
-      isMounted = false;
-      clearTimeout(safetyTimer);
-    };
-  }, [regionFilter]);
+  }, [regionFilter, posts.length]);
 
   useEffect(() => {
     loadInitial();
@@ -327,7 +332,14 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       comments: 3,
       commentsList: defaultRelativeList,
     };
-    setPosts((prev) => [postWithTime, ...prev]);
+
+    setPosts((prev) => {
+      const updated = [postWithTime, ...prev];
+      try {
+        localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(updated.slice(0, 16)));
+      } catch {}
+      return updated;
+    });
 
     try {
       scheduleEngagementForNewPost(postWithTime, ({ likesCountIncrement, newComment }) => {
