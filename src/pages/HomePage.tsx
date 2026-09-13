@@ -180,7 +180,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   const [cursor, setCursor] = useState<FeedPage['cursor']>(null);
   const [hasMore, setHasMore] = useState(true);
 
-  // Cached posts maujood hone par spinner shuru se hi false rahega
   const [loading, setLoading] = useState<boolean>(() => posts.length === 0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [activePost, setActivePost] = useState<any | null>(null);
@@ -242,7 +241,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   const loadInitial = useCallback(async () => {
     let active = true;
 
-    // Hard safety guard: 2 second se zyada loading indicator kabhi active nahi rahega
     const safetyTimer = setTimeout(() => {
       if (active) setLoading(false);
     }, 2000);
@@ -264,10 +262,29 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         } catch {}
       }
 
-      // Background AI simulation trigger bina render ko pause kiye
+      // Cold-start seed: Agar feed me posts kam hain to turant screen par naya post push karo
+      if (sorted.length < 4) {
+        generateAndPublishConfession().then((newPost) => {
+          if (newPost && active) {
+            setPosts((prev) => {
+              const updated = sortPostsByRecent([newPost, ...prev.filter((p) => p.id !== newPost.id)]);
+              try {
+                localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(updated.slice(0, 16)));
+              } catch {}
+              return updated;
+            });
+          }
+        }).catch(console.warn);
+      }
+
+      // Background routine schedule
       setTimeout(() => {
-        syncSimulatedActivity(sorted).catch(() => {});
-      }, 500);
+        syncSimulatedActivity(sorted).then((updated) => {
+          if (updated && updated.length > sorted.length && active) {
+            setPosts(updated);
+          }
+        }).catch(() => {});
+      }, 1000);
 
     } catch (err) {
       console.error('Error in loadInitial:', err);
