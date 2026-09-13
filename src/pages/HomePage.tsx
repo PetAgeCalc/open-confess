@@ -229,18 +229,45 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
   const loadInitial = useCallback(async () => {
     setLoading(true);
+    let isMounted = true;
+
+    // Safety fallback: 4 second se zyada kabhi loader ghoomne nahi dega
+    const safetyTimer = setTimeout(() => {
+      if (isMounted) setLoading(false);
+    }, 4000);
+
     try {
       const page = await fetchInitialFeed(regionFilter ?? undefined);
-      const blended = await syncSimulatedActivity(page.posts);
+      
+      let blended = page.posts;
+      try {
+        blended = await syncSimulatedActivity(page.posts);
+      } catch (err) {
+        console.warn('Simulator sync bypassed:', err);
+      }
+
       const merged = applySavedActivity(blended);
       const sorted = sortPostsByRecent(merged);
-      setPosts(sorted);
-      setCursor(page.cursor);
-      setHasMore(page.hasMore);
-      setVisibleCount(POSTS_PER_PAGE);
+      
+      if (isMounted) {
+        setPosts(sorted);
+        setCursor(page.cursor);
+        setHasMore(page.hasMore);
+        setVisibleCount(POSTS_PER_PAGE);
+      }
+    } catch (err) {
+      console.error('Error in loadInitial:', err);
     } finally {
-      setLoading(false);
+      clearTimeout(safetyTimer);
+      if (isMounted) {
+        setLoading(false);
+      }
     }
+
+    return () => {
+      isMounted = false;
+      clearTimeout(safetyTimer);
+    };
   }, [regionFilter]);
 
   useEffect(() => {
@@ -281,6 +308,8 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       setCursor(page.cursor);
       setHasMore(page.hasMore);
       setVisibleCount((prev) => prev + POSTS_PER_PAGE);
+    } catch (err) {
+      console.error('Load more failed:', err);
     } finally {
       setLoadingMore(false);
     }
@@ -300,34 +329,38 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     };
     setPosts((prev) => [postWithTime, ...prev]);
 
-    scheduleEngagementForNewPost(postWithTime, ({ likesCountIncrement, newComment }) => {
-      setPosts((prev) =>
-        prev.map((p) => {
-          if (p.id !== postWithTime.id) return p;
-          const currentLikes = safeLikesCount(p);
-          const currentList = (p as any).commentsList && (p as any).commentsList.length > 0 ? (p as any).commentsList : defaultRelativeList;
-          const updatedList = newComment ? [...currentList, newComment] : currentList;
-          const updatedLikes = likesCountIncrement ? currentLikes + likesCountIncrement : currentLikes;
+    try {
+      scheduleEngagementForNewPost(postWithTime, ({ likesCountIncrement, newComment }) => {
+        setPosts((prev) =>
+          prev.map((p) => {
+            if (p.id !== postWithTime.id) return p;
+            const currentLikes = safeLikesCount(p);
+            const currentList = (p as any).commentsList && (p as any).commentsList.length > 0 ? (p as any).commentsList : defaultRelativeList;
+            const updatedList = newComment ? [...currentList, newComment] : currentList;
+            const updatedLikes = likesCountIncrement ? currentLikes + likesCountIncrement : currentLikes;
 
-          const updatedPost = {
-            ...p,
-            likesCount: updatedLikes,
-            likes: updatedLikes,
-            commentsCount: updatedList.length,
-            comments: updatedList.length,
-            commentsList: updatedList,
-          };
+            const updatedPost = {
+              ...p,
+              likesCount: updatedLikes,
+              likes: updatedLikes,
+              commentsCount: updatedList.length,
+              comments: updatedList.length,
+              commentsList: updatedList,
+            };
 
-          saveActivityToStorage(postWithTime.id, {
-            likesCount: updatedLikes,
-            commentsCount: updatedList.length,
-            commentsList: updatedList,
-          });
+            saveActivityToStorage(postWithTime.id, {
+              likesCount: updatedLikes,
+              commentsCount: updatedList.length,
+              commentsList: updatedList,
+            });
 
-          return updatedPost as Confession;
-        })
-      );
-    });
+            return updatedPost as Confession;
+          })
+        );
+      });
+    } catch (e) {
+      console.warn('Engagement schedule bypassed:', e);
+    }
   }
 
   function handleOpenPost(post: Confession) {
@@ -383,7 +416,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       nextEmoji = emoji;
     }
 
-    // 1. Instant optimistic update for feed posts
     setPosts((prev) =>
       prev.map((p) => {
         if (String(p.id) === String(postId)) {
@@ -398,7 +430,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       })
     );
 
-    // 2. Instant optimistic update for modal if opened
     if (activePost && String(activePost.id) === String(postId)) {
       setActivePost((prev: any) => ({
         ...prev,
@@ -411,13 +442,11 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     setModalPickerOpen(false);
     setCardPickerPostId(null);
 
-    // 3. Storage persistence
     saveActivityToStorage(String(postId), {
       likesCount: nextCount,
       userReaction: nextEmoji,
     });
 
-    // 4. Remote Firebase persistence
     try {
       await setReaction(String(postId), currentEmoji as any, nextEmoji as any);
     } catch (err) {
@@ -511,7 +540,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         </button>
       </section>
 
-      {/* Feed Section - Full-Width Single Column */}
+      {/* Feed Section */}
       <section className="w-full px-3 sm:px-6 md:px-8 pt-1 pb-20 space-y-6">
         {regionFilter && (
           <p className="text-xs md:text-sm text-stone-600 text-center mb-2">
