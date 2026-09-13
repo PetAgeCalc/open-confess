@@ -47,7 +47,7 @@ function readLocalStats(): Record<string, LocalPostStats> {
     const raw = localStorage.getItem(LOCAL_INTERACTIONS_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch {
-    return {};
+    return [];
   }
 }
 
