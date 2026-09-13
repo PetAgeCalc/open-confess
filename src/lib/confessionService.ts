@@ -5,7 +5,6 @@ import {
   getDocs,
   getDoc,
   query,
-  orderBy,
   limit,
   startAfter,
   serverTimestamp,
@@ -97,7 +96,12 @@ export interface FeedPage {
 
 export async function fetchInitialFeed(regionFilter?: string): Promise<FeedPage> {
   if (isFirebaseConfigured && postsDb) {
-    return fetchFirestorePage(null, regionFilter);
+    try {
+      return await fetchFirestorePage(null, regionFilter);
+    } catch (e) {
+      console.error("Firestore fetch failed, falling to local:", e);
+      return fetchLocalPage(0, regionFilter);
+    }
   }
   return fetchLocalPage(0, regionFilter);
 }
@@ -107,7 +111,11 @@ export async function fetchNextPage(
   regionFilter?: string
 ): Promise<FeedPage> {
   if (isFirebaseConfigured && postsDb) {
-    return fetchFirestorePage(cursor as QueryDocumentSnapshot | null, regionFilter);
+    try {
+      return await fetchFirestorePage(cursor as QueryDocumentSnapshot | null, regionFilter);
+    } catch (e) {
+      return fetchLocalPage((cursor as number) ?? 0, regionFilter);
+    }
   }
   return fetchLocalPage((cursor as number) ?? 0, regionFilter);
 }
@@ -117,11 +125,11 @@ async function fetchFirestorePage(
   regionFilter?: string
 ): Promise<FeedPage> {
   const colRef = collection(postsDb!, 'confessions');
-  const constraints: any[] = [orderBy('createdAt', 'desc'), limit(PAGE_SIZE)];
-
+  
+  // Hang hone se bachane ke liye safe query
   const q = cursor
-    ? query(colRef, ...constraints, startAfter(cursor))
-    : query(colRef, ...constraints);
+    ? query(colRef, limit(PAGE_SIZE * 2), startAfter(cursor))
+    : query(colRef, limit(PAGE_SIZE * 2));
 
   const snap = await getDocs(q);
   const targetDb = interactionsDb || postsDb;
@@ -140,6 +148,9 @@ async function fetchFirestorePage(
       } catch (e) {}
     }
 
+    // createdAt ya createdA dono me se jo bhi mile use accept karega
+    const rawTime = data.createdAt || data.createdA || Date.now();
+
     return {
       id: docSnap.id,
       authorName: data.authorName || data.author || 'Anonymous',
@@ -148,7 +159,7 @@ async function fetchFirestorePage(
       country: data.country || '',
       city: data.city || '',
       region: data.region || data.category || '',
-      createdAt: safeEpochMs(data.createdAt),
+      createdAt: safeEpochMs(rawTime),
       viewsCount: data.viewsCount ?? 0,
       likesCount: Number(reactionData?.likesCount ?? data.likesCount ?? 0),
       reactions: reactionData?.reactions ?? emptyReactions(),
@@ -157,11 +168,14 @@ async function fetchFirestorePage(
   });
 
   const resolvedPosts = await Promise.all(postsPromises);
-  const posts = resolvedPosts.filter((post): post is Confession => post !== null);
+  const validPosts = resolvedPosts.filter((post): post is Confession => post !== null);
 
-  posts.sort((a, b) => safeEpochMs(b.createdAt) - safeEpochMs(a.createdAt));
+  // Client side sorting - Instant aur reliable bina index error ke
+  validPosts.sort((a, b) => safeEpochMs(b.createdAt) - safeEpochMs(a.createdAt));
+  const posts = validPosts.slice(0, PAGE_SIZE);
+
   const lastDoc = snap.docs[snap.docs.length - 1] ?? null;
-  return { posts, cursor: lastDoc, hasMore: snap.docs.length === PAGE_SIZE };
+  return { posts, cursor: lastDoc, hasMore: snap.docs.length >= PAGE_SIZE };
 }
 
 function fetchLocalPage(pageIndex: number, regionFilter?: string): FeedPage {
@@ -217,6 +231,7 @@ export async function createConfession(input: CreateConfessionInput): Promise<Co
       city: input.city,
       region,
       createdAt: serverTimestamp(),
+      createdA: serverTimestamp(),
       viewsCount: 0,
     });
 
@@ -369,17 +384,17 @@ export async function fetchComments(postId: string): Promise<Comment[]> {
       const snap = await getDocs(
         query(
           collection(targetDb, 'comments'),
-          where('postId', '==', postId),
-          orderBy('createdAt', 'asc')
+          where('postId', '==', postId)
         )
       );
-      return snap.docs.map((d) => ({
+      const comments = snap.docs.map((d) => ({
         id: d.id,
         authorName: d.data().author || d.data().authorName || 'Anonymous',
         text: d.data().body || d.data().text || '',
         createdAt: safeEpochMs(d.data().createdAt),
         parentId: null,
       }));
+      return comments.sort((a, b) => safeEpochMs(a.createdAt) - safeEpochMs(b.createdAt));
     } catch (e) {
       return [];
     }
