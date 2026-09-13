@@ -1,5 +1,10 @@
 import { initializeApp, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  Firestore,
+} from 'firebase/firestore';
 
 /**
  * Dual Firebase architecture:
@@ -41,22 +46,30 @@ let interactionsApp: FirebaseApp | null = null;
 export let postsDb: Firestore | null = null;
 export let interactionsDb: Firestore | null = null;
 
-// Initialize Posts Project
+// Initialize Posts Project with Local Cache
 try {
   const finalPostsConfig = {
     ...postsConfig,
     apiKey: import.meta.env.VITE_POSTS_FIREBASE_API_KEY || postsConfig.apiKey,
   };
   postsApp = initializeApp(finalPostsConfig as Record<string, string>, 'postsApp');
-  postsDb = getFirestore(postsApp);
+  postsDb = initializeFirestore(postsApp, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
+  });
 } catch (e) {
   console.error("Error initializing posts Firebase:", e);
 }
 
-// Initialize Interactions Project
+// Initialize Interactions Project with Local Cache
 try {
   interactionsApp = initializeApp(interactionsConfig as Record<string, string>, 'interactionsApp');
-  interactionsDb = getFirestore(interactionsApp);
+  interactionsDb = initializeFirestore(interactionsApp, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
+  });
 } catch (e) {
   console.error("Error initializing interactions Firebase:", e);
 }
