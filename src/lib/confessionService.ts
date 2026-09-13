@@ -126,7 +126,6 @@ async function fetchFirestorePage(
 ): Promise<FeedPage> {
   const colRef = collection(postsDb!, 'confessions');
   
-  // Hang hone se bachane ke liye safe query
   const q = cursor
     ? query(colRef, limit(PAGE_SIZE * 2), startAfter(cursor))
     : query(colRef, limit(PAGE_SIZE * 2));
@@ -148,7 +147,6 @@ async function fetchFirestorePage(
       } catch (e) {}
     }
 
-    // createdAt ya createdA dono me se jo bhi mile use accept karega
     const rawTime = data.createdAt || data.createdA || Date.now();
 
     return {
@@ -170,7 +168,6 @@ async function fetchFirestorePage(
   const resolvedPosts = await Promise.all(postsPromises);
   const validPosts = resolvedPosts.filter((post): post is Confession => post !== null);
 
-  // Client side sorting - Instant aur reliable bina index error ke
   validPosts.sort((a, b) => safeEpochMs(b.createdAt) - safeEpochMs(a.createdAt));
   const posts = validPosts.slice(0, PAGE_SIZE);
 
