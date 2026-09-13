@@ -1,6 +1,5 @@
 import { createConfession, setReaction, addComment } from './confessionService';
 import { Confession, ReactionEmoji } from '../types';
-// Cloudinary ke exact exported function name ke sath match kiya gaya
 import { uploadImageToCloudinary } from './cloudinary';
 
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || '';
@@ -143,7 +142,6 @@ async function compressImageToJpgFile(imageUrl: string): Promise<File> {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
 
-      // 600px width par scale karke image size ~40-50KB JPG banta hai
       const targetWidth = 600;
       const targetHeight = Math.round((img.height / img.width) * targetWidth);
 
@@ -156,7 +154,6 @@ async function compressImageToJpgFile(imageUrl: string): Promise<File> {
 
       ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
-      // Quality 0.65 se crisp output aur light weight file milti hai
       canvas.toBlob(
         (compressedBlob) => {
           if (compressedBlob) {
@@ -209,10 +206,7 @@ async function generateAndUploadCompressedImage(
   const rawGeneratedUrl = `https://image.pollinations.ai/prompt/${prompt}?width=768&height=1024&seed=${uniqueSeed}&nologo=true&model=flux`;
 
   try {
-    // 1. Fetch aur compress karein (~50KB JPG)
     const compressedJpgFile = await compressImageToJpgFile(rawGeneratedUrl);
-
-    // 2. Cloudinary me direct upload
     const cloudinaryUrl = await uploadImageToCloudinary(compressedJpgFile);
 
     if (cloudinaryUrl) {
@@ -222,7 +216,6 @@ async function generateAndUploadCompressedImage(
     console.warn('Cloudinary compression/upload fallback:', err);
   }
 
-  // Network ya Cloudinary issue aane par fallback URL
   return rawGeneratedUrl;
 }
 
@@ -251,7 +244,6 @@ function isDuplicate(text: string): boolean {
   return hashes.includes(cleanSnippet);
 }
 
-// Post ki language aur emotion ke hisaab se natural reader comment generate karta hai
 async function generateSmartMatchingComment(postText: string, lang: 'Bengali' | 'Hindi' | 'English'): Promise<string> {
   if (!GROQ_API_KEY || !GROQ_API_KEY.startsWith('gsk_')) {
     if (lang === 'Bengali') return 'কথাগুলো বুক ছুঁয়ে গেল, শক্ত থেকো।';
@@ -397,7 +389,6 @@ function generateDynamicFallback(lang: 'Bengali' | 'Hindi' | 'English', city: st
   };
 }
 
-// Organic Growth: Delayed start (6-10 min) + slow batches reaching 100+ reacts and 50+ comments
 async function applyOrganicGradualEngagement(posts: Confession[]) {
   try {
     const rawTracker = localStorage.getItem(ENGAGEMENT_TRACKER_KEY);
@@ -411,17 +402,14 @@ async function applyOrganicGradualEngagement(posts: Confession[]) {
 
       const elapsedMinutes = Math.floor((now - createdAt) / (60 * 1000));
 
-      // Initial buffer: pehle 6 minutes bilkul quiet
       if (elapsedMinutes < 6) continue;
 
       const record = tracker[post.id] || { commentsCount: 0, reactionsCount: 0, lastActivity: 0 };
 
-      // Spacing: har 5-8 minute me ek ek wave
       if (now - record.lastActivity < 5 * 60 * 1000) continue;
 
       const postLang = detectPostLanguage(post.text, (post as any).city);
 
-      // Reactions compounding (100+ limit)
       if (record.reactionsCount < 120) {
         const reactsToAdd = Math.floor(Math.random() * 3) + 1;
         for (let i = 0; i < reactsToAdd; i++) {
@@ -431,7 +419,6 @@ async function applyOrganicGradualEngagement(posts: Confession[]) {
         record.reactionsCount += reactsToAdd;
       }
 
-      // Comments compounding (50+ limit)
       if (record.commentsCount < 60) {
         const smartComment = await generateSmartMatchingComment(post.text, postLang);
         const randomUser = getAppropriateUsername(postLang);
@@ -466,7 +453,6 @@ export async function generateAndPublishConfession(): Promise<Confession | null>
     story = generateDynamicFallback(targetLang, randomLoc.city);
   }
 
-  // 50KB JPG compress hokar Cloudinary me upload
   const imageUrl = await generateAndUploadCompressedImage(story.body, isBengaliContext);
 
   const newPost = await createConfession({
@@ -495,7 +481,6 @@ export async function syncSimulatedActivity(existingPosts: Confession[]): Promis
       return existingPosts;
     }
 
-    // ~14.4 mins = ~100 posts in 24 hours
     if (now - lastRun >= 14 * 60 * 1000) {
       localStorage.setItem(SIMULATOR_SCHEDULE_KEY, String(now));
       await generateAndPublishConfession();
