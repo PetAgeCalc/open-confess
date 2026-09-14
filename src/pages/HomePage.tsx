@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Loader2, X, Heart, MessageCircle, MapPin, Send, User, Share2, Copy, Check } from 'lucide-react';
 import { Confession } from '../types';
-import { fetchInitialFeed, fetchNextPage, FeedPage, setReaction, addComment } from '../lib/confessionService';
+import { fetchInitialFeed, fetchNextPage, FeedPage, setReaction, addComment, fetchComments } from '../lib/confessionService';
 import CreateConfessionModal from '../components/CreateConfessionModal';
-import { syncSimulatedActivity, scheduleEngagementForNewPost, generateAndPublishConfession } from '../lib/activitySimulator';
 
 interface HomePageProps {
   regionFilter: string | null;
@@ -69,64 +68,21 @@ function parsePostTimestamp(post: any): number {
   if (typeof raw === 'string') {
     const parsed = Date.parse(raw);
     if (!isNaN(parsed)) return parsed;
-    const match = raw.match(/(\d+)\s*(m|h|d)/i);
-    if (match) {
-      const amount = parseInt(match[1], 10);
-      const unit = match[2].toLowerCase();
-      const now = Date.now();
-      if (unit === 'm') return now - amount * 60000;
-      if (unit === 'h') return now - amount * 3600000;
-      if (unit === 'd') return now - amount * 86400000;
-    }
   }
   return 0;
 }
 
-function generateRelativeComments(postTimestamp: number): CommentItem[] {
-  const now = Date.now();
-  const postTime = postTimestamp > 0 ? postTimestamp : now;
-  const elapsedSecs = Math.max(0, Math.floor((now - postTime) / 1000));
-
-  const time1 = postTime + Math.floor(elapsedSecs * 0.35 * 1000);
-  const time2 = postTime + Math.floor(elapsedSecs * 0.65 * 1000);
-  const time3 = postTime + Math.floor(elapsedSecs * 0.90 * 1000);
-
-  return [
-    {
-      id: '1',
-      author: 'Anonymous',
-      text: 'Sobbing. This is what real empathy and strength look like.',
-      createdAt: elapsedSecs < 120 ? 'Just now' : parseTimeToHuman(time1),
-    },
-    {
-      id: '2',
-      author: 'Anonymous',
-      text: 'Choosing to carry this requires immense courage. Much love.',
-      createdAt: elapsedSecs < 90 ? 'Just now' : parseTimeToHuman(time2),
-    },
-    {
-      id: '3',
-      author: 'Anonymous',
-      text: 'Blood means nothing compared to who shows up every single day.',
-      createdAt: elapsedSecs < 60 ? 'Just now' : parseTimeToHuman(time3),
-    },
-  ];
-}
-
 function safeCommentCount(post: any): number {
-  if (!post) return 3;
-  if (Array.isArray(post.commentsList) && post.commentsList.length > 0) {
+  if (!post) return 0;
+  if (Array.isArray(post.commentsList)) {
     return post.commentsList.length;
   }
-  if (Array.isArray(post.comments) && post.comments.length > 0) {
+  if (Array.isArray(post.comments)) {
     return post.comments.length;
   }
   const countVal = post.commentsCount ?? post.comments;
   const num = Number(countVal);
-  if (!isNaN(num) && num > 0) {
-    return num;
-  }
-  return 3;
+  return !isNaN(num) && num >= 0 ? num : 0;
 }
 
 function safeLikesCount(post: any): number {
@@ -145,56 +101,30 @@ function extractAuthorName(item: any): string {
   return str;
 }
 
-function normalizeComment(c: any, index: number): CommentItem {
-  if (!c) {
-    return { id: String(index), author: 'Anonymous', text: '', createdAt: 'Just now' };
-  }
-  if (typeof c === 'string') {
-    return { id: String(index), author: 'Anonymous', text: c, createdAt: 'Just now' };
-  }
-  const cleanAuthor = extractAuthorName(c);
-  const cleanText = String(c.text || c.content || c.comment || c.message || '');
-  let rawTime = c.createdAt || c.timestamp || c.date || c.time;
-  if (!rawTime && c.author && !isNaN(Number(c.author))) {
-    rawTime = c.author;
-  }
-  return {
-    id: String(c.id || index),
-    author: cleanAuthor,
-    text: cleanText,
-    createdAt: parseTimeToHuman(rawTime),
-  };
-}
-
 export default function HomePage({ regionFilter }: HomePageProps) {
   const [posts, setPosts] = useState<Confession[]>(() => {
     try {
       const cached = localStorage.getItem(FEED_CACHE_KEY);
-      if (cached) {
-        return JSON.parse(cached);
-      }
+      if (cached) return JSON.parse(cached);
     } catch {}
     return [];
   });
 
   const [cursor, setCursor] = useState<FeedPage['cursor']>(null);
   const [hasMore, setHasMore] = useState(true);
-
   const [loading, setLoading] = useState<boolean>(() => posts.length === 0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [activePost, setActivePost] = useState<any | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-
   const [visibleCount, setVisibleCount] = useState<number>(POSTS_PER_PAGE);
-
   const [sharePopupPost, setSharePopupPost] = useState<Confession | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
-
   const [modalPickerOpen, setModalPickerOpen] = useState(false);
   const [cardPickerPostId, setCardPickerPostId] = useState<string | null>(null);
-
   const [commentName, setCommentName] = useState('');
   const [commentText, setCommentText] = useState('');
+  const [loadingComments, setLoadingComments] = useState(false);
+
   const modalPickerRef = useRef<HTMLDivElement>(null);
   const shareRef = useRef<HTMLDivElement>(null);
 
@@ -241,10 +171,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   const loadInitial = useCallback(async () => {
     let active = true;
 
-    const safetyTimer = setTimeout(() => {
-      if (active) setLoading(false);
-    }, 2000);
-
     try {
       const page = await fetchInitialFeed(regionFilter ?? undefined);
       const merged = applySavedActivity(page.posts);
@@ -261,41 +187,14 @@ export default function HomePage({ regionFilter }: HomePageProps) {
           localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(sorted.slice(0, 16)));
         } catch {}
       }
-
-      // Cold-start seed: Agar feed me posts kam hain to turant screen par naya post push karo
-      if (sorted.length < 4) {
-        generateAndPublishConfession().then((newPost) => {
-          if (newPost && active) {
-            setPosts((prev) => {
-              const updated = sortPostsByRecent([newPost, ...prev.filter((p) => p.id !== newPost.id)]);
-              try {
-                localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(updated.slice(0, 16)));
-              } catch {}
-              return updated;
-            });
-          }
-        }).catch(console.warn);
-      }
-
-      // Background routine schedule
-      setTimeout(() => {
-        syncSimulatedActivity(sorted).then((updated) => {
-          if (updated && updated.length > sorted.length && active) {
-            setPosts(updated);
-          }
-        }).catch(() => {});
-      }, 1000);
-
     } catch (err) {
       console.error('Error in loadInitial:', err);
     } finally {
-      clearTimeout(safetyTimer);
       if (active) setLoading(false);
     }
 
     return () => {
       active = false;
-      clearTimeout(safetyTimer);
     };
   }, [regionFilter]);
 
@@ -346,15 +245,14 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
   function handleCreated(confession: Confession) {
     const postTimestamp = (confession as any).createdAt || Date.now();
-    const defaultRelativeList = generateRelativeComments(postTimestamp);
 
     const postWithTime = {
       ...confession,
       createdAt: postTimestamp,
       userReaction: null,
-      commentsCount: 3,
-      comments: 3,
-      commentsList: defaultRelativeList,
+      commentsCount: 0,
+      comments: 0,
+      commentsList: [],
     };
 
     setPosts((prev) => {
@@ -364,68 +262,50 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       } catch {}
       return updated;
     });
-
-    try {
-      scheduleEngagementForNewPost(postWithTime, ({ likesCountIncrement, newComment }) => {
-        setPosts((prev) =>
-          prev.map((p) => {
-            if (p.id !== postWithTime.id) return p;
-            const currentLikes = safeLikesCount(p);
-            const currentList = (p as any).commentsList && (p as any).commentsList.length > 0 ? (p as any).commentsList : defaultRelativeList;
-            const updatedList = newComment ? [...currentList, newComment] : currentList;
-            const updatedLikes = likesCountIncrement ? currentLikes + likesCountIncrement : currentLikes;
-
-            const updatedPost = {
-              ...p,
-              likesCount: updatedLikes,
-              likes: updatedLikes,
-              commentsCount: updatedList.length,
-              comments: updatedList.length,
-              commentsList: updatedList,
-            };
-
-            saveActivityToStorage(postWithTime.id, {
-              likesCount: updatedLikes,
-              commentsCount: updatedList.length,
-              commentsList: updatedList,
-            });
-
-            return updatedPost as Confession;
-          })
-        );
-      });
-    } catch (e) {
-      console.warn('Engagement schedule bypassed:', e);
-    }
   }
 
-  function handleOpenPost(post: Confession) {
+  async function handleOpenPost(post: Confession) {
     const raw = post as Record<string, any>;
-    const rawComments = Array.isArray(raw.commentsList)
-      ? raw.commentsList
-      : Array.isArray(raw.comments) && typeof raw.comments[0] === 'object'
-      ? raw.comments
-      : [];
-
-    let list: CommentItem[] = [];
-
-    if (rawComments.length > 0) {
-      list = rawComments.map((c: any, index: number) => normalizeComment(c, index));
-    } else {
-      const postTimestamp = parsePostTimestamp(raw);
-      list = generateRelativeComments(postTimestamp);
-    }
-
-    const totalComments = Math.max(list.length, safeCommentCount(raw));
-
+    
+    // Set initial active state
     setActivePost({
       ...raw,
       likesCount: safeLikesCount(raw),
-      commentsCount: totalComments,
-      commentsList: list,
+      commentsCount: safeCommentCount(raw),
+      commentsList: raw.commentsList || [],
       userReaction: raw.userReaction || null,
       formattedTime: parseTimeToHuman(raw.createdAt || raw.timestamp || raw.time),
     });
+
+    // Real DB se comments fetch karo
+    setLoadingComments(true);
+    try {
+      const fetched = await fetchComments(raw.id);
+      const mappedComments: CommentItem[] = fetched.map((c) => ({
+        id: c.id,
+        author: c.authorName || 'Anonymous',
+        text: c.text,
+        createdAt: parseTimeToHuman(c.createdAt),
+      }));
+
+      setActivePost((prev: any) => {
+        if (!prev || prev.id !== raw.id) return prev;
+        return {
+          ...prev,
+          commentsCount: mappedComments.length,
+          commentsList: mappedComments,
+        };
+      });
+
+      // Feed state me bhi update sync karo
+      setPosts((prev) =>
+        prev.map((p) => (p.id === raw.id ? { ...p, commentsCount: mappedComments.length, commentsList: mappedComments } : p))
+      );
+    } catch (err) {
+      console.error('Failed to fetch real comments:', err);
+    } finally {
+      setLoadingComments(false);
+    }
   }
 
   async function handleSelectReaction(postId: string, emoji: string, e?: React.MouseEvent | React.PointerEvent) {
@@ -503,12 +383,9 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       createdAt: 'Just now',
     };
 
-    const postTimestamp = parsePostTimestamp(activePost);
-    const currentList = (activePost.commentsList && activePost.commentsList.length > 0)
-      ? activePost.commentsList
-      : generateRelativeComments(postTimestamp);
-
+    const currentList = activePost.commentsList || [];
     const updatedComments = [...currentList, newComment];
+
     const updated = {
       ...activePost,
       commentsCount: updatedComments.length,
@@ -639,9 +516,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                         {/* Interactive Reaction/Like on Card */}
                         <div 
                           className="relative card-reaction-container" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                          }}
+                          onClick={(e) => e.stopPropagation()}
                         >
                           <button
                             type="button"
@@ -942,26 +817,37 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                   Comments ({safeCommentCount(activePost)})
                 </h3>
 
-                <div className="space-y-3">
-                  {(activePost.commentsList || []).map((comm: CommentItem) => (
-                    <div key={comm.id} className="p-3.5 rounded-2xl bg-stone-50/90 border border-stone-100">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2 font-medium text-xs sm:text-sm text-stone-800">
-                          <div className="w-6 h-6 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-[10px]">
-                            <User className="w-3.5 h-3.5" />
+                {loadingComments ? (
+                  <div className="flex items-center justify-center py-6 text-stone-400 gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-rose-500" />
+                    <span className="text-xs">Loading comments...</span>
+                  </div>
+                ) : (activePost.commentsList || []).length === 0 ? (
+                  <p className="text-xs sm:text-sm text-stone-400 py-3 italic">
+                    No comments yet. Be the first to reply.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {(activePost.commentsList || []).map((comm: CommentItem) => (
+                      <div key={comm.id} className="p-3.5 rounded-2xl bg-stone-50/90 border border-stone-100">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-2 font-medium text-xs sm:text-sm text-stone-800">
+                            <div className="w-6 h-6 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-[10px]">
+                              <User className="w-3.5 h-3.5" />
+                            </div>
+                            <span>{comm.author}</span>
                           </div>
-                          <span>{comm.author}</span>
+                          <span className="text-[11px] text-stone-400">
+                            {comm.createdAt}
+                          </span>
                         </div>
-                        <span className="text-[11px] text-stone-400">
-                          {comm.createdAt}
-                        </span>
+                        <p className="text-xs sm:text-sm text-stone-700 pl-8 leading-relaxed">
+                          {comm.text}
+                        </p>
                       </div>
-                      <p className="text-xs sm:text-sm text-stone-700 pl-8 leading-relaxed">
-                        {comm.text}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Add Comment Field */}
                 <div className="pt-3 space-y-2.5">
