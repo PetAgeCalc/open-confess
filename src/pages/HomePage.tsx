@@ -99,7 +99,6 @@ function extractAuthorName(item: any): string {
 }
 
 export default function HomePage({ regionFilter }: HomePageProps) {
-  // Stale-While-Revalidate: Instant 0ms load from cache
   const [posts, setPosts] = useState<Confession[]>(() => {
     try {
       const cached = localStorage.getItem(FEED_CACHE_KEY);
@@ -188,7 +187,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     }
   };
 
-  // Background Live Sync
   const loadInitial = useCallback(async (isManualRefresh = false) => {
     if (isManualRefresh) setRefreshing(true);
     try {
@@ -214,12 +212,10 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     }
   }, [regionFilter, activeTab]);
 
-  // Initial fetch on mount
   useEffect(() => {
     loadInitial();
   }, [loadInitial]);
 
-  // Tab switch ya screen unlock par silent refresh
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -262,7 +258,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     }
   }
 
-  // Clickable Hashtag & @mention Formatter (English, Hindi, Bengali)
   function formatInteractiveText(text: string) {
     if (!text) return null;
     const parts = text.split(/([#@][\w\u0980-\u09FF\u0900-\u097F]+)/g);
@@ -303,7 +298,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     });
   }
 
-  // Filter posts if a hashtag is active
   const filteredPosts = activeHashtagFilter
     ? posts.filter((p: any) => {
         const text = (p.text || p.content || '').toLowerCase();
@@ -529,8 +523,8 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
   return (
     <div className="w-full min-h-screen overflow-x-hidden bg-[#f3e6d8]">
-      {/* Clean Top Action Toolbar (Tagline Removed for a sleek, modern UI) */}
-      <section className="w-full px-4 pt-4 pb-2.5 text-center">
+      {/* Exact Header Alignment with Blue Rotating Arrow */}
+      <section className="w-full px-4 pt-1 pb-1 text-center">
         <div className="flex items-center justify-center gap-2 max-w-sm mx-auto">
           {/* Segmented Fresh & Trending Control */}
           <div className="inline-flex items-center p-1 rounded-full bg-[#faefe6] border border-[#ebd8c8] shadow-sm">
@@ -542,7 +536,9 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                   : 'text-stone-600 hover:text-stone-900'
               }`}
             >
-              <RotateCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+              <RotateCw 
+                className={`w-3.5 h-3.5 text-sky-400 ${refreshing ? 'animate-spin' : ''}`} 
+              />
               <span>Fresh</span>
             </button>
 
@@ -598,7 +594,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
           </p>
         )}
 
-        {/* Loading Spinner tabhi aayega jab cache bilkul empty ho */}
         {loading && posts.length === 0 ? (
           <div className="flex justify-center py-16">
             <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#ee4266' }} />
