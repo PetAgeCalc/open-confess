@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Loader2, X, Heart, MessageCircle, MapPin, Send, User, Share2, Copy, Check } from 'lucide-react';
+import { Plus, Loader2, X, Heart, MessageCircle, MapPin, Send, User, Share2, Copy, Check, Hash } from 'lucide-react';
 import { Confession } from '../types';
 import { fetchInitialFeed, fetchNextPage, FeedPage, setReaction, addComment, fetchComments } from '../lib/confessionService';
 import CreateConfessionModal from '../components/CreateConfessionModal';
@@ -125,6 +125,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   const [commentName, setCommentName] = useState('');
   const [commentText, setCommentText] = useState('');
   const [loadingComments, setLoadingComments] = useState(false);
+  const [activeHashtagFilter, setActiveHashtagFilter] = useState<string | null>(null);
 
   const modalPickerRef = useRef<HTMLDivElement>(null);
   const shareRef = useRef<HTMLDivElement>(null);
@@ -235,8 +236,57 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [modalPickerOpen, sharePopupPost, cardPickerPostId]);
 
+  // Clickable Hashtag and @mention formatter (Supports English, Hindi, Bengali)
+  function formatInteractiveText(text: string) {
+    if (!text) return null;
+    const parts = text.split(/([#@][\w\u0980-\u09FF\u0900-\u097F]+)/g);
+
+    return parts.map((part, index) => {
+      if (part.startsWith('#')) {
+        return (
+          <span
+            key={index}
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveHashtagFilter(part);
+              if (activePost) setActivePost(null);
+            }}
+            className="text-[#e15b50] font-semibold hover:underline cursor-pointer transition-colors px-0.5 inline-block"
+          >
+            {part}
+          </span>
+        );
+      }
+
+      if (part.startsWith('@')) {
+        return (
+          <span
+            key={index}
+            onClick={(e) => {
+              e.stopPropagation();
+              alert('All identities are 100% anonymous on OpenConfess!');
+            }}
+            className="text-sky-600 font-semibold hover:underline cursor-pointer transition-colors px-0.5 inline-block"
+          >
+            {part}
+          </span>
+        );
+      }
+
+      return part;
+    });
+  }
+
+  // Filter posts if a hashtag is active
+  const filteredPosts = activeHashtagFilter
+    ? posts.filter((p: any) => {
+        const text = (p.text || p.content || '').toLowerCase();
+        return text.includes(activeHashtagFilter.toLowerCase());
+      })
+    : posts;
+
   async function handleLoadMore() {
-    if (visibleCount < posts.length) {
+    if (visibleCount < filteredPosts.length) {
       setVisibleCount((prev) => prev + POSTS_PER_PAGE);
       return;
     }
@@ -452,8 +502,8 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
-  const visiblePosts = posts.slice(0, visibleCount);
-  const canLoadMore = visibleCount < posts.length || hasMore;
+  const visiblePosts = filteredPosts.slice(0, visibleCount);
+  const canLoadMore = visibleCount < filteredPosts.length || hasMore;
 
   return (
     <div className="w-full min-h-screen overflow-x-hidden bg-[#f3e6d8]">
@@ -481,7 +531,23 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
       {/* Feed Section */}
       <section className="w-full px-3 sm:px-6 md:px-8 pt-1 pb-20 space-y-6">
-        {regionFilter && (
+        {/* Active Hashtag Filter Notification Banner */}
+        {activeHashtagFilter && (
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#e15b50] bg-[#faefe6] px-4 py-1.5 rounded-full border border-[#ebd8c8] shadow-sm">
+              <Hash className="w-3.5 h-3.5 text-[#e15b50]" />
+              <span>Posts tagged with {activeHashtagFilter}</span>
+            </span>
+            <button
+              onClick={() => setActiveHashtagFilter(null)}
+              className="text-xs text-stone-500 hover:text-stone-800 underline cursor-pointer transition-colors"
+            >
+              Clear Filter
+            </button>
+          </div>
+        )}
+
+        {regionFilter && !activeHashtagFilter && (
           <p className="text-xs md:text-sm text-stone-600 text-center mb-2">
             Showing confessions from <span className="font-semibold text-stone-800">{regionFilter}</span>
           </p>
@@ -491,10 +557,20 @@ export default function HomePage({ regionFilter }: HomePageProps) {
           <div className="flex justify-center py-16">
             <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#ee4266' }} />
           </div>
-        ) : posts.length === 0 ? (
-          <p className="text-center text-stone-500 py-16 text-sm">
-            No confessions here yet. Be the first to share one.
-          </p>
+        ) : filteredPosts.length === 0 ? (
+          <div className="text-center py-16 space-y-2">
+            <p className="text-stone-500 text-sm">
+              {activeHashtagFilter ? `No confessions found with ${activeHashtagFilter}` : 'No confessions here yet. Be the first to share one.'}
+            </p>
+            {activeHashtagFilter && (
+              <button
+                onClick={() => setActiveHashtagFilter(null)}
+                className="text-xs text-rose-500 font-semibold underline cursor-pointer"
+              >
+                Show all confessions
+              </button>
+            )}
+          </div>
         ) : (
           <div className="flex flex-col gap-6 w-full">
             {visiblePosts.map((post) => {
@@ -533,7 +609,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                     </div>
 
                     <p className="text-stone-800 text-sm sm:text-base md:text-lg leading-relaxed line-clamp-4 font-normal whitespace-pre-wrap">
-                      {(post as any).text || (post as any).content || ''}
+                      {formatInteractiveText((post as any).text || (post as any).content || '')}
                     </p>
 
                     <div className="mt-5 flex items-center justify-between pt-3 border-t border-[#ebd8c8]/60">
@@ -778,7 +854,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
               </div>
 
               <p className="text-stone-900 text-base sm:text-lg md:text-xl leading-relaxed whitespace-pre-wrap">
-                {activePost.text || activePost.content || ''}
+                {formatInteractiveText(activePost.text || activePost.content || '')}
               </p>
 
               {/* Reactions & Social Share Bar */}
