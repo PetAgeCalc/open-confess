@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Loader2, X, Heart, MessageCircle, MapPin, Send, User, Share2, Copy, Check, Hash } from 'lucide-react';
+import { Plus, Loader2, X, Heart, MessageCircle, MapPin, Send, User, Share2, Copy, Check, Hash, RotateCw, Flame } from 'lucide-react';
 import { Confession } from '../types';
 import { fetchInitialFeed, fetchNextPage, FeedPage, setReaction, addComment, fetchComments } from '../lib/confessionService';
 import CreateConfessionModal from '../components/CreateConfessionModal';
@@ -110,8 +110,9 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
   const [cursor, setCursor] = useState<FeedPage['cursor']>(null);
   const [hasMore, setHasMore] = useState(true);
-  // Spinner tabhi aayega jab bilkul naya visitor ho aur cache blank ho
   const [loading, setLoading] = useState<boolean>(() => posts.length === 0);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'fresh' | 'trending'>('fresh');
   const [loadingMore, setLoadingMore] = useState(false);
   const [activePost, setActivePost] = useState<any | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -128,7 +129,14 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   const modalPickerRef = useRef<HTMLDivElement>(null);
   const shareRef = useRef<HTMLDivElement>(null);
 
-  const sortPostsByRecent = (items: Confession[]): Confession[] => {
+  const sortPosts = (items: Confession[], tab: 'fresh' | 'trending'): Confession[] => {
+    if (tab === 'trending') {
+      return [...items].sort((a, b) => {
+        const scoreA = safeLikesCount(a) * 2 + safeCommentCount(a) * 3;
+        const scoreB = safeLikesCount(b) * 2 + safeCommentCount(b) * 3;
+        return scoreB - scoreA;
+      });
+    }
     return [...items].sort((a, b) => parsePostTimestamp(b) - parsePostTimestamp(a));
   };
 
@@ -181,11 +189,12 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   };
 
   // Background Live Sync
-  const loadInitial = useCallback(async () => {
+  const loadInitial = useCallback(async (isManualRefresh = false) => {
+    if (isManualRefresh) setRefreshing(true);
     try {
       const page = await fetchInitialFeed(regionFilter ?? undefined);
       const merged = applySavedActivity(page.posts);
-      const sorted = sortPostsByRecent(merged);
+      const sorted = sortPosts(merged, activeTab);
 
       setPosts(sorted);
       setCursor(page.cursor);
@@ -199,8 +208,11 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       console.error('Error in loadInitial:', err);
     } finally {
       setLoading(false);
+      if (isManualRefresh) {
+        setTimeout(() => setRefreshing(false), 500);
+      }
     }
-  }, [regionFilter]);
+  }, [regionFilter, activeTab]);
 
   // Initial fetch on mount
   useEffect(() => {
@@ -241,6 +253,14 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     document.addEventListener('mousedown', handleOutside);
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [modalPickerOpen, sharePopupPost, cardPickerPostId]);
+
+  function handleTabChange(tab: 'fresh' | 'trending') {
+    setActiveTab(tab);
+    setPosts((prev) => sortPosts(prev, tab));
+    if (tab === 'fresh') {
+      loadInitial(true);
+    }
+  }
 
   // Clickable Hashtag & @mention Formatter (English, Hindi, Bengali)
   function formatInteractiveText(text: string) {
@@ -303,7 +323,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     try {
       const page = await fetchNextPage(cursor, regionFilter ?? undefined);
       const merged = applySavedActivity(page.posts);
-      setPosts((prev) => sortPostsByRecent([...prev, ...merged]));
+      setPosts((prev) => sortPosts([...prev, ...merged], activeTab));
       setCursor(page.cursor);
       setHasMore(page.hasMore);
       setVisibleCount((prev) => prev + POSTS_PER_PAGE);
@@ -509,26 +529,49 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
   return (
     <div className="w-full min-h-screen overflow-x-hidden bg-[#f3e6d8]">
-      {/* Hero Section */}
-      <section className="w-full px-4 pt-6 pb-4 text-center">
-        <h1 
-          className="font-display text-3xl sm:text-4xl md:text-5xl font-bold leading-tight"
-          style={{ color: '#e15b50' }}
-        >
-          Real stories. Zero identities.
-        </h1>
+      {/* Clean Top Action Toolbar (Tagline Removed for a sleek, modern UI) */}
+      <section className="w-full px-4 pt-4 pb-2.5 text-center">
+        <div className="flex items-center justify-center gap-2 max-w-sm mx-auto">
+          {/* Segmented Fresh & Trending Control */}
+          <div className="inline-flex items-center p-1 rounded-full bg-[#faefe6] border border-[#ebd8c8] shadow-sm">
+            <button
+              onClick={() => handleTabChange('fresh')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                activeTab === 'fresh'
+                  ? 'bg-[#e15b50] text-white shadow-sm'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              <RotateCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+              <span>Fresh</span>
+            </button>
 
-        <button
-          onClick={() => setCreateOpen(true)}
-          className="mt-3.5 inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-white font-semibold text-xs md:text-sm shadow-md active:scale-95 transition-all cursor-pointer"
-          style={{
-            background: 'linear-gradient(90deg, #f95738 0%, #ee4266 100%)',
-            boxShadow: '0 4px 14px rgba(238, 66, 102, 0.3)'
-          }}
-        >
-          <Plus className="w-4 h-4 stroke-[2.5]" />
-          <span>Share Your Confession</span>
-        </button>
+            <button
+              onClick={() => handleTabChange('trending')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                activeTab === 'trending'
+                  ? 'bg-[#e15b50] text-white shadow-sm'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              <Flame className="w-3.5 h-3.5" />
+              <span>Trending</span>
+            </button>
+          </div>
+
+          {/* Primary Confess Button */}
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="inline-flex items-center gap-1.5 px-4.5 py-2 rounded-full text-white font-semibold text-xs md:text-sm shadow-md active:scale-95 transition-all cursor-pointer shrink-0"
+            style={{
+              background: 'linear-gradient(90deg, #f95738 0%, #ee4266 100%)',
+              boxShadow: '0 4px 14px rgba(238, 66, 102, 0.3)'
+            }}
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>Confess</span>
+          </button>
+        </div>
       </section>
 
       {/* Feed Section */}
@@ -555,7 +598,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
           </p>
         )}
 
-        {/* Loading Spinner sirf tab aayega jab cache bilkul empty ho */}
+        {/* Loading Spinner tabhi aayega jab cache bilkul empty ho */}
         {loading && posts.length === 0 ? (
           <div className="flex justify-center py-16">
             <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#ee4266' }} />
