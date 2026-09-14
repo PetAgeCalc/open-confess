@@ -187,7 +187,8 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     }
   };
 
-  const loadInitial = useCallback(async () => {
+  const loadInitial = useCallback(async (isManualRefresh = false) => {
+    if (isManualRefresh) setRefreshing(true);
     try {
       const page = await fetchInitialFeed(regionFilter ?? undefined);
       const merged = applySavedActivity(page.posts);
@@ -205,6 +206,9 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       console.error('Error in loadInitial:', err);
     } finally {
       setLoading(false);
+      if (isManualRefresh) {
+        setTimeout(() => setRefreshing(false), 500);
+      }
     }
   }, [regionFilter, activeTab]);
 
@@ -246,11 +250,28 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [modalPickerOpen, sharePopupPost, cardPickerPostId]);
 
-  // Fresh button par direct hard refresh
-  function handleFreshClick() {
+  // Read More Confession logic linked directly to Fresh button
+  async function handleFreshClick() {
     setRefreshing(true);
     setActiveTab('fresh');
-    window.location.reload();
+    try {
+      localStorage.removeItem(FEED_CACHE_KEY);
+      const page = await fetchInitialFeed(regionFilter ?? undefined);
+      const merged = applySavedActivity(page.posts);
+      const sorted = sortPosts(merged, 'fresh');
+      setPosts(sorted);
+      setCursor(page.cursor);
+      setHasMore(page.hasMore);
+      setVisibleCount(POSTS_PER_PAGE);
+      try {
+        localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(sorted.slice(0, 16)));
+      } catch {}
+    } catch (err) {
+      console.error('Failed to reload fresh posts:', err);
+      window.location.reload();
+    } finally {
+      setTimeout(() => setRefreshing(false), 500);
+    }
   }
 
   function handleTabChange(tab: 'fresh' | 'trending') {
@@ -527,7 +548,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
   return (
     <div className="w-full min-h-screen overflow-x-hidden bg-[#f3e6d8]">
-      {/* Action Toolbar with Blue Fresh, Green Arrow, and Green Confess */}
+      {/* Action Toolbar with Blue Fresh, Green Arrow, and Perfectly Centered Green Confess */}
       <section className="w-full px-4 pt-1 pb-1 text-center">
         <div className="flex items-center justify-center gap-2 max-w-sm mx-auto">
           {/* Segmented Fresh (Blue) & Trending Control */}
@@ -559,17 +580,17 @@ export default function HomePage({ regionFilter }: HomePageProps) {
             </button>
           </div>
 
-          {/* Primary Confess Button (Green Gradient) */}
+          {/* Primary Confess Button (Perfect Center Alignment with Minimal Gap) */}
           <button
             onClick={() => setCreateOpen(true)}
-            className="inline-flex items-center gap-1.5 px-4.5 py-2 rounded-full text-white font-semibold text-xs md:text-sm shadow-md active:scale-95 transition-all cursor-pointer shrink-0"
+            className="inline-flex items-center justify-center gap-1 px-4 py-2 rounded-full text-white font-semibold text-xs md:text-sm shadow-md active:scale-95 transition-all cursor-pointer shrink-0"
             style={{
               background: 'linear-gradient(90deg, #059669 0%, #10b981 100%)',
               boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
             }}
           >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>Confess</span>
+            <Plus className="w-3.5 h-3.5 stroke-[3]" />
+            <span className="leading-none tracking-normal">Confess</span>
           </button>
         </div>
       </section>
