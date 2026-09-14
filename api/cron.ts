@@ -134,7 +134,7 @@ const DIVERSE_CATEGORIES = [
       'photo-1480714378408-67cf0d13bc1b'
     ],
     bengali: 'শহরের প্রতিদিনের বাস্তব সমস্যা, সাধারণ মানুষের ভোগান্তি আর সামাজিক বৈষম্য',
-    hindi: 'देश और समाज के ताजा हालात, महंगाई और आम जनता की रोजमर्रा की परेशानी',
+    hindi: 'দেশ और समाज के ताजा हालात, महंगाई और आम जनता की रोजमर्रा की परेशानी',
     english: 'breaking news realities, social hypocrisies and civic struggles of everyday citizens',
     tags: '#TodayNews #CurrentAffairs #TrendingNow #PublicReality'
   },
@@ -312,7 +312,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const author = getUsername(targetLang, false);
     const nowTime = Date.now();
 
-    // 1. AI Generation (85-100 Words) with Strictly Appended 3-5 Relevant Trending Hashtags
+    // 1. AI Generation (85-95 Words) with strict 3.2s Timeout to prevent Vercel 10s Kill
     let postText = '';
     try {
       const promptTopic = targetLang === 'Bengali' ? cat.bengali : targetLang === 'Hindi' ? cat.hindi : cat.english;
@@ -329,7 +329,7 @@ MANDATORY RULES:
 - NO quotes, NO headers, NO bullet points. Output plain raw text with the hashtags at the bottom.`;
 
       const aiRes = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}?seed=${nowTime}&model=openai`, {
-        signal: AbortSignal.timeout(4500)
+        signal: AbortSignal.timeout(3200)
       });
 
       if (aiRes.ok) {
@@ -343,7 +343,7 @@ MANDATORY RULES:
       }
     } catch (e) {}
 
-    // Instant Fallback if AI delays
+    // Instant Fallback if AI delays (Zero-Downtime Guarantee)
     if (!postText) {
       if (targetLang === 'Bengali') {
         postText = BENGALI_FALLBACKS[Math.floor(Math.random() * BENGALI_FALLBACKS.length)].replace('শহরের', `${loc.city} শহরের`);
@@ -354,11 +354,11 @@ MANDATORY RULES:
       }
     }
 
-    // 2. Direct, Ultra-Fast Unsplash CDN Image (Strict ~45KB-50KB, Never Fails, Never 404)
+    // 2. Direct, Ultra-Fast Unsplash CDN Image (Strict ~45KB-50KB, Always Present, Never 404)
     const selectedPhotoId = cat.photoIds[Math.floor(Math.random() * cat.photoIds.length)];
     const imageUrl = `https://images.unsplash.com/${selectedPhotoId}?auto=format&fit=crop&w=600&h=420&q=75&fm=jpg`;
 
-    // 3. Post to 'open-confees' DB
+    // 3. PRIORITY #1: Post to 'open-confees' DB IMMEDIATELY with Image & Matching Category
     const postRes = await fetch(
       `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions?key=${POSTS_API_KEY}`,
       {
@@ -389,10 +389,10 @@ MANDATORY RULES:
     const postDoc = await postRes.json();
     const newPostId = postDoc.name?.split('/').pop();
 
-    // 4. Organic Comments and Likes on Existing Posts
+    // 4. Organic Comments and Likes on Past Posts (Safe execution with break on first match)
     try {
       const listRes = await fetch(
-        `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions?pageSize=12&key=${POSTS_API_KEY}`
+        `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions?pageSize=8&key=${POSTS_API_KEY}`
       );
       const listData = await listRes.json();
       const documents = listData.documents || [];
@@ -414,7 +414,7 @@ MANDATORY RULES:
           const commentContent = cPool[Math.floor(Math.random() * cPool.length)];
           const commenterName = getUsername(pLang, true);
 
-          // Write to interactions DB with both field mappings so fetchComments always finds it
+          // Write comment to interactions DB
           await fetch(
             `https://firestore.googleapis.com/v1/projects/${INTERACTIONS_PROJECT_ID}/databases/(default)/documents/comments?key=${INTERACTIONS_API_KEY}`,
             {
@@ -453,7 +453,7 @@ MANDATORY RULES:
               })
             }
           ).catch(() => {});
-          break;
+          break; // Exit loop immediately to keep execution time under 2.5 seconds
         }
       }
     } catch (err) {}
