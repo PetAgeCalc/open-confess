@@ -187,8 +187,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     }
   };
 
-  const loadInitial = useCallback(async (isManualRefresh = false) => {
-    if (isManualRefresh) setRefreshing(true);
+  const loadInitial = useCallback(async () => {
     try {
       const page = await fetchInitialFeed(regionFilter ?? undefined);
       const merged = applySavedActivity(page.posts);
@@ -206,9 +205,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       console.error('Error in loadInitial:', err);
     } finally {
       setLoading(false);
-      if (isManualRefresh) {
-        setTimeout(() => setRefreshing(false), 500);
-      }
     }
   }, [regionFilter, activeTab]);
 
@@ -250,12 +246,20 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [modalPickerOpen, sharePopupPost, cardPickerPostId]);
 
+  // Fresh button par direct hard refresh
+  function handleFreshClick() {
+    setRefreshing(true);
+    setActiveTab('fresh');
+    window.location.reload();
+  }
+
   function handleTabChange(tab: 'fresh' | 'trending') {
+    if (tab === 'fresh') {
+      handleFreshClick();
+      return;
+    }
     setActiveTab(tab);
     setPosts((prev) => sortPosts(prev, tab));
-    if (tab === 'fresh') {
-      loadInitial(true);
-    }
   }
 
   function formatInteractiveText(text: string) {
@@ -523,21 +527,21 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
   return (
     <div className="w-full min-h-screen overflow-x-hidden bg-[#f3e6d8]">
-      {/* Exact Header Alignment with Blue Rotating Arrow */}
+      {/* Action Toolbar with Blue Fresh, Green Arrow, and Green Confess */}
       <section className="w-full px-4 pt-1 pb-1 text-center">
         <div className="flex items-center justify-center gap-2 max-w-sm mx-auto">
-          {/* Segmented Fresh & Trending Control */}
+          {/* Segmented Fresh (Blue) & Trending Control */}
           <div className="inline-flex items-center p-1 rounded-full bg-[#faefe6] border border-[#ebd8c8] shadow-sm">
             <button
-              onClick={() => handleTabChange('fresh')}
+              onClick={handleFreshClick}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'fresh'
-                  ? 'bg-[#e15b50] text-white shadow-sm'
+                  ? 'bg-[#2563eb] text-white shadow-sm'
                   : 'text-stone-600 hover:text-stone-900'
               }`}
             >
               <RotateCw 
-                className={`w-3.5 h-3.5 text-sky-400 ${refreshing ? 'animate-spin' : ''}`} 
+                className={`w-3.5 h-3.5 text-[#10b981] ${refreshing ? 'animate-spin' : ''}`} 
               />
               <span>Fresh</span>
             </button>
@@ -546,7 +550,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
               onClick={() => handleTabChange('trending')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'trending'
-                  ? 'bg-[#e15b50] text-white shadow-sm'
+                  ? 'bg-[#2563eb] text-white shadow-sm'
                   : 'text-stone-600 hover:text-stone-900'
               }`}
             >
@@ -555,13 +559,13 @@ export default function HomePage({ regionFilter }: HomePageProps) {
             </button>
           </div>
 
-          {/* Primary Confess Button */}
+          {/* Primary Confess Button (Green Gradient) */}
           <button
             onClick={() => setCreateOpen(true)}
             className="inline-flex items-center gap-1.5 px-4.5 py-2 rounded-full text-white font-semibold text-xs md:text-sm shadow-md active:scale-95 transition-all cursor-pointer shrink-0"
             style={{
-              background: 'linear-gradient(90deg, #f95738 0%, #ee4266 100%)',
-              boxShadow: '0 4px 14px rgba(238, 66, 102, 0.3)'
+              background: 'linear-gradient(90deg, #059669 0%, #10b981 100%)',
+              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
             }}
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
