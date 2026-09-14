@@ -1,10 +1,9 @@
-import { createConfession, setReaction, addComment } from './confessionService';
+import { createConfession } from './confessionService';
 import { Confession, ReactionEmoji } from '../types';
 
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || '';
 const POSTED_HASHES_KEY = 'open_confess_posted_hashes_v9';
 const SIMULATOR_SCHEDULE_KEY = 'open_confess_sim_schedule_v9';
-const ENGAGEMENT_TRACKER_KEY = 'open_confess_organic_growth_v3';
 
 interface LocationProfile {
   city: string;
@@ -13,14 +12,11 @@ interface LocationProfile {
 }
 
 const GLOBAL_LOCATIONS: LocationProfile[] = [
-  // Bengali Context
   { city: 'Kolkata', country: 'India', langGroup: 'Bengali' },
   { city: 'Dhaka', country: 'Bangladesh', langGroup: 'Bengali' },
   { city: 'Chittagong', country: 'Bangladesh', langGroup: 'Bengali' },
   { city: 'Sylhet', country: 'Bangladesh', langGroup: 'Bengali' },
   { city: 'Howrah', country: 'India', langGroup: 'Bengali' },
-
-  // Indian Context (Hindi / Hinglish / English)
   { city: 'Delhi', country: 'India', langGroup: 'IndiaMix' },
   { city: 'Mumbai', country: 'India', langGroup: 'IndiaMix' },
   { city: 'Pune', country: 'India', langGroup: 'IndiaMix' },
@@ -28,8 +24,6 @@ const GLOBAL_LOCATIONS: LocationProfile[] = [
   { city: 'Hyderabad', country: 'India', langGroup: 'IndiaMix' },
   { city: 'Lucknow', country: 'India', langGroup: 'IndiaMix' },
   { city: 'Jaipur', country: 'India', langGroup: 'IndiaMix' },
-
-  // Global Context
   { city: 'London', country: 'UK', langGroup: 'GlobalEnglish' },
   { city: 'New York', country: 'USA', langGroup: 'GlobalEnglish' },
   { city: 'Toronto', country: 'Canada', langGroup: 'GlobalEnglish' },
@@ -57,7 +51,6 @@ const GLOBAL_USERNAMES = [
   'StarlightWalker', 'CandidNotes', 'EchoInTheDark'
 ];
 
-// 100+ Curated Non-Repeating Aesthetic Photo IDs (Never Blank, Guaranteed ~45-50KB)
 const BENGAL_PHOTOS = [
   'photo-1558431382-27e303142255', 'photo-1609137144822-263a2339d6e4',
   'photo-1534528741775-53994a69daeb', 'photo-1507003211169-0a1dd7228f2d',
@@ -146,14 +139,6 @@ function determineTargetLanguage(location: LocationProfile): 'Bengali' | 'Hindi'
   return 'English';
 }
 
-function detectPostLanguage(text: string, city: string = ''): 'Bengali' | 'Hindi' | 'English' {
-  if (/[\u0980-\u09FF]/.test(text)) return 'Bengali';
-  if (/[\u0900-\u097F]/.test(text)) return 'Hindi';
-  if (['Kolkata', 'Dhaka', 'Chittagong', 'Sylhet', 'Howrah'].includes(city)) return 'Bengali';
-  if (['Delhi', 'Mumbai', 'Pune', 'Lucknow', 'Jaipur'].includes(city)) return 'Hindi';
-  return 'English';
-}
-
 function getAppropriateUsername(lang: 'Bengali' | 'Hindi' | 'English'): string {
   if (lang === 'Bengali') {
     return BENGALI_USERNAMES[Math.floor(Math.random() * BENGALI_USERNAMES.length)];
@@ -164,9 +149,6 @@ function getAppropriateUsername(lang: 'Bengali' | 'Hindi' | 'English'): string {
   return GLOBAL_USERNAMES[Math.floor(Math.random() * GLOBAL_USERNAMES.length)];
 }
 
-// -------------------------------------------------------------
-// RELIABLE 50KB JPG IMAGE GENERATOR (NEVER BLANKS, INSTANT CDN)
-// -------------------------------------------------------------
 function generateGuaranteedCoverImage(isBengaliContext: boolean, isIndianContext: boolean): string {
   let pool = GLOBAL_PHOTOS;
   if (isBengaliContext) {
@@ -175,13 +157,8 @@ function generateGuaranteedCoverImage(isBengaliContext: boolean, isIndianContext
     pool = INDIA_PHOTOS;
   }
 
-  // Pick random image from pool
   const randomPhotoId = pool[Math.floor(Math.random() * pool.length)];
-
-  // Random cache buster seed taaki browser hamesha fresh render kare
   const randomVersion = Math.floor(Math.random() * 1000);
-
-  // w=600&h=420&fit=crop&q=70&fm=jpg guarantees crisp output and exact ~40-50KB size
   return `https://images.unsplash.com/${randomPhotoId}?auto=format&fit=crop&w=600&h=420&q=70&fm=jpg&v=${randomVersion}`;
 }
 
@@ -208,56 +185,6 @@ function isDuplicate(text: string): boolean {
   const cleanSnippet = text.trim().slice(0, 50).toLowerCase();
   const hashes = getStoredHashes();
   return hashes.includes(cleanSnippet);
-}
-
-// Generates natural context-matching reader comments
-async function generateSmartMatchingComment(postText: string, lang: 'Bengali' | 'Hindi' | 'English'): Promise<string> {
-  if (!GROQ_API_KEY || !GROQ_API_KEY.startsWith('gsk_')) {
-    if (lang === 'Bengali') return 'কথাগুলো বুক ছুঁয়ে গেল, শক্ত থেকো।';
-    if (lang === 'Hindi') return 'हर लाइन से तुम्हारा दर्द महसूस हो रहा है भाई, हिम्मत रखो।';
-    return 'Felt every single word of this. Stay strong.';
-  }
-
-  let languageInstruction = 'Natural short spoken English (max 15 words).';
-  if (lang === 'Bengali') {
-    languageInstruction = 'Short, emotional, natural conversational Bengali (বাংলা লিপি) reply as an empathetic reader (max 15 words).';
-  } else if (lang === 'Hindi') {
-    languageInstruction = 'Short, natural, heartfelt conversational Hindi (देवनागरी लिपि) reply as an empathetic reader (max 15 words).';
-  }
-
-  const prompt = `Read this confession carefully:
-"${postText.slice(0, 250)}"
-
-Task: Write 1 short, deeply empathetic reader comment responding directly to what happened in the confession.
-Rules:
-- ${languageInstruction}
-- Must feel 100% human, casual, and specific to the post.
-- No quotes, no hashtags, no meta explanations. Output ONLY the comment text.`;
-
-  try {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${GROQ_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.85,
-        max_tokens: 50
-      })
-    });
-
-    if (!res.ok) throw new Error();
-    const data = await res.json();
-    const reply = data.choices?.[0]?.message?.content?.trim();
-    if (reply && reply.length > 3) return reply.replace(/^["']|["']$/g, '');
-  } catch {}
-
-  if (lang === 'Bengali') return 'নিজেকে একা মনে কোরো না, সময় সব ঠিক করে দেবে।';
-  if (lang === 'Hindi') return 'तुम अकेले नहीं हो दोस्त, वक्त के साथ सब बेहतर होगा।';
-  return 'Sending you strength and warmth.';
 }
 
 async function callGroqAI(
@@ -356,54 +283,11 @@ function generateDynamicFallback(lang: 'Bengali' | 'Hindi' | 'English', city: st
   };
 }
 
-// Organic Growth: Delayed start (6-10 min) + slow batches reaching 100+ reacts and 50+ comments
-async function applyOrganicGradualEngagement(posts: Confession[]) {
-  try {
-    const rawTracker = localStorage.getItem(ENGAGEMENT_TRACKER_KEY);
-    const tracker: Record<string, { commentsCount: number; reactionsCount: number; lastActivity: number }> =
-      rawTracker ? JSON.parse(rawTracker) : {};
-    const now = Date.now();
-
-    for (const post of posts.slice(0, 35)) {
-      const createdAt = Number((post as any).createdAt || (post as any).timestamp || 0);
-      if (!createdAt) continue;
-
-      const elapsedMinutes = Math.floor((now - createdAt) / (60 * 1000));
-
-      // Rule: Pehle 6 minute tak ZERO activity (organic pacing)
-      if (elapsedMinutes < 6) continue;
-
-      const record = tracker[post.id] || { commentsCount: 0, reactionsCount: 0, lastActivity: 0 };
-
-      // Spacing: Har 5-8 minute me ek ek wave
-      if (now - record.lastActivity < 5 * 60 * 1000) continue;
-
-      const postLang = detectPostLanguage(post.text, (post as any).city);
-
-      // Reactions Growth -> 100+ target (❤️ bias)
-      if (record.reactionsCount < 120) {
-        const reactsToAdd = Math.floor(Math.random() * 3) + 1;
-        for (let i = 0; i < reactsToAdd; i++) {
-          const emoji: ReactionEmoji = Math.random() < 0.8 ? '❤️' : (Math.random() < 0.5 ? '🤗' : '🙏');
-          setReaction(post.id, null, emoji).catch(() => {});
-        }
-        record.reactionsCount += reactsToAdd;
-      }
-
-      // Comments Growth -> 50+ target
-      if (record.commentsCount < 60) {
-        const smartComment = await generateSmartMatchingComment(post.text, postLang);
-        const randomUser = getAppropriateUsername(postLang);
-        addComment(post.id, randomUser, smartComment).catch(() => {});
-        record.commentsCount += 1;
-      }
-
-      record.lastActivity = now;
-      tracker[post.id] = record;
-    }
-
-    localStorage.setItem(ENGAGEMENT_TRACKER_KEY, JSON.stringify(tracker));
-  } catch {}
+// -------------------------------------------------------------
+// CLIENT ENGAGEMENT DISABLED (Fully handled server-side by api/cron.ts)
+// -------------------------------------------------------------
+async function applyOrganicGradualEngagement(_posts: Confession[]) {
+  return;
 }
 
 export async function generateAndPublishConfession(): Promise<Confession | null> {
@@ -426,7 +310,6 @@ export async function generateAndPublishConfession(): Promise<Confession | null>
     story = generateDynamicFallback(targetLang, randomLoc.city);
   }
 
-  // 100% Reliable, Instant CDN, 50KB JPG compressed cover
   const imageUrl = generateGuaranteedCoverImage(isBengaliContext, isIndianContext);
 
   const newPost = await createConfession({
@@ -455,7 +338,6 @@ export async function syncSimulatedActivity(existingPosts: Confession[]): Promis
       return existingPosts;
     }
 
-    // ~14.4 mins = ~100 posts in 24 hours
     if (now - lastRun >= 14 * 60 * 1000) {
       localStorage.setItem(SIMULATOR_SCHEDULE_KEY, String(now));
       await generateAndPublishConfession();
