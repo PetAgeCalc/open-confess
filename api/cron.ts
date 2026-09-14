@@ -1,6 +1,19 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { initializeApp, getApps } from 'firebase/app';
+import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
-const FIREBASE_PROJECT_ID = process.env.VITE_FIREBASE_PROJECT_ID || 'open-confess';
+// Client config fallback
+const firebaseConfig = {
+  apiKey: process.env.VITE_FIREBASE_API_KEY,
+  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.VITE_FIREBASE_PROJECT_ID || 'open-confess',
+  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.VITE_FIREBASE_APP_ID
+};
+
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+const db = getFirestore(app);
 
 const LOCATIONS = [
   { city: 'Kolkata', country: 'India', lang: 'Bengali' },
@@ -37,9 +50,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (loc.lang === 'Hindi') langRule = 'Write strictly in emotional, heartfelt Hindi script (देवनागरी लिपि).';
 
     const seed = Date.now();
-    const systemPrompt = `You are a real person sharing an anonymous, emotional confession. City: ${loc.city}. ${langRule} Length: exactly 90-100 words. No introduction, no title, no hashtags, no quotes. Output only the confession paragraph.`;
+    const systemPrompt = `You are an anonymous real person writing a heartfelt, emotional confession. City: ${loc.city}. ${langRule} Length: exactly 90-100 words. No intro, no title, no hashtags, no quotes. Just the raw confession.`;
 
-    // 100% Free AI Generator (No Key Required)
     const aiUrl = `https://text.pollinations.ai/${encodeURIComponent(systemPrompt)}?seed=${seed}&model=openai`;
     const aiRes = await fetch(aiUrl);
     let confessionText = await aiRes.text();
@@ -47,48 +59,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!confessionText || confessionText.length < 50) {
       if (loc.lang === 'Bengali') {
-        confessionText = `${loc.city} শহরের এই কোলাহলের মাঝে প্রতিদিন নিজের ভেতরের একাকিত্বকে আড়াল করে বাঁচা খুব কঠিন হয়ে উঠছে। পরিবারের সবাইকে ভালো রাখতে গিয়ে নিজের ভালোলাগাগুলোকে কবে হারিয়ে ফেলেছি জানি না। হাসিমুখের পেছনে কতটা না-বলা কান্না জমে থাকে, তা কাউকে বোঝানো যায় না। মাঝে মাঝে ক্লান্ত লাগে, কিন্তু পথচলা থামানোর কোনো উপায় নেই।`;
+        confessionText = `${loc.city} শহরের এই চার দেয়ালে প্রতিদিন কত স্বপ্ন যে নিঃশব্দে হারিয়ে যায়। পরিবারের মুখে হাসি ফোটাতে গিয়ে নিজের ভালোলাগাগুলোকে কবে যেন বিসর্জন দিয়েছি। কাজের ব্যস্ততায় দিন কেটে যায় ঠিকই, কিন্তু রাতের নিস্তব্ধতায় মনে হয় আমি কি সত্যিই বাঁচছি নাকি কেবল টিকে থাকার অভিনয় করছি? বুকের ভেতর চেপে রাখা একরাশ না-বলা কথা কাউকেই বলা হয় না।`;
       } else if (loc.lang === 'Hindi') {
-        confessionText = `${loc.city} में रहते हुए बाहर से सब कुछ सामान्य नजर आता है, लेकिन कमरे की चारदीवारी में हर रात एक अजीब सा अधूरापन घेर लेता है। घर पर फोन करके हमेशा कहता हूँ कि मैं बहुत खुश हूँ, लेकिन असल में जिम्मेदारियों का बोझ इतना भारी हो चुका है कि खुलकर हंसना भूल गया हूँ। खुद से हारने का डर सबसे ज्यादा तकलीफ देता है।`;
+        confessionText = `${loc.city} की इस भागदौड़ में बाहर से सब ठीक नजर आता है, लेकिन कमरे के अकेलेपन में हर शाम एक अधूरापन घेर लेता है। घर पर फोन करके हमेशा कहता हूँ कि मैं बहुत खुश हूँ, लेकिन असल में जिम्मेदारियों का बोझ इतना भारी हो चुका है कि खुलकर मुस्कुराना भूल गया हूँ। कभी-कभी लगता है कि सब छोड़कर वापस चला जाऊँ, पर उम्मीदें रोक लेती हैं।`;
       } else {
-        confessionText = `Living in ${loc.city} looks like an exciting life from the outside, but the silent weight of pretending to have everything together is exhausting. Every phone call back home feels like an audition where I act cheerful to keep my family proud. Carrying unspoken burdens alone in a crowded room is a lonely battle I fight every day.`;
+        confessionText = `Living in ${loc.city} looks picturesque on social media, but the silent exhaustion of meeting endless expectations is slowly breaking me. Every call back home is a performance where I act cheerful so nobody worries. Carrying hidden anxiety while maintaining a composed smile is the heaviest price I pay each day.`;
       }
     }
 
-    // 45-50KB Lightweight CDN Cover Image
     const photoId = PHOTOS[Math.floor(Math.random() * PHOTOS.length)];
     const imageUrl = `https://images.unsplash.com/${photoId}?auto=format&fit=crop&w=600&h=420&q=70&fm=jpg&v=${seed}`;
 
-    // Direct Firestore Database Entry
-    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/confessions`;
-    
-    const docData = {
-      fields: {
-        authorName: { stringValue: author },
-        text: { stringValue: confessionText },
-        imageUrl: { stringValue: imageUrl },
-        city: { stringValue: loc.city },
-        country: { stringValue: loc.country },
-        category: { stringValue: 'Raw Confessions' },
-        likesCount: { integerValue: '0' },
-        commentsCount: { integerValue: '0' },
-        createdAt: { timestampValue: new Date().toISOString() }
-      }
-    };
-
-    const fsRes = await fetch(firestoreUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(docData)
+    // Direct Firebase SDK write
+    const docRef = await addDoc(collection(db, 'confessions'), {
+      authorName: author,
+      text: confessionText,
+      imageUrl: imageUrl,
+      city: loc.city,
+      country: loc.country,
+      category: 'Raw Confessions',
+      likesCount: 0,
+      commentsCount: 0,
+      createdAt: serverTimestamp()
     });
-
-    if (!fsRes.ok) {
-      const errText = await fsRes.text();
-      return res.status(500).json({ error: 'Firestore write failed', details: errText });
-    }
 
     return res.status(200).json({
       success: true,
+      id: docRef.id,
       message: `Posted successfully from ${loc.city} (${loc.lang})`
     });
   } catch (error: any) {
