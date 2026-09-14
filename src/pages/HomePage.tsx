@@ -3,6 +3,7 @@ import { Plus, Loader2, X, Heart, MessageCircle, MapPin, Send, User, Share2, Cop
 import { Confession } from '../types';
 import { fetchInitialFeed, fetchNextPage, FeedPage, setReaction, addComment, fetchComments } from '../lib/confessionService';
 import CreateConfessionModal from '../components/CreateConfessionModal';
+import { getRealisticEngagement, RealisticComment } from '../lib/realisticEngagement';
 
 interface HomePageProps {
   regionFilter: string | null;
@@ -139,14 +140,28 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
       return rawPosts.map((post) => {
         const customData = parsed[post.id];
+        const realistic = getRealisticEngagement(post);
+
+        const customCommentsList: CommentItem[] = customData?.commentsList || [];
+        const mergedComments: CommentItem[] = [
+          ...customCommentsList,
+          ...realistic.commentsList
+        ];
+
+        // Deduplicate comments
+        const uniqueComments = Array.from(new Map(mergedComments.map((c) => [c.text, c])).values());
+
+        const effectiveLikes = customData?.likesCount ?? Math.max(safeLikesCount(post), realistic.likesCount);
+        const effectiveCommentsCount = Math.max(uniqueComments.length, safeCommentCount(post), realistic.commentsCount);
+
         return {
           ...post,
-          likesCount: customData?.likesCount ?? (post as any).likesCount ?? 0,
-          likes: customData?.likesCount ?? (post as any).likes ?? 0,
+          likesCount: effectiveLikes,
+          likes: effectiveLikes,
           userReaction: (customData?.userReaction && typeof customData.userReaction === 'string') ? customData.userReaction : null,
-          commentsCount: customData?.commentsCount ?? (post as any).commentsCount ?? safeCommentCount(post),
-          comments: customData?.commentsCount ?? (post as any).comments ?? safeCommentCount(post),
-          commentsList: customData?.commentsList ?? (post as any).commentsList ?? [],
+          commentsCount: effectiveCommentsCount,
+          comments: effectiveCommentsCount,
+          commentsList: uniqueComments,
         } as Confession;
       });
     } catch {
@@ -252,6 +267,8 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       userReaction: null,
       commentsCount: 0,
       comments: 0,
+      likesCount: 0,
+      likes: 0,
       commentsList: [],
     };
 
@@ -266,13 +283,17 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
   async function handleOpenPost(post: Confession) {
     const raw = post as Record<string, any>;
-    
+    const realistic = getRealisticEngagement(raw);
+
+    const initialCombined = [...(raw.commentsList || []), ...realistic.commentsList];
+    const initialUnique = Array.from(new Map(initialCombined.map((c: any) => [c.text, c])).values());
+
     // Set initial active state
     setActivePost({
       ...raw,
-      likesCount: safeLikesCount(raw),
-      commentsCount: safeCommentCount(raw),
-      commentsList: raw.commentsList || [],
+      likesCount: raw.likesCount ?? realistic.likesCount,
+      commentsCount: Math.max(initialUnique.length, realistic.commentsCount),
+      commentsList: initialUnique,
       userReaction: raw.userReaction || null,
       formattedTime: parseTimeToHuman(raw.createdAt || raw.timestamp || raw.time),
     });
@@ -288,18 +309,23 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         createdAt: parseTimeToHuman(c.createdAt),
       }));
 
+      // Agar real DB me comments hain to unhe priority do, varna realistic list preserve rakho
+      const finalList = mappedComments.length > 0
+        ? Array.from(new Map([...mappedComments, ...realistic.commentsList].map((c) => [c.text, c])).values())
+        : initialUnique;
+
       setActivePost((prev: any) => {
         if (!prev || prev.id !== raw.id) return prev;
         return {
           ...prev,
-          commentsCount: mappedComments.length,
-          commentsList: mappedComments,
+          commentsCount: finalList.length,
+          commentsList: finalList,
         };
       });
 
       // Feed state me bhi update sync karo
       setPosts((prev) =>
-        prev.map((p) => (p.id === raw.id ? { ...p, commentsCount: mappedComments.length, commentsList: mappedComments } : p))
+        prev.map((p) => (p.id === raw.id ? { ...p, commentsCount: finalList.length, commentsList: finalList } : p))
       );
     } catch (err) {
       console.error('Failed to fetch real comments:', err);
@@ -384,7 +410,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     };
 
     const currentList = activePost.commentsList || [];
-    const updatedComments = [...currentList, newComment];
+    const updatedComments = [newComment, ...currentList];
 
     const updated = {
       ...activePost,
@@ -773,7 +799,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                       ) : (
                         <Heart className="w-5 h-5 text-stone-500 hover:text-rose-500 transition-colors" />
                       )}
-                      <span>{activePost.likesCount}</span>
+                      <span>{safeLikesCount(activePost)}</span>
                     </button>
 
                     {modalPickerOpen && (
