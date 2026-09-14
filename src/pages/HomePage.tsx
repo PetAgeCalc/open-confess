@@ -30,8 +30,8 @@ const EMOJI_LIST = [
 ];
 
 const STORAGE_KEY = 'open_confess_user_activity_v1';
-const POSTS_PER_PAGE = 8;
 const FEED_CACHE_KEY = 'open_confess_feed_cache_instant_v1';
+const POSTS_PER_PAGE = 8;
 
 function parseTimeToHuman(rawTime: any): string {
   if (!rawTime) return 'Just now';
@@ -75,12 +75,8 @@ function parsePostTimestamp(post: any): number {
 
 function safeCommentCount(post: any): number {
   if (!post) return 0;
-  if (Array.isArray(post.commentsList)) {
-    return post.commentsList.length;
-  }
-  if (Array.isArray(post.comments)) {
-    return post.comments.length;
-  }
+  if (Array.isArray(post.commentsList)) return post.commentsList.length;
+  if (Array.isArray(post.comments)) return post.comments.length;
   const countVal = post.commentsCount ?? post.comments;
   const num = Number(countVal);
   return !isNaN(num) && num >= 0 ? num : 0;
@@ -103,6 +99,7 @@ function extractAuthorName(item: any): string {
 }
 
 export default function HomePage({ regionFilter }: HomePageProps) {
+  // Stale-While-Revalidate: Instant 0ms load from cache
   const [posts, setPosts] = useState<Confession[]>(() => {
     try {
       const cached = localStorage.getItem(FEED_CACHE_KEY);
@@ -113,6 +110,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
   const [cursor, setCursor] = useState<FeedPage['cursor']>(null);
   const [hasMore, setHasMore] = useState(true);
+  // Spinner tabhi aayega jab bilkul naya visitor ho aur cache blank ho
   const [loading, setLoading] = useState<boolean>(() => posts.length === 0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [activePost, setActivePost] = useState<any | null>(null);
@@ -149,9 +147,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
           ...realistic.commentsList
         ];
 
-        // Deduplicate comments
         const uniqueComments = Array.from(new Map(mergedComments.map((c) => [c.text, c])).values());
-
         const effectiveLikes = customData?.likesCount ?? Math.max(safeLikesCount(post), realistic.likesCount);
         const effectiveCommentsCount = Math.max(uniqueComments.length, safeCommentCount(post), realistic.commentsCount);
 
@@ -184,38 +180,48 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     }
   };
 
+  // Background Live Sync
   const loadInitial = useCallback(async () => {
-    let active = true;
-
     try {
       const page = await fetchInitialFeed(regionFilter ?? undefined);
       const merged = applySavedActivity(page.posts);
       const sorted = sortPostsByRecent(merged);
 
-      if (active) {
-        setPosts(sorted);
-        setCursor(page.cursor);
-        setHasMore(page.hasMore);
-        setVisibleCount(POSTS_PER_PAGE);
-        setLoading(false);
+      setPosts(sorted);
+      setCursor(page.cursor);
+      setHasMore(page.hasMore);
+      setVisibleCount(POSTS_PER_PAGE);
 
-        try {
-          localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(sorted.slice(0, 16)));
-        } catch {}
-      }
+      try {
+        localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(sorted.slice(0, 16)));
+      } catch {}
     } catch (err) {
       console.error('Error in loadInitial:', err);
     } finally {
-      if (active) setLoading(false);
+      setLoading(false);
     }
-
-    return () => {
-      active = false;
-    };
   }, [regionFilter]);
 
+  // Initial fetch on mount
   useEffect(() => {
     loadInitial();
+  }, [loadInitial]);
+
+  // Tab switch ya screen unlock par silent refresh
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadInitial();
+      }
+    };
+
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
+    };
   }, [loadInitial]);
 
   useEffect(() => {
@@ -236,7 +242,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [modalPickerOpen, sharePopupPost, cardPickerPostId]);
 
-  // Clickable Hashtag and @mention formatter (Supports English, Hindi, Bengali)
+  // Clickable Hashtag & @mention Formatter (English, Hindi, Bengali)
   function formatInteractiveText(text: string) {
     if (!text) return null;
     const parts = text.split(/([#@][\w\u0980-\u09FF\u0900-\u097F]+)/g);
@@ -338,7 +344,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     const initialCombined = [...(raw.commentsList || []), ...realistic.commentsList];
     const initialUnique = Array.from(new Map(initialCombined.map((c: any) => [c.text, c])).values());
 
-    // Set initial active state
     setActivePost({
       ...raw,
       likesCount: raw.likesCount ?? realistic.likesCount,
@@ -348,7 +353,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       formattedTime: parseTimeToHuman(raw.createdAt || raw.timestamp || raw.time),
     });
 
-    // Real DB se comments fetch karo
     setLoadingComments(true);
     try {
       const fetched = await fetchComments(raw.id);
@@ -359,7 +363,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         createdAt: parseTimeToHuman(c.createdAt),
       }));
 
-      // Agar real DB me comments hain to unhe priority do, varna realistic list preserve rakho
       const finalList = mappedComments.length > 0
         ? Array.from(new Map([...mappedComments, ...realistic.commentsList].map((c) => [c.text, c])).values())
         : initialUnique;
@@ -373,7 +376,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         };
       });
 
-      // Feed state me bhi update sync karo
       setPosts((prev) =>
         prev.map((p) => (p.id === raw.id ? { ...p, commentsCount: finalList.length, commentsList: finalList } : p))
       );
@@ -553,7 +555,8 @@ export default function HomePage({ regionFilter }: HomePageProps) {
           </p>
         )}
 
-        {loading ? (
+        {/* Loading Spinner sirf tab aayega jab cache bilkul empty ho */}
+        {loading && posts.length === 0 ? (
           <div className="flex justify-center py-16">
             <Loader2 className="w-7 h-7 animate-spin" style={{ color: '#ee4266' }} />
           </div>
