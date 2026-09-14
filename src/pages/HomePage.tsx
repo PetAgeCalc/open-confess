@@ -32,6 +32,7 @@ const EMOJI_LIST = [
 const STORAGE_KEY = 'open_confess_user_activity_v1';
 const FEED_CACHE_KEY = 'open_confess_feed_cache_instant_v1';
 const POSTS_PER_PAGE = 8;
+const FALLBACK_IMAGE_URL = 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=600&h=420&q=80';
 
 function parseTimeToHuman(rawTime: any): string {
   if (!rawTime) return 'Just now';
@@ -250,7 +251,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [modalPickerOpen, sharePopupPost, cardPickerPostId]);
 
-  // Read More Confession logic linked directly to Fresh button
   async function handleFreshClick() {
     setRefreshing(true);
     setActiveTab('fresh');
@@ -597,7 +597,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
       {/* Feed Section */}
       <section className="w-full px-3 sm:px-6 md:px-8 pt-1 pb-20 space-y-6">
-        {/* Active Hashtag Filter Notification Banner */}
         {activeHashtagFilter && (
           <div className="flex items-center justify-center gap-2 mb-2">
             <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#e15b50] bg-[#faefe6] px-4 py-1.5 rounded-full border border-[#ebd8c8] shadow-sm">
@@ -649,7 +648,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                   onClick={() => handleOpenPost(post)}
                   className="w-full rounded-[26px] sm:rounded-[30px] overflow-hidden bg-[#faefe6] shadow-[0_4px_16px_rgba(0,0,0,0.05)] border border-[#ebd8c8] cursor-pointer hover:shadow-lg transition-all"
                 >
-                  {/* Image Banner */}
+                  {/* Image Banner with Automatic Error Fallback */}
                   {Boolean((post as any).imageUrl || (post as any).image) && (
                     <div className="w-full h-64 sm:h-80 md:h-96 overflow-hidden bg-stone-200">
                       <img
@@ -657,6 +656,12 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                         alt="Confession story"
                         className="w-full h-full object-cover hover:scale-[1.02] transition-transform duration-500"
                         loading="lazy"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          if (target.src !== FALLBACK_IMAGE_URL) {
+                            target.src = FALLBACK_IMAGE_URL;
+                          }
+                        }}
                       />
                     </div>
                   )}
@@ -868,7 +873,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         </div>
       )}
 
-      {/* Post Modal Detail */}
+      {/* Post Modal Detail with Fallback */}
       {activePost && (
         <div 
           className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6"
@@ -898,6 +903,12 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                     src={activePost.imageUrl || activePost.image} 
                     alt="Confession" 
                     className="w-full h-full max-h-[420px] object-cover block"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      if (target.src !== FALLBACK_IMAGE_URL) {
+                        target.src = FALLBACK_IMAGE_URL;
+                      }
+                    }}
                   />
                 </div>
               )}
