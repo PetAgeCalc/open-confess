@@ -1,1 +1,15 @@
+name: 15-Minute Auto Post Cron
 
+on:
+  schedule:
+    # Har 15 minute me bina kisi visitor ke automatically trigger hoga
+    - cron: '*/15 * * * *'
+  workflow_dispatch: # Isse aap chahein toh GitHub dashboard se manually bhi run kar sakte hain
+
+jobs:
+  trigger-post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit OpenConfess Cron API
+        run: |
+          curl -s -X GET "https://www.openconfess.com/api/cron"
