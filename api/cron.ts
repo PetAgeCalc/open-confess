@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const FIREBASE_PROJECT_ID = process.env.VITE_FIREBASE_PROJECT_ID || 'open-confess';
-const GROQ_API_KEY = process.env.VITE_GROQ_API_KEY || '';
 
 const LOCATIONS = [
   { city: 'Kolkata', country: 'India', lang: 'Bengali' },
@@ -34,40 +33,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const author = names[Math.floor(Math.random() * names.length)];
 
     let langRule = 'Write strictly in modern English.';
-    if (loc.lang === 'Bengali') langRule = 'Write strictly in authentic, emotional Bengali (বাংলা লিপি).';
-    if (loc.lang === 'Hindi') langRule = 'Write strictly in emotional, conversational Hindi (देवनागरी लिपि).';
+    if (loc.lang === 'Bengali') langRule = 'Write strictly in authentic, emotional Bengali script (বাংলা লিপি).';
+    if (loc.lang === 'Hindi') langRule = 'Write strictly in emotional, heartfelt Hindi script (देवनागरी लिपि).';
 
-    const randomSeed = Math.random().toString(36).substring(2, 7);
+    const seed = Date.now();
+    const systemPrompt = `You are a real person sharing an anonymous, emotional confession. City: ${loc.city}. ${langRule} Length: exactly 90-100 words. No introduction, no title, no hashtags, no quotes. Output only the confession paragraph.`;
 
-    // 1. Groq AI Call
-    const aiRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${GROQ_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [{
-          role: 'user',
-          content: `Write an authentic, deeply moving confession about life, regret, or hidden feelings. City: ${loc.city}. ${langRule} Length: exactly 90-100 words. No hashtags, no quotes, no title. Seed: ${randomSeed}`
-        }],
-        temperature: 0.9
-      })
-    });
+    // 100% Free AI Generator (No Key Required)
+    const aiUrl = `https://text.pollinations.ai/${encodeURIComponent(systemPrompt)}?seed=${seed}&model=openai`;
+    const aiRes = await fetch(aiUrl);
+    let confessionText = await aiRes.text();
+    confessionText = confessionText.trim().replace(/^["']|["']$/g, '');
 
-    const aiData = await aiRes.json();
-    const confessionText = aiData.choices?.[0]?.message?.content?.trim();
-
-    if (!confessionText) {
-      return res.status(500).json({ error: 'AI generation failed' });
+    if (!confessionText || confessionText.length < 50) {
+      if (loc.lang === 'Bengali') {
+        confessionText = `${loc.city} শহরের এই কোলাহলের মাঝে প্রতিদিন নিজের ভেতরের একাকিত্বকে আড়াল করে বাঁচা খুব কঠিন হয়ে উঠছে। পরিবারের সবাইকে ভালো রাখতে গিয়ে নিজের ভালোলাগাগুলোকে কবে হারিয়ে ফেলেছি জানি না। হাসিমুখের পেছনে কতটা না-বলা কান্না জমে থাকে, তা কাউকে বোঝানো যায় না। মাঝে মাঝে ক্লান্ত লাগে, কিন্তু পথচলা থামানোর কোনো উপায় নেই।`;
+      } else if (loc.lang === 'Hindi') {
+        confessionText = `${loc.city} में रहते हुए बाहर से सब कुछ सामान्य नजर आता है, लेकिन कमरे की चारदीवारी में हर रात एक अजीब सा अधूरापन घेर लेता है। घर पर फोन करके हमेशा कहता हूँ कि मैं बहुत खुश हूँ, लेकिन असल में जिम्मेदारियों का बोझ इतना भारी हो चुका है कि खुलकर हंसना भूल गया हूँ। खुद से हारने का डर सबसे ज्यादा तकलीफ देता है।`;
+      } else {
+        confessionText = `Living in ${loc.city} looks like an exciting life from the outside, but the silent weight of pretending to have everything together is exhausting. Every phone call back home feels like an audition where I act cheerful to keep my family proud. Carrying unspoken burdens alone in a crowded room is a lonely battle I fight every day.`;
+      }
     }
 
-    // 2. Guaranteed 45-50KB CDN Image
+    // 45-50KB Lightweight CDN Cover Image
     const photoId = PHOTOS[Math.floor(Math.random() * PHOTOS.length)];
-    const imageUrl = `https://images.unsplash.com/${photoId}?auto=format&fit=crop&w=600&h=420&q=70&fm=jpg&v=${Date.now()}`;
+    const imageUrl = `https://images.unsplash.com/${photoId}?auto=format&fit=crop&w=600&h=420&q=70&fm=jpg&v=${seed}`;
 
-    // 3. Direct Firestore REST API Push (No SDK needed, instant cloud write)
+    // Direct Firestore Database Entry
     const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/confessions`;
     
     const docData = {
