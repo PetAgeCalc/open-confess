@@ -5,6 +5,8 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 body {
@@ -13,6 +15,8 @@ body {
   -webkit-font-smoothing: antialiased;
   background-color: #fff8f5;
   color: #1a1a1a;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 .font-display {
