@@ -196,7 +196,7 @@ const CATEGORIES: CategoryDef[] = [
     category: 'Work & Corporate Hustle',
     photoIds: ['photo-1486312338219-ce68d2c6f44d', 'photo-1498050108023-c5249f4df085', 'photo-1519389950473-47ba0277781c'],
     bengali: 'অফিসের অমানবিক প্রেশার, বসের টক্সিক রাজনীতি আর ক্যারিয়ারের ক্লান্তিকর লড়াই',
-    hindi: 'कॉर्पोरेट की 9-to-5 गुलामी, टॉक्सिक बॉस और ईএমआई के चक्कर में पिसती जिंदगी',
+    hindi: 'कॉर्पोरेट की 9-to-5 गुलामी, टॉक्सिक बॉस और ईএমআই के चक्कर में पिसती जिंदगी',
     english: 'corporate burnout, impossible deadlines and pretending to love a toxic job',
     tags: '#CorporateLife #Burnout #9to5Hustle #WorkLife',
     comments: {
@@ -314,6 +314,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const cat: CategoryDef = Math.random() < 0.5 ? CATEGORIES[rotIndex] : CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
 
     const author = getUsername(targetLang, false);
+    const nowIso = new Date().toISOString();
     const nowTime = Date.now();
 
     // 1. AI Post Generation (Strict 2.8s Timeout for Instant Delivery)
@@ -363,6 +364,7 @@ MANDATORY RULES:
     const imageUrl = `https://res.cloudinary.com/${CLOUD_NAME}/image/fetch/f_auto,q_auto:eco,w_600,h_420,c_fill/${encodeURIComponent(rawSourceUrl)}`;
 
     // 3. PRIORITY #1: Post to 'open-confees' DB IMMEDIATELY
+    // FIX: Saved with both timestampValue and stringValue to prevent query drop mismatch!
     const postRes = await fetch(
       `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions?key=${POSTS_API_KEY}`,
       {
@@ -384,7 +386,9 @@ MANDATORY RULES:
             likes: { integerValue: '0' },
             commentsCount: { integerValue: '0' },
             comments: { integerValue: '0' },
-            createdAt: { timestampValue: new Date().toISOString() }
+            createdAt: { stringValue: nowIso },
+            createdA: { stringValue: nowIso },
+            timestamp: { integerValue: String(nowTime) }
           }
         })
       }
@@ -396,7 +400,7 @@ MANDATORY RULES:
     // 4. Organic comments & engagement on previous confessions
     try {
       const listRes = await fetch(
-        `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions?pageSize=6&key=${POSTS_API_KEY}`
+        `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions?pageSize=12&key=${POSTS_API_KEY}`
       );
       const listData = await listRes.json();
       const documents = listData.documents || [];
@@ -432,7 +436,7 @@ MANDATORY RULES:
                   author: { stringValue: commenterName },
                   text: { stringValue: commentContent },
                   body: { stringValue: commentContent },
-                  createdAt: { timestampValue: new Date().toISOString() }
+                  createdAt: { stringValue: new Date().toISOString() }
                 }
               })
             }
