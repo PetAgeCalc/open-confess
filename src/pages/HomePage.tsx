@@ -590,8 +590,8 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
   return (
     <div className="w-full min-h-screen overflow-x-hidden bg-[#f3e6d8]">
-      {/* Action Toolbar with Blue Fresh, Green Arrow, and Perfectly Centered Green Confess */}
-      <section className="w-full px-4 pt-1 pb-1 text-center">
+      {/* Action Toolbar - Sticky Header (Fresh, Trending, Confess stays at top during scroll) */}
+      <section className="sticky top-0 z-40 w-full px-4 py-2 text-center bg-[#f3e6d8]/95 backdrop-blur-md border-b border-[#ebd8c8]/50 shadow-[0_2px_12px_rgba(0,0,0,0.03)] transition-all">
         <div className="flex items-center justify-center gap-2 max-w-sm mx-auto">
           {/* Segmented Fresh (Blue) & Trending Control */}
           <div className="inline-flex items-center p-1 rounded-full bg-[#faefe6] border border-[#ebd8c8] shadow-sm">
@@ -638,7 +638,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       </section>
 
       {/* Feed Section */}
-      <section className="w-full px-3 sm:px-6 md:px-8 pt-1 pb-20 space-y-6">
+      <section className="w-full px-3 sm:px-6 md:px-8 pt-2 pb-20 space-y-6">
         {activeHashtagFilter && (
           <div className="flex items-center justify-center gap-2 mb-2">
             <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#e15b50] bg-[#faefe6] px-4 py-1.5 rounded-full border border-[#ebd8c8] shadow-sm">
