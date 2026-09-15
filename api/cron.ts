@@ -199,7 +199,7 @@ const CATEGORIES: CategoryDef[] = [
     category: 'Work & Corporate Hustle',
     photoIds: ['photo-1486312338219-ce68d2c6f44d', 'photo-1498050108023-c5249f4df085', 'photo-1519389950473-47ba0277781c', 'photo-1497215728101-856f4ea42174', 'photo-1521737711867-e3b97375f902', 'photo-1556761175-b413da4baf72'],
     bengali: 'অফিসের অমানবিক প্রেশার, বসের টক্সিক রাজনীতি আর ক্যারিয়ারের ক্লান্তিকর লড়াই',
-    hindi: 'कॉर्पोरेट की 9-to-5 गुलामी, टॉक्सिक बॉस और ईएमआई के चक्कर में पिसती जिंदगी',
+    hindi: 'कॉर्पोरेट की 9-to-5 गुलामी, टॉक्सिक बॉस और ईएमআই के चक्कर में पिसती जिंदगी',
     english: 'corporate burnout, impossible deadlines and pretending to love a toxic job',
     tags: '#CorporateLife #Burnout #9to5Hustle #WorkLife',
     comments: {
@@ -251,7 +251,7 @@ const CATEGORIES: CategoryDef[] = [
     category: 'Tech, AI & Future Anxiety',
     photoIds: ['photo-1518770660439-4636190af475', 'photo-1526374965328-7f61d4dc18c5', 'photo-1486312338219-ce68d2c6f44d', 'photo-1498050108023-c5249f4df085', 'photo-1519389950473-47ba0277781c', 'photo-1531297484001-80022131f5a1'],
     bengali: 'প্রযুক্তির দ্রুত বদল, এআই বিপ্লব এবং ভবিষ্যতের চাকরি নিয়ে তরুণদের উদ্বেগ',
-    hindi: 'तेजी से बदलती टेक्नोलॉजी, एআই का खौफ और भविष्य के करियर की बेचैनी',
+    hindi: 'तेजी से बदलती टेक्नोलॉजी, एआई का खौफ और भविष्य के करियर की बेचैनी',
     english: 'artificial intelligence revolution, tech burnout and anxiety about future careers',
     tags: '#TechTrends #ArtificialIntelligence #FutureOfWork #CodingLife',
     comments: {
@@ -304,7 +304,7 @@ function getUsername(lang: 'Bengali' | 'Hindi' | 'English', allowAnonymous = tru
   return GLOBAL_USERNAMES[Math.floor(Math.random() * GLOBAL_USERNAMES.length)];
 }
 
-// Fail-Proof Cloudinary Preset Uploader (Using direct JSON payload to avoid Node.js FormData issues)
+// Fail-Proof Cloudinary Preset Uploader (Safe 7s timeout + Direct fallback)
 async function uploadAndCompressWithPreset(sourceImageUrl: string): Promise<string> {
   try {
     const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
@@ -314,7 +314,7 @@ async function uploadAndCompressWithPreset(sourceImageUrl: string): Promise<stri
         file: sourceImageUrl,
         upload_preset: UPLOAD_PRESET
       }),
-      signal: AbortSignal.timeout(3500)
+      signal: AbortSignal.timeout(7000) // 7 seconds timeout so it never aborts prematurely
     });
 
     if (uploadRes.ok) {
@@ -326,7 +326,7 @@ async function uploadAndCompressWithPreset(sourceImageUrl: string): Promise<stri
     }
   } catch (err) {}
 
-  // Safe fallback if upload fails
+  // Safe fallback if upload fails or times out
   return `https://res.cloudinary.com/${CLOUD_NAME}/image/fetch/f_auto,q_auto:eco,w_600,h_420,c_fill/${encodeURIComponent(sourceImageUrl)}`;
 }
 
