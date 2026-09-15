@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Heart, MessageCircle, MapPin, Tag } from 'lucide-react';
+import { Heart, MessageCircle, MapPin, Tag, Trash2 } from 'lucide-react';
 import { Confession } from '../types';
-import { setReaction } from '../lib/confessionService';
+import { setReaction, deleteConfession } from '../lib/confessionService';
 
 interface ConfessionCardProps {
   confession: Confession;
@@ -40,7 +40,12 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
   const [commentsCount, setCommentsCount] = useState<number>(initialComments);
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const pickerRef = useRef<HTMLDivElement>(null);
+
+  // Secret Admin check via URL parameter
+  const searchParams = new URLSearchParams(window.location.search);
+  const isAdmin = searchParams.get('admin') === 'ashim97';
 
   // Sync initial state and user's saved reaction
   useEffect(() => {
@@ -81,6 +86,31 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
     e.preventDefault();
     e.stopPropagation();
     setPickerOpen((prev) => !prev);
+  }
+
+  async function handleDeletePost(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!postId) return;
+
+    const confirmed = window.confirm("Kya aap sach me is confession ko delete karna chahte hain?");
+    if (!confirmed) return;
+
+    try {
+      setIsDeleting(true);
+      const success = await deleteConfession(postId);
+      if (success) {
+        window.location.reload();
+      } else {
+        alert("Delete nahi ho paya!");
+        setIsDeleting(false);
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert("Delete karne me koi error aayi.");
+      setIsDeleting(false);
+    }
   }
 
   function handleSelectEmoji(e: React.MouseEvent | React.PointerEvent, emoji: string) {
@@ -182,65 +212,81 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
       </p>
 
       {/* Footer Actions */}
-      <div className="flex items-center gap-4 pt-3 border-t border-stone-100 text-xs sm:text-sm text-stone-600 relative">
-        {/* Emoji Button & Floating Tray */}
-        <div
-          ref={pickerRef}
-          className="relative z-30"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-        >
+      <div className="flex items-center justify-between pt-3 border-t border-stone-100 text-xs sm:text-sm text-stone-600 relative">
+        <div className="flex items-center gap-4">
+          {/* Emoji Button & Floating Tray */}
+          <div
+            ref={pickerRef}
+            className="relative z-30"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          >
+            <button
+              type="button"
+              onClick={handleMainButtonClick}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all active:scale-95 cursor-pointer ${
+                selectedEmoji
+                  ? 'border-rose-300 bg-rose-50 text-rose-600 font-medium shadow-sm'
+                  : 'border-stone-200 hover:bg-stone-50 text-stone-600'
+              }`}
+            >
+              {selectedEmoji ? (
+                <span className="text-base leading-none">{selectedEmoji}</span>
+              ) : (
+                <Heart className="w-4 h-4 text-stone-400 hover:text-rose-500" />
+              )}
+              <span className="font-semibold">{likes}</span>
+            </button>
+
+            {/* Emoji Tray */}
+            {pickerOpen && (
+              <div
+                className="absolute bottom-full left-0 mb-2 flex items-center gap-1 p-2 bg-white rounded-2xl shadow-2xl border border-stone-200 z-50 overflow-x-auto max-w-[85vw] sm:max-w-none"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              >
+                {EMOJI_OPTIONS.map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onPointerDown={(e) => handleSelectEmoji(e, item.emoji)}
+                    onClick={(e) => handleSelectEmoji(e, item.emoji)}
+                    className={`text-xl p-1.5 rounded-xl hover:scale-125 active:scale-90 transition-all cursor-pointer ${
+                      selectedEmoji === item.emoji ? 'bg-rose-100 scale-110' : 'hover:bg-stone-100'
+                    }`}
+                    title={item.label}
+                  >
+                    {item.emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Comments Count */}
+          <div className="flex items-center gap-1.5 text-stone-500">
+            <MessageCircle className="w-4 h-4 text-stone-400" />
+            <span>{commentsCount} comments</span>
+          </div>
+        </div>
+
+        {/* Secret Admin Delete Button */}
+        {isAdmin && (
           <button
             type="button"
-            onClick={handleMainButtonClick}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all active:scale-95 cursor-pointer ${
-              selectedEmoji
-                ? 'border-rose-300 bg-rose-50 text-rose-600 font-medium shadow-sm'
-                : 'border-stone-200 hover:bg-stone-50 text-stone-600'
-            }`}
+            disabled={isDeleting}
+            onClick={handleDeletePost}
+            className="flex items-center gap-1 px-2.5 py-1 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-medium rounded-lg text-xs transition-colors cursor-pointer disabled:opacity-50"
+            title="Delete this confession"
           >
-            {selectedEmoji ? (
-              <span className="text-base leading-none">{selectedEmoji}</span>
-            ) : (
-              <Heart className="w-4 h-4 text-stone-400 hover:text-rose-500" />
-            )}
-            <span className="font-semibold">{likes}</span>
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
           </button>
-
-          {/* Emoji Tray */}
-          {pickerOpen && (
-            <div
-              className="absolute bottom-full left-0 mb-2 flex items-center gap-1 p-2 bg-white rounded-2xl shadow-2xl border border-stone-200 z-50 overflow-x-auto max-w-[85vw] sm:max-w-none"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-            >
-              {EMOJI_OPTIONS.map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onPointerDown={(e) => handleSelectEmoji(e, item.emoji)}
-                  onClick={(e) => handleSelectEmoji(e, item.emoji)}
-                  className={`text-xl p-1.5 rounded-xl hover:scale-125 active:scale-90 transition-all cursor-pointer ${
-                    selectedEmoji === item.emoji ? 'bg-rose-100 scale-110' : 'hover:bg-stone-100'
-                  }`}
-                  title={item.label}
-                >
-                  {item.emoji}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Comments Count */}
-        <div className="flex items-center gap-1.5 text-stone-500">
-          <MessageCircle className="w-4 h-4 text-stone-400" />
-          <span>{commentsCount} comments</span>
-        </div>
+        )}
       </div>
     </article>
   );
