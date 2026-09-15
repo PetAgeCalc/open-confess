@@ -302,7 +302,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       const success = await deleteConfession(postId);
 
       if (success) {
-        // State aur cache se remove karein
         setPosts((prev) => {
           const updated = prev.filter((p) => String(p.id) !== String(postId));
           try {
@@ -589,9 +588,12 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   const canLoadMore = visibleCount < filteredPosts.length || hasMore;
 
   return (
-    <div className="w-full min-h-screen overflow-x-hidden bg-[#f3e6d8]">
-      {/* Action Toolbar - Sticky Header (Fresh, Trending, Confess stays at top during scroll) */}
-      <section className="sticky top-0 z-40 w-full px-4 py-2 text-center bg-[#f3e6d8]/95 backdrop-blur-md border-b border-[#ebd8c8]/50 shadow-[0_2px_12px_rgba(0,0,0,0.03)] transition-all">
+    <div className="w-full min-h-screen bg-[#f3e6d8]">
+      {/* Action Toolbar - Guaranteed Sticky at Screen Top */}
+      <section 
+        style={{ position: 'sticky', top: 0, zIndex: 50 }}
+        className="w-full px-4 py-2 text-center bg-[#f3e6d8] border-b border-[#ebd8c8]/70 shadow-sm"
+      >
         <div className="flex items-center justify-center gap-2 max-w-sm mx-auto">
           {/* Segmented Fresh (Blue) & Trending Control */}
           <div className="inline-flex items-center p-1 rounded-full bg-[#faefe6] border border-[#ebd8c8] shadow-sm">
@@ -932,7 +934,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         </div>
       )}
 
-      {/* Post Modal Detail with Fallback */}
       {activePost && (
         <div 
           className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6"
