@@ -589,10 +589,10 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
   return (
     <div className="w-full min-h-screen bg-[#f3e6d8]">
-      {/* Action Toolbar - Guaranteed Sticky at Screen Top */}
+      {/* Action Toolbar - Sticky Header Below Main Header */}
       <section 
-        style={{ position: 'sticky', top: 0, zIndex: 50 }}
-        className="w-full px-4 py-2 text-center bg-[#f3e6d8] border-b border-[#ebd8c8]/70 shadow-sm"
+        style={{ position: 'sticky', top: '57px', zIndex: 30 }}
+        className="w-full px-4 py-2 text-center bg-[#f3e6d8]/95 backdrop-blur-md border-b border-[#ebd8c8]/70 shadow-sm transition-all"
       >
         <div className="flex items-center justify-center gap-2 max-w-sm mx-auto">
           {/* Segmented Fresh (Blue) & Trending Control */}
@@ -934,6 +934,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         </div>
       )}
 
+      {/* Post Modal Detail with Fallback */}
       {activePost && (
         <div 
           className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6"
