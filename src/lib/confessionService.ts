@@ -10,6 +10,7 @@ import {
   serverTimestamp,
   setDoc,
   where,
+  orderBy,
   QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import { postsDb, interactionsDb, isFirebaseConfigured } from './firebase';
@@ -47,7 +48,7 @@ function readLocalStats(): Record<string, LocalPostStats> {
     const raw = localStorage.getItem(LOCAL_INTERACTIONS_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch {
-    return [];
+    return {};
   }
 }
 
@@ -63,9 +64,15 @@ function emptyReactions(): ReactionMap {
 
 function safeEpochMs(val: any): number {
   if (!val) return Date.now();
-  if (typeof val === 'number') return val;
+  if (typeof val === 'number') {
+    return val < 10000000000 ? val * 1000 : val;
+  }
   if (val?.toMillis) return val.toMillis();
   if (val?.seconds) return val.seconds * 1000;
+  if (typeof val === 'string') {
+    const parsed = Date.parse(val);
+    if (!isNaN(parsed)) return parsed;
+  }
   const parsed = toEpochMs(val);
   return isNaN(parsed) ? Date.now() : parsed;
 }
@@ -126,9 +133,18 @@ async function fetchFirestorePage(
 ): Promise<FeedPage> {
   const colRef = collection(postsDb!, 'confessions');
   
-  const q = cursor
-    ? query(colRef, limit(PAGE_SIZE * 2), startAfter(cursor))
-    : query(colRef, limit(PAGE_SIZE * 2));
+  // FIX: Added orderBy('createdAt', 'desc') so newest posts always come first!
+  let q;
+  try {
+    q = cursor
+      ? query(colRef, orderBy('createdAt', 'desc'), startAfter(cursor), limit(PAGE_SIZE * 2))
+      : query(colRef, orderBy('createdAt', 'desc'), limit(PAGE_SIZE * 2));
+  } catch (err) {
+    // Fallback if index is creating
+    q = cursor
+      ? query(colRef, startAfter(cursor), limit(PAGE_SIZE * 2))
+      : query(colRef, limit(PAGE_SIZE * 2));
+  }
 
   const snap = await getDocs(q);
   const targetDb = interactionsDb || postsDb;
@@ -147,19 +163,19 @@ async function fetchFirestorePage(
       } catch (e) {}
     }
 
-    const rawTime = data.createdAt || data.createdA || Date.now();
+    const rawTime = data.createdAt || data.createdA || data.timestamp || Date.now();
 
     return {
       id: docSnap.id,
       authorName: data.authorName || data.author || 'Anonymous',
       text: data.body || data.text || data.content || '',
-      imageUrl: data.imageUrl ?? null,
+      imageUrl: data.imageUrl || data.image || null,
       country: data.country || '',
       city: data.city || '',
       region: data.region || data.category || '',
       createdAt: safeEpochMs(rawTime),
       viewsCount: data.viewsCount ?? 0,
-      likesCount: Number(reactionData?.likesCount ?? data.likesCount ?? 0),
+      likesCount: Number(reactionData?.likesCount ?? data.likesCount ?? data.likes ?? 0),
       reactions: reactionData?.reactions ?? emptyReactions(),
       comments: [],
     } as Confession;
@@ -168,6 +184,7 @@ async function fetchFirestorePage(
   const resolvedPosts = await Promise.all(postsPromises);
   const validPosts = resolvedPosts.filter((post): post is Confession => post !== null);
 
+  // Strictly sort latest epoch timestamp on top
   validPosts.sort((a, b) => safeEpochMs(b.createdAt) - safeEpochMs(a.createdAt));
   const posts = validPosts.slice(0, PAGE_SIZE);
 
@@ -216,19 +233,28 @@ export interface CreateConfessionInput {
 
 export async function createConfession(input: CreateConfessionInput): Promise<Confession> {
   const region = [input.city, input.country].filter(Boolean).join(', ');
+  const nowIso = new Date().toISOString();
 
   if (isFirebaseConfigured && postsDb) {
     const docRef = await addDoc(collection(postsDb, 'confessions'), {
       authorName: input.authorName || 'Anonymous',
+      author: input.authorName || 'Anonymous',
       body: input.text,
       text: input.text,
+      content: input.text,
       imageUrl: input.imageUrl,
+      image: input.imageUrl,
       category: input.category || 'General',
       country: input.country,
       city: input.city,
       region,
-      createdAt: serverTimestamp(),
-      createdA: serverTimestamp(),
+      createdAt: nowIso, // Stores exact ISO string so it is immediately searchable
+      createdA: nowIso,
+      timestamp: Date.now(),
+      likesCount: 0,
+      likes: 0,
+      commentsCount: 0,
+      comments: 0,
       viewsCount: 0,
     });
 
