@@ -12,6 +12,7 @@ import {
   where,
   orderBy,
   QueryDocumentSnapshot,
+  deleteDoc,
 } from 'firebase/firestore';
 import { postsDb, interactionsDb, isFirebaseConfigured } from './firebase';
 import { seedConfessions } from './seedData';
@@ -432,4 +433,40 @@ export async function fetchComments(postId: string): Promise<Comment[]> {
 
 function findPostAnywhere(postId: string): Confession | undefined {
   return getMergedLocalFeed().find((p) => p.id === postId);
+}
+
+export async function deleteConfession(postId: string): Promise<boolean> {
+  let deleted = false;
+
+  // 1. Firebase Firestore se delete karein (posts & interactions dono se)
+  if (isFirebaseConfigured) {
+    try {
+      if (postsDb) {
+        await deleteDoc(doc(postsDb, 'confessions', postId));
+      }
+      const targetDb = interactionsDb || postsDb;
+      if (targetDb) {
+        await deleteDoc(doc(targetDb, 'reactions', postId));
+      }
+      deleted = true;
+    } catch (err) {
+      console.error('Firebase delete failed:', err);
+    }
+  }
+
+  // 2. Local fallback storage se bhi delete karein agar wahan save ho
+  const localPosts = readLocalPosts();
+  const updatedPosts = localPosts.filter((p) => p.id !== postId);
+  if (updatedPosts.length !== localPosts.length) {
+    writeLocalPosts(updatedPosts);
+    deleted = true;
+  }
+
+  const localStats = readLocalStats();
+  if (localStats[postId]) {
+    delete localStats[postId];
+    writeLocalStats(localStats);
+  }
+
+  return deleted;
 }
