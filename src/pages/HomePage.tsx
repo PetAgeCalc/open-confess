@@ -589,10 +589,10 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
   return (
     <div className="w-full min-h-screen bg-[#f3e6d8]">
-      {/* Action Toolbar - Sticky Header Below Main Header */}
+      {/* Action Toolbar - 100% Fixed at Screen Top */}
       <section 
-        style={{ position: 'sticky', top: '57px', zIndex: 30 }}
-        className="w-full px-4 py-2 text-center bg-[#f3e6d8]/95 backdrop-blur-md border-b border-[#ebd8c8]/70 shadow-sm transition-all"
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 40 }}
+        className="w-full px-4 py-2 text-center bg-[#f3e6d8]/95 backdrop-blur-md border-b border-[#ebd8c8]/80 shadow-sm"
       >
         <div className="flex items-center justify-center gap-2 max-w-sm mx-auto">
           {/* Segmented Fresh (Blue) & Trending Control */}
@@ -624,7 +624,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
             </button>
           </div>
 
-          {/* Primary Confess Button (Perfect Center Alignment with Minimal Gap) */}
+          {/* Primary Confess Button */}
           <button
             onClick={() => setCreateOpen(true)}
             className="inline-flex items-center justify-center gap-1 px-4 py-2 rounded-full text-white font-semibold text-xs md:text-sm shadow-md active:scale-95 transition-all cursor-pointer shrink-0"
@@ -639,8 +639,8 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         </div>
       </section>
 
-      {/* Feed Section */}
-      <section className="w-full px-3 sm:px-6 md:px-8 pt-2 pb-20 space-y-6">
+      {/* Feed Section - Top padding added so posts do not hide under fixed toolbar */}
+      <section className="w-full px-3 sm:px-6 md:px-8 pt-[62px] pb-20 space-y-6">
         {activeHashtagFilter && (
           <div className="flex items-center justify-center gap-2 mb-2">
             <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#e15b50] bg-[#faefe6] px-4 py-1.5 rounded-full border border-[#ebd8c8] shadow-sm">
@@ -934,7 +934,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
         </div>
       )}
 
-      {/* Post Modal Detail with Fallback */}
+      {/* Post Modal Detail */}
       {activePost && (
         <div 
           className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-6"
@@ -1042,7 +1042,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {/* Secret Admin Delete Button inside Modal */}
                   {isAdmin && (
                     <button
                       type="button"
