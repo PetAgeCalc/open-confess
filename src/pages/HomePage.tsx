@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Loader2, X, Heart, MessageCircle, MapPin, Send, User, Share2, Copy, Check, Hash, RotateCw, Flame } from 'lucide-react';
+import { Plus, Loader2, X, Heart, MessageCircle, MapPin, Send, User, Share2, Copy, Check, Hash, RotateCw, Flame, Trash2 } from 'lucide-react';
 import { Confession } from '../types';
-import { fetchInitialFeed, fetchNextPage, FeedPage, setReaction, addComment, fetchComments } from '../lib/confessionService';
+import { fetchInitialFeed, fetchNextPage, FeedPage, setReaction, addComment, fetchComments, deleteConfession } from '../lib/confessionService';
 import CreateConfessionModal from '../components/CreateConfessionModal';
 import { getRealisticEngagement, RealisticComment } from '../lib/realisticEngagement';
 
@@ -125,6 +125,11 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   const [commentText, setCommentText] = useState('');
   const [loadingComments, setLoadingComments] = useState(false);
   const [activeHashtagFilter, setActiveHashtagFilter] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Secret Admin check via URL query param: ?admin=ashim97
+  const searchParams = new URLSearchParams(window.location.search);
+  const isAdmin = searchParams.get('admin') === 'ashim97';
 
   const modalPickerRef = useRef<HTMLDivElement>(null);
   const shareRef = useRef<HTMLDivElement>(null);
@@ -281,6 +286,43 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     }
     setActiveTab(tab);
     setPosts((prev) => sortPosts(prev, tab));
+  }
+
+  async function handleDeletePost(postId: string, e?: React.MouseEvent) {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+
+    const confirmed = window.confirm("Kya aap sach me is confession ko delete karna chahte hain?");
+    if (!confirmed) return;
+
+    try {
+      setDeletingId(postId);
+      const success = await deleteConfession(postId);
+
+      if (success) {
+        // State aur cache se remove karein
+        setPosts((prev) => {
+          const updated = prev.filter((p) => String(p.id) !== String(postId));
+          try {
+            localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(updated.slice(0, 16)));
+          } catch {}
+          return updated;
+        });
+
+        if (activePost && String(activePost.id) === String(postId)) {
+          setActivePost(null);
+        }
+      } else {
+        alert("Delete nahi ho paya.");
+      }
+    } catch (err) {
+      console.error("Delete failed:", err);
+      alert("Delete karne me error aayi.");
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   function formatInteractiveText(text: string) {
@@ -641,6 +683,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
             {visiblePosts.map((post) => {
               const isCardPickerOpen = cardPickerPostId === post.id;
               const hasReaction = Boolean((post as any).userReaction);
+              const isCurrentDeleting = deletingId === post.id;
 
               return (
                 <div
@@ -758,10 +801,26 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                         </button>
                       </div>
 
-                      {/* Tap to View */}
-                      <span className="text-xs sm:text-sm font-medium text-[#e15b50] hover:underline cursor-pointer">
-                        Tap to view
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {/* Secret Admin Delete Button on Card */}
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            disabled={isCurrentDeleting}
+                            onClick={(e) => handleDeletePost(post.id, e)}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-red-100 hover:bg-red-200 border border-red-300 text-red-700 rounded-full text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                            title="Delete this confession"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>{isCurrentDeleting ? '...' : 'Delete'}</span>
+                          </button>
+                        )}
+
+                        {/* Tap to View */}
+                        <span className="text-xs sm:text-sm font-medium text-[#e15b50] hover:underline cursor-pointer">
+                          Tap to view
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -980,14 +1039,30 @@ export default function HomePage({ regionFilter }: HomePageProps) {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={(e) => triggerShare(activePost, e)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-stone-200 hover:bg-stone-50 text-stone-600 text-xs sm:text-sm font-medium transition-colors cursor-pointer"
-                >
-                  <Share2 className="w-4 h-4 text-stone-500" />
-                  <span>Share</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* Secret Admin Delete Button inside Modal */}
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      disabled={deletingId === activePost.id}
+                      onClick={(e) => handleDeletePost(activePost.id, e)}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-red-100 hover:bg-red-200 border border-red-300 text-red-700 rounded-full text-xs font-semibold shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                      title="Delete confession"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>{deletingId === activePost.id ? 'Deleting...' : 'Delete'}</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={(e) => triggerShare(activePost, e)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-stone-200 hover:bg-stone-50 text-stone-600 text-xs sm:text-sm font-medium transition-colors cursor-pointer"
+                  >
+                    <Share2 className="w-4 h-4 text-stone-500" />
+                    <span>Share</span>
+                  </button>
+                </div>
               </div>
 
               {/* Comments Section */}
