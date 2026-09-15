@@ -58,7 +58,7 @@ export const Header: React.FC<HeaderProps> = ({
   }
 
   return (
-    <header className="sticky top-0 z-[60] bg-[#fff8f5]/95 backdrop-blur-md border-b border-[#f3e3dd] px-2.5 sm:px-4 py-2">
+    <header className="relative w-full z-20 bg-[#fff8f5] border-b border-[#f3e3dd] px-2.5 sm:px-4 py-2">
       <div className="max-w-4xl mx-auto flex items-center justify-between gap-1.5">
         
         {/* Left: Bada Red Heart + Open Confess */}
@@ -111,7 +111,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Search Dropdown */}
           {searchOpen && (
-            <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-stone-200 p-2 z-[70]">
+            <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-stone-200 p-2 z-[90]">
               <div className="flex items-center gap-1 px-2 py-1 bg-stone-50 rounded-xl border border-stone-200">
                 <Search className="w-3.5 h-3.5 text-stone-400 shrink-0" />
                 <input
@@ -163,7 +163,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Dropdown Options */}
           {menuOpen && (
-            <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-2xl border border-stone-200 py-2.5 z-[70] divide-y divide-stone-100 animate-in fade-in zoom-in-95 duration-100">
+            <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-2xl border border-stone-200 py-2.5 z-[90] divide-y divide-stone-100 animate-in fade-in zoom-in-95 duration-100">
               <div className="py-1">
                 <button
                   onClick={() => { onOpenLegal?.('about'); setMenuOpen(false); }}
