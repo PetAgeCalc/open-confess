@@ -1,57 +1,242 @@
-import { useState } from 'react';
-import Header, { LegalTopic } from './components/Header';
-import HomePage from './pages/HomePage';
-import LegalPage from './pages/LegalPage';
-import { InstallModal } from './components/InstallModal';
-import CreateConfessionModal from './components/CreateConfessionModal';
+import React, { useState, useEffect, useRef } from 'react';
+import { MoreVertical, Heart, Search, MapPin, X, RotateCw, Flame, Plus } from 'lucide-react';
+import RegionFilterBox from './RegionFilterBox';
 
-export default function App() {
-  const [regionFilter, setRegionFilter] = useState<string | null>(null);
-  const [legalTopic, setLegalTopic] = useState<LegalTopic | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'fresh' | 'trending'>('fresh');
-  const [refreshing, setRefreshing] = useState(false);
+export type LegalTopic = 'about' | 'contact' | 'privacy' | 'terms' | 'disclaimer';
 
-  function handleFreshClick() {
-    setRefreshing(true);
-    setActiveTab('fresh');
-    try {
-      localStorage.removeItem('open_confess_feed_cache_instant_v1');
-      window.location.reload();
-    } finally {
-      setTimeout(() => setRefreshing(false), 500);
+export interface HeaderProps {
+  selectedRegion?: string | null;
+  onRegionChange?: (region: string | null) => void;
+  onOpenLegal?: (topic: LegalTopic) => void;
+  activeTab?: 'fresh' | 'trending';
+  refreshing?: boolean;
+  onFreshClick?: () => void;
+  onTabChange?: (tab: 'fresh' | 'trending') => void;
+  onOpenCreate?: () => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({
+  selectedRegion,
+  onRegionChange,
+  onOpenLegal,
+  activeTab = 'fresh',
+  refreshing = false,
+  onFreshClick,
+  onTabChange,
+  onOpenCreate,
+}) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const menuContainerRef = useRef<HTMLDivElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideInteraction = (event: Event) => {
+      const target = event.target as Node;
+      if (menuOpen && menuContainerRef.current && !menuContainerRef.current.contains(target)) {
+        setMenuOpen(false);
+      }
+      if (searchOpen && searchContainerRef.current && !searchContainerRef.current.contains(target)) {
+        setSearchOpen(false);
+      }
+    };
+
+    const handleScroll = () => {
+      if (menuOpen) setMenuOpen(false);
+      if (searchOpen) setSearchOpen(false);
+    };
+
+    document.addEventListener('touchstart', handleOutsideInteraction, true);
+    document.addEventListener('mousedown', handleOutsideInteraction, true);
+    window.addEventListener('scroll', handleScroll, true);
+
+    return () => {
+      document.removeEventListener('touchstart', handleOutsideInteraction, true);
+      document.removeEventListener('mousedown', handleOutsideInteraction, true);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [menuOpen, searchOpen]);
+
+  function handleSelectRegion(region: string | null) {
+    if (onRegionChange) {
+      onRegionChange(region);
     }
+    setSearchOpen(false);
   }
 
   return (
-    <div className="w-full min-h-screen bg-[#fff8f5] text-stone-900">
-      <Header
-        selectedRegion={regionFilter}
-        onRegionChange={setRegionFilter}
-        onOpenLegal={setLegalTopic}
-        activeTab={activeTab}
-        refreshing={refreshing}
-        onFreshClick={handleFreshClick}
-        onTabChange={setActiveTab}
-        onOpenCreate={() => setCreateOpen(true)}
-      />
+    // fixed top-0 left-0 w-full ensures 100% reliable sticking during scroll
+    <header className="fixed top-0 left-0 right-0 w-full z-50 bg-[#f7ebe1]/95 backdrop-blur-md border-b border-[#ebd8c8] shadow-sm">
+      {/* Top Row: Logo + Website Name, Search, 3-Dots */}
+      <div className="px-3 sm:px-4 py-2 border-b border-[#ebd8c8]/50">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
+          
+          {/* Logo + Brand */}
+          <div 
+            onClick={() => handleSelectRegion(null)}
+            className="flex items-center gap-1.5 cursor-pointer select-none shrink-0"
+          >
+            <div 
+              className="w-9 h-9 rounded-2xl flex items-center justify-center shadow-md shrink-0"
+              style={{
+                background: 'linear-gradient(135deg, #f95738 0%, #ee4266 100%)',
+                boxShadow: '0 3px 10px rgba(238, 66, 102, 0.35)'
+              }}
+            >
+              <Heart className="w-5 h-5 text-white fill-white" />
+            </div>
+            <span 
+              className="text-lg sm:text-xl font-extrabold tracking-tight"
+              style={{ color: '#ee4266' }}
+            >
+              Open Confess
+            </span>
+          </div>
 
-      {/* activeTab pass karna zaroori hai taaki Fresh/Trending kaam kare */}
-      <HomePage regionFilter={regionFilter} activeTab={activeTab} />
+          {/* Search Box */}
+          <div ref={searchContainerRef} className="relative shrink min-w-0 max-w-[130px] sm:max-w-xs">
+            {selectedRegion ? (
+              <div className="flex items-center justify-between gap-1 px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-medium">
+                <span className="truncate flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
+                  {selectedRegion}
+                </span>
+                <button 
+                  onClick={() => handleSelectRegion(null)}
+                  className="p-0.5 rounded-full hover:bg-rose-200"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setSearchOpen(!searchOpen)}
+                className="w-full flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#faefe6] text-stone-600 text-xs hover:bg-[#f3e6d8] transition-colors border border-[#ebd8c8]"
+              >
+                <Search className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                <span className="truncate text-stone-500">Search</span>
+              </button>
+            )}
 
-      {legalTopic && (
-        <LegalPage topic={legalTopic} onClose={() => setLegalTopic(null)} />
-      )}
-      
-      {createOpen && (
-        <CreateConfessionModal 
-          onClose={() => setCreateOpen(false)} 
-          onCreated={() => window.location.reload()} 
-        />
-      )}
+            {searchOpen && (
+              <div className="absolute top-full right-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-stone-200 p-2 z-[99]">
+                <RegionFilterBox 
+                  selectedRegion={selectedRegion}
+                  onSelectRegion={(reg: string | null) => handleSelectRegion(reg)}
+                  onClose={() => setSearchOpen(false)}
+                />
+              </div>
+            )}
+          </div>
 
-      {/* Install App Popup Modal */}
-      <InstallModal />
-    </div>
+          {/* 3-Dots Menu */}
+          <div ref={menuContainerRef} className="relative shrink-0">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen(!menuOpen);
+              }}
+              className="p-1.5 rounded-full hover:bg-stone-200/70 text-stone-700 transition-colors"
+              aria-label="Menu"
+            >
+              <MoreVertical className="w-5 h-5" />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-2xl border border-stone-200 py-2.5 z-[99] divide-y divide-stone-100 animate-in fade-in zoom-in-95 duration-100">
+                <div className="py-1">
+                  <button
+                    onClick={() => { onOpenLegal?.('about'); setMenuOpen(false); }}
+                    style={{ fontSize: '16.5px', fontWeight: 600 }}
+                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
+                  >
+                    About Us
+                  </button>
+                  <button
+                    onClick={() => { onOpenLegal?.('contact'); setMenuOpen(false); }}
+                    style={{ fontSize: '16.5px', fontWeight: 600 }}
+                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
+                  >
+                    Contact Us
+                  </button>
+                  <button
+                    onClick={() => { onOpenLegal?.('privacy'); setMenuOpen(false); }}
+                    style={{ fontSize: '16.5px', fontWeight: 600 }}
+                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
+                  >
+                    Privacy Policy
+                  </button>
+                  <button
+                    onClick={() => { onOpenLegal?.('terms'); setMenuOpen(false); }}
+                    style={{ fontSize: '16.5px', fontWeight: 600 }}
+                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
+                  >
+                    Terms of Service
+                  </button>
+                  <button
+                    onClick={() => { onOpenLegal?.('disclaimer'); setMenuOpen(false); }}
+                    style={{ fontSize: '16.5px', fontWeight: 600 }}
+                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
+                  >
+                    Disclaimer & Moderation
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
+
+      {/* Bottom Row: 3 Buttons Row (Fresh, Trending, Confess) */}
+      <div className="w-full px-4 py-2 bg-[#f3e6d8]">
+        <div className="flex items-center justify-center gap-2 max-w-sm mx-auto">
+          <div className="inline-flex items-center p-1 rounded-full bg-[#faefe6] border border-[#ebd8c8] shadow-sm">
+            <button
+              type="button"
+              onClick={onFreshClick}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                activeTab === 'fresh'
+                  ? 'bg-[#2563eb] text-white shadow-sm'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              <RotateCw 
+                className={`w-3.5 h-3.5 text-[#10b981] ${refreshing ? 'animate-spin' : ''}`} 
+              />
+              <span>Fresh</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onTabChange?.('trending')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                activeTab === 'trending'
+                  ? 'bg-[#2563eb] text-white shadow-sm'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              <Flame className="w-3.5 h-3.5" />
+              <span>Trending</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={onOpenCreate}
+            className="inline-flex items-center justify-center gap-1 px-4 py-2 rounded-full text-white font-semibold text-xs md:text-sm shadow-md active:scale-95 transition-all cursor-pointer shrink-0"
+            style={{
+              background: 'linear-gradient(90deg, #059669 0%, #10b981 100%)',
+              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
+            }}
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[3]" />
+            <span className="leading-none tracking-normal">Confess</span>
+          </button>
+        </div>
+      </div>
+    </header>
   );
-}
+};
+
+export default Header;
