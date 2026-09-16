@@ -552,8 +552,8 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
 
   return (
     <div className="w-full min-h-screen bg-[#f3e6d8]">
-      {/* Feed Section */}
-      <section className="w-full px-3 sm:px-6 md:px-8 pt-4 pb-20 space-y-6">
+      {/* pt-28 (112px) taaki upar ka fixed header card ko na dabaye */}
+      <section className="w-full px-3 sm:px-6 md:px-8 pt-28 pb-20 space-y-6">
         {activeHashtagFilter && (
           <div className="flex items-center justify-center gap-2 mb-2">
             <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#e15b50] bg-[#faefe6] px-4 py-1.5 rounded-full border border-[#ebd8c8] shadow-sm">
@@ -606,7 +606,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
                   onClick={() => handleOpenPost(post)}
                   className="w-full rounded-[26px] sm:rounded-[30px] overflow-hidden bg-[#faefe6] shadow-[0_4px_16px_rgba(0,0,0,0.05)] border border-[#ebd8c8] cursor-pointer hover:shadow-lg transition-all"
                 >
-                  {/* Image Banner with Automatic Error Fallback */}
+                  {/* Image Banner */}
                   {Boolean((post as any).imageUrl || (post as any).image) && (
                     <div className="w-full h-64 sm:h-80 md:h-96 overflow-hidden bg-stone-200">
                       <img
