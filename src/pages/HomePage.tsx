@@ -107,11 +107,11 @@ function matchesSelectedCountry(post: any, countryFilter: string | null): boolea
 
   // 1. Direct country property
   const postCountry = String(post.country || '').trim().toLowerCase();
-  if (postCountry && (postCountry.includes(target) || target.includes(postCountry))) {
+  if (postCountry && (postCountry === target || postCountry.includes(target) || target.includes(postCountry))) {
     return true;
   }
 
-  // 2. Region property (e.g. "Delhi, India" or "India")
+  // 2. Region property (e.g. "Jaipur, India", "Sydney, Australia")
   const postRegion = String(post.region || '').trim().toLowerCase();
   if (postRegion) {
     const parts = postRegion.split(',').map((p) => p.trim().toLowerCase());
@@ -127,7 +127,7 @@ function matchesSelectedCountry(post: any, countryFilter: string | null): boolea
     return true;
   }
 
-  // 4. Fallback search inside body/text if location wasn't tagged properly
+  // 4. Fallback search inside body/text
   const postText = String(post.text || post.content || post.body || '').toLowerCase();
   if (postText.includes(target)) {
     return true;
@@ -230,7 +230,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
 
   const loadInitial = useCallback(async () => {
     try {
-      // Pass undefined to fetch all posts, filtering is done cleanly on the feed
+      // Pass undefined to fetch all posts, filtering is handled by useMemo
       const page = await fetchInitialFeed(undefined);
       const merged = applySavedActivity(page.posts);
       const sorted = sortPosts(merged, activeTab);
@@ -252,7 +252,12 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
 
   useEffect(() => {
     loadInitial();
-  }, [loadInitial]);
+  }, [loadInitial, regionFilter]);
+
+  // When regionFilter changes, reset visible count so filtered items show on top
+  useEffect(() => {
+    setVisibleCount(POSTS_PER_PAGE);
+  }, [regionFilter]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
