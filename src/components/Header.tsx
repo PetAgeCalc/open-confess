@@ -96,7 +96,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <button 
                   type="button"
                   onClick={() => handleSelectRegion(null)}
-                  className="p-0.5 rounded-full hover:bg-rose-200"
+                  className="p-0.5 rounded-full hover:bg-rose-200 cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -105,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => setSearchOpen(!searchOpen)}
-                className="w-full flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-full bg-[#faefe6] text-stone-600 text-xs sm:text-sm hover:bg-[#f3e6d8] transition-colors border border-[#ebd8c8]"
+                className="w-full flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-full bg-[#faefe6] text-stone-600 text-xs sm:text-sm hover:bg-[#f3e6d8] transition-colors border border-[#ebd8c8] cursor-pointer"
               >
                 <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-500 shrink-0" />
                 <span className="truncate text-stone-500">Search</span>
@@ -114,10 +114,10 @@ export const Header: React.FC<HeaderProps> = ({
 
             {searchOpen && (
               <div className="absolute top-full right-0 mt-2 w-72 sm:w-80 bg-white rounded-2xl shadow-2xl border border-stone-200 p-2 z-[99]">
+                {/* Fixed Prop Name: onRegionChange pass kiya gaya hai */}
                 <RegionFilterBox 
-                  selectedRegion={selectedRegion}
-                  onSelectRegion={(reg: string | null) => handleSelectRegion(reg)}
-                  onClose={() => setSearchOpen(false)}
+                  selectedRegion={selectedRegion ?? null}
+                  onRegionChange={(reg: string | null) => handleSelectRegion(reg)}
                 />
               </div>
             )}
@@ -131,7 +131,7 @@ export const Header: React.FC<HeaderProps> = ({
                 e.stopPropagation();
                 setMenuOpen(!menuOpen);
               }}
-              className="p-1.5 sm:p-2 rounded-full hover:bg-stone-200/70 text-stone-700 transition-colors"
+              className="p-1.5 sm:p-2 rounded-full hover:bg-stone-200/70 text-stone-700 transition-colors cursor-pointer"
               aria-label="Menu"
             >
               <MoreVertical className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -143,35 +143,35 @@ export const Header: React.FC<HeaderProps> = ({
                   <button
                     type="button"
                     onClick={() => { onOpenLegal?.('about'); setMenuOpen(false); }}
-                    className="w-full text-left px-5 py-3 text-sm sm:text-base font-semibold hover:bg-rose-50 text-stone-800 transition-colors block"
+                    className="w-full text-left px-5 py-3 text-sm sm:text-base font-semibold hover:bg-rose-50 text-stone-800 transition-colors block cursor-pointer"
                   >
                     About Us
                   </button>
                   <button
                     type="button"
                     onClick={() => { onOpenLegal?.('contact'); setMenuOpen(false); }}
-                    className="w-full text-left px-5 py-3 text-sm sm:text-base font-semibold hover:bg-rose-50 text-stone-800 transition-colors block"
+                    className="w-full text-left px-5 py-3 text-sm sm:text-base font-semibold hover:bg-rose-50 text-stone-800 transition-colors block cursor-pointer"
                   >
                     Contact Us
                   </button>
                   <button
                     type="button"
                     onClick={() => { onOpenLegal?.('privacy'); setMenuOpen(false); }}
-                    className="w-full text-left px-5 py-3 text-sm sm:text-base font-semibold hover:bg-rose-50 text-stone-800 transition-colors block"
+                    className="w-full text-left px-5 py-3 text-sm sm:text-base font-semibold hover:bg-rose-50 text-stone-800 transition-colors block cursor-pointer"
                   >
                     Privacy Policy
                   </button>
                   <button
                     type="button"
                     onClick={() => { onOpenLegal?.('terms'); setMenuOpen(false); }}
-                    className="w-full text-left px-5 py-3 text-sm sm:text-base font-semibold hover:bg-rose-50 text-stone-800 transition-colors block"
+                    className="w-full text-left px-5 py-3 text-sm sm:text-base font-semibold hover:bg-rose-50 text-stone-800 transition-colors block cursor-pointer"
                   >
                     Terms of Service
                   </button>
                   <button
                     type="button"
                     onClick={() => { onOpenLegal?.('disclaimer'); setMenuOpen(false); }}
-                    className="w-full text-left px-5 py-3 text-sm sm:text-base font-semibold hover:bg-rose-50 text-stone-800 transition-colors block"
+                    className="w-full text-left px-5 py-3 text-sm sm:text-base font-semibold hover:bg-rose-50 text-stone-800 transition-colors block cursor-pointer"
                   >
                     Disclaimer & Moderation
                   </button>
