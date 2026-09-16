@@ -1,3 +1,5 @@
+// src/components/Header.tsx
+
 import React, { useState, useEffect, useRef } from 'react';
 import { MoreVertical, Heart, Search, MapPin, X, RotateCw, Flame, Plus } from 'lucide-react';
 import RegionFilterBox from './RegionFilterBox';
@@ -60,8 +62,8 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="fixed top-0 left-0 right-0 w-full z-50 bg-[#f3e6d8]/95 backdrop-blur-md border-b border-[#ebd8c8] shadow-sm">
       {/* Top Row: Logo + Search + Menu */}
-      <div className="px-3 sm:px-6 py-2">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
+      <div className="px-4 sm:px-6 pt-2 pb-1">
+        <div className="max-w-xl sm:max-w-2xl mx-auto flex items-center justify-between gap-2.5 sm:gap-4">
           
           {/* Logo */}
           <div 
@@ -85,10 +87,10 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </div>
 
-          {/* Search Box */}
-          <div ref={searchContainerRef} className="relative shrink min-w-0 max-w-[140px] sm:max-w-xs md:max-w-sm w-full">
+          {/* Search Box - Ab mark kiye huye area tak perfectly extend hoga */}
+          <div ref={searchContainerRef} className="relative flex-1 min-w-0 max-w-[175px] sm:max-w-xs md:max-w-sm">
             {selectedRegion ? (
-              <div className="flex items-center justify-between gap-1 px-3 py-1.5 rounded-full bg-rose-100 text-rose-700 text-xs sm:text-sm font-medium">
+              <div className="flex items-center justify-between gap-1 px-3 py-1.5 rounded-full bg-rose-100 text-rose-700 text-xs sm:text-sm font-medium shadow-sm">
                 <span className="truncate flex items-center gap-1">
                   <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                   {selectedRegion}
@@ -105,16 +107,15 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => setSearchOpen(!searchOpen)}
-                className="w-full flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-full bg-[#faefe6] text-stone-600 text-xs sm:text-sm hover:bg-[#f3e6d8] transition-colors border border-[#ebd8c8] cursor-pointer"
+                className="w-full flex items-center gap-1.5 px-3.5 py-1.5 sm:py-2 rounded-full bg-[#faefe6] text-stone-600 text-xs sm:text-sm hover:bg-[#f3e6d8] transition-colors border border-[#ebd8c8] cursor-pointer shadow-sm"
               >
                 <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-500 shrink-0" />
-                <span className="truncate text-stone-500">Search</span>
+                <span className="truncate text-stone-500 font-medium">Search</span>
               </button>
             )}
 
             {searchOpen && (
               <div className="absolute top-full right-0 mt-2 w-72 sm:w-80 bg-white rounded-2xl shadow-2xl border border-stone-200 p-2 z-[99]">
-                {/* Fixed Prop Name: onRegionChange pass kiya gaya hai */}
                 <RegionFilterBox 
                   selectedRegion={selectedRegion ?? null}
                   onRegionChange={(reg: string | null) => handleSelectRegion(reg)}
@@ -183,11 +184,11 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Buttons Row - Desktop me Responsive & Bada Layout */}
-      <div className="w-full px-4 sm:px-6 pb-2.5 pt-0.5">
-        <div className="flex items-center justify-center gap-2.5 sm:gap-4 max-w-sm sm:max-w-lg md:max-w-xl mx-auto">
+      {/* Buttons Row: Ab Top Row ke saath perfect width aur alignment match karega */}
+      <div className="w-full px-4 sm:px-6 pb-2.5 pt-1">
+        <div className="max-w-xl sm:max-w-2xl mx-auto flex items-center justify-between gap-3">
           
-          {/* Segmented Container (Fresh & Trending) */}
+          {/* Segmented Container (Fresh & Trending) - Mark line tak balanced */}
           <div className="inline-flex items-center p-1 sm:p-1.5 rounded-full bg-[#faefe6] border border-[#ebd8c8] shadow-sm">
             <button
               type="button"
@@ -222,7 +223,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          {/* Confess Button */}
+          {/* Confess Button - Ab sidhe mark kiye huye corner line par align hoga */}
           <button
             type="button"
             onClick={() => {
