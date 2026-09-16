@@ -11,6 +11,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'fresh' | 'trending'>('fresh');
   const [refreshing, setRefreshing] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // 1. Fresh button action
   const handleFreshClick = () => {
@@ -19,11 +20,11 @@ export default function App() {
     try {
       localStorage.removeItem('open_confess_feed_cache_instant_v1');
     } catch {}
-    
+
     setTimeout(() => {
       setRefreshing(false);
-      window.location.reload();
-    }, 400);
+      setRefreshKey((prev) => prev + 1);
+    }, 300);
   };
 
   // 2. Trending button action
@@ -36,12 +37,16 @@ export default function App() {
     setCreateModalOpen(true);
   };
 
+  const handleRegionSelect = (region: string | null) => {
+    setRegionFilter(region);
+  };
+
   return (
     <div className="w-full min-h-screen bg-[#fff8f5] text-stone-900">
       {/* Header ko 3 buttons ke actions pass kiye gaye hain */}
       <Header
         selectedRegion={regionFilter}
-        onRegionChange={setRegionFilter}
+        onRegionChange={handleRegionSelect}
         onOpenLegal={setLegalTopic}
         activeTab={activeTab}
         refreshing={refreshing}
@@ -50,20 +55,25 @@ export default function App() {
         onOpenCreate={handleOpenCreate}
       />
 
-      <HomePage regionFilter={regionFilter} activeTab={activeTab} />
-      
+      {/* key prop ensure karta hai ki country badalte hi instant accurate list render ho */}
+      <HomePage
+        key={`${regionFilter || 'all'}-${refreshKey}`}
+        regionFilter={regionFilter}
+        activeTab={activeTab}
+      />
+
       {legalTopic && (
         <LegalPage topic={legalTopic} onClose={() => setLegalTopic(null)} />
       )}
-      
+
       {/* Confess Button dabane par khulne wala modal */}
       {createModalOpen && (
-        <CreateConfessionModal 
-          onClose={() => setCreateModalOpen(false)} 
+        <CreateConfessionModal
+          onClose={() => setCreateModalOpen(false)}
           onCreated={() => {
             setCreateModalOpen(false);
             handleFreshClick();
-          }} 
+          }}
         />
       )}
 
