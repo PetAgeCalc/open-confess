@@ -192,13 +192,14 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
         <span>Recent</span>
       </div>
 
-      {/* Post Image */}
+      {/* Post Image: Facebook/X style adaptive fit (No Cropping) */}
       {Boolean(imageUrl) && (
-        <div className="w-full rounded-2xl overflow-hidden bg-stone-100 border border-stone-100 mb-4 max-h-72 sm:max-h-96">
+        <div className="w-full rounded-2xl overflow-hidden bg-stone-100/60 border border-stone-100 mb-4 flex items-center justify-center">
           <img
             src={imageUrl}
             alt="Confession"
-            className="w-full h-full object-cover block"
+            loading="lazy"
+            className="w-full h-auto max-h-[500px] object-contain block mx-auto rounded-2xl transition-transform duration-300"
             onError={(e) => {
               (e.target as HTMLElement).parentElement?.classList.add('hidden');
             }}
