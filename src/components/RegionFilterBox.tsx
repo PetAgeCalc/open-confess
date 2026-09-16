@@ -42,7 +42,18 @@ export default function RegionFilterBox({ selectedRegion, onRegionChange }: Regi
       }
     });
 
-    const fallbackList = ['India', 'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'Bangladesh', 'Pakistan', 'Nepal', 'United Arab Emirates'];
+    const fallbackList = [
+      'India',
+      'United States',
+      'United Kingdom',
+      'Canada',
+      'Australia',
+      'Germany',
+      'Bangladesh',
+      'Pakistan',
+      'Nepal',
+      'United Arab Emirates',
+    ];
     fallbackList.forEach((c) => {
       if (!countryMap.has(c)) countryMap.set(c, 0);
     });
@@ -59,20 +70,17 @@ export default function RegionFilterBox({ selectedRegion, onRegionChange }: Regi
   }, [countries, query]);
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent | TouchEvent) {
+    function handleClickOutside(e: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
-    };
+    // Sirf 'click' listener use hoga taaki button ke onPointerDown se pehle close na ho
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  // Instant trigger on mobile touch or click
+  // Instant direct trigger for both Desktop & Mobile
   const handleSelectCountry = (country: string | null) => {
     onRegionChange(country);
     setQuery(country || '');
@@ -118,13 +126,9 @@ export default function RegionFilterBox({ selectedRegion, onRegionChange }: Regi
           <button
             type="button"
             aria-label="Clear region filter"
-            onMouseDown={(e) => {
+            onPointerDown={(e) => {
               e.preventDefault();
-              handleSelectCountry(null);
-              setQuery('');
-            }}
-            onTouchStart={(e) => {
-              e.preventDefault();
+              e.stopPropagation();
               handleSelectCountry(null);
               setQuery('');
             }}
@@ -136,16 +140,16 @@ export default function RegionFilterBox({ selectedRegion, onRegionChange }: Regi
       </div>
 
       {open && (
-        <div className="absolute left-0 right-0 mt-2 max-h-64 overflow-y-auto bg-white rounded-2xl shadow-2xl border border-stone-200 z-[100] p-1.5 animate-in fade-in zoom-in-95">
+        <div
+          className="absolute left-0 right-0 mt-2 max-h-64 overflow-y-auto bg-white rounded-2xl shadow-2xl border border-stone-200 z-[9999] p-1.5 animate-in fade-in zoom-in-95"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
           {/* All Worldwide Button */}
           <button
             type="button"
-            onMouseDown={(e) => {
+            onPointerDown={(e) => {
               e.preventDefault();
-              handleSelectCountry(null);
-            }}
-            onTouchStart={(e) => {
-              e.preventDefault();
+              e.stopPropagation();
               handleSelectCountry(null);
             }}
             className="w-full flex items-center justify-between px-3 py-2 text-xs sm:text-sm rounded-xl hover:bg-rose-50 text-stone-700 cursor-pointer transition-colors"
@@ -159,12 +163,9 @@ export default function RegionFilterBox({ selectedRegion, onRegionChange }: Regi
             <button
               key={c.country}
               type="button"
-              onMouseDown={(e) => {
+              onPointerDown={(e) => {
                 e.preventDefault();
-                handleSelectCountry(c.country);
-              }}
-              onTouchStart={(e) => {
-                e.preventDefault();
+                e.stopPropagation();
                 handleSelectCountry(c.country);
               }}
               className="w-full flex items-center justify-between px-3 py-2.5 text-xs sm:text-sm rounded-xl hover:bg-rose-50 text-stone-800 font-medium cursor-pointer transition-colors active:bg-rose-100"
@@ -177,12 +178,9 @@ export default function RegionFilterBox({ selectedRegion, onRegionChange }: Regi
           {filteredCountries.length === 0 && (
             <button
               type="button"
-              onMouseDown={(e) => {
+              onPointerDown={(e) => {
                 e.preventDefault();
-                handleSelectCountry(query.trim());
-              }}
-              onTouchStart={(e) => {
-                e.preventDefault();
+                e.stopPropagation();
                 handleSelectCountry(query.trim());
               }}
               className="w-full px-3 py-2.5 text-xs sm:text-sm text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer text-center font-medium"
