@@ -12,14 +12,35 @@ export default function RegionFilterBox({ selectedRegion, onRegionChange }: Regi
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const regions = useMemo(() => getAllRegionsWithCounts(), []);
+  const rawRegions = useMemo(() => getAllRegionsWithCounts(), []);
   const totalCount = useMemo(() => getTotalPostCount(), []);
 
-  const filtered = useMemo(() => {
-    if (!query.trim()) return regions;
-    const q = query.toLowerCase();
-    return regions.filter((r) => r.region.toLowerCase().includes(q));
-  }, [regions, query]);
+  // Extract only Country names from "City, Country" or "Country" and aggregate counts
+  const countries = useMemo(() => {
+    const countryMap = new Map<string, number>();
+
+    rawRegions.forEach((item) => {
+      if (!item.region) return;
+      // Agar "City, Country" format hai to last part Country hoga
+      const parts = item.region.split(',').map((p) => p.trim());
+      const countryName = parts[parts.length - 1];
+
+      if (countryName) {
+        countryMap.set(countryName, (countryMap.get(countryName) ?? 0) + item.count);
+      }
+    });
+
+    return Array.from(countryMap.entries())
+      .map(([country, count]) => ({ country, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [rawRegions]);
+
+  // Search query filter: only searches country names
+  const filteredCountries = useMemo(() => {
+    if (!query.trim()) return countries;
+    const q = query.toLowerCase().trim();
+    return countries.filter((c) => c.country.toLowerCase().includes(q));
+  }, [countries, query]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -45,7 +66,7 @@ export default function RegionFilterBox({ selectedRegion, onRegionChange }: Regi
             if (selectedRegion) onRegionChange(null);
           }}
           onFocus={() => setOpen(true)}
-          placeholder="Search a city or country..."
+          placeholder="Search country..."
           className="bg-transparent text-sm w-full outline-none placeholder:text-gray-400 text-gray-800"
         />
         {selectedRegion && (
@@ -56,7 +77,7 @@ export default function RegionFilterBox({ selectedRegion, onRegionChange }: Regi
               onRegionChange(null);
               setQuery('');
             }}
-            className="text-gray-400 hover:text-gray-600 shrink-0"
+            className="text-gray-400 hover:text-gray-600 shrink-0 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -68,33 +89,39 @@ export default function RegionFilterBox({ selectedRegion, onRegionChange }: Regi
 
       {open && (
         <div className="absolute left-0 right-0 mt-2 max-h-72 overflow-y-auto bg-white rounded-xl shadow-lg border border-gray-100 z-40 animate-fade-in">
+          {/* All Worldwide Reset */}
           <button
+            type="button"
             onClick={() => {
               onRegionChange(null);
               setQuery('');
               setOpen(false);
             }}
-            className="w-full flex items-center justify-between px-4 py-2.5 text-sm hover:bg-blush-50 text-gray-700"
+            className="w-full flex items-center justify-between px-4 py-2.5 text-sm hover:bg-blush-50 text-gray-700 cursor-pointer"
           >
-            <span>All regions</span>
+            <span>All Worldwide</span>
             <span className="text-xs text-gray-400">{totalCount}</span>
           </button>
-          {filtered.map((r) => (
+
+          {/* Unique Countries List */}
+          {filteredCountries.map((c) => (
             <button
-              key={r.region}
+              key={c.country}
+              type="button"
               onClick={() => {
-                onRegionChange(r.region);
+                onRegionChange(c.country);
                 setQuery('');
                 setOpen(false);
               }}
-              className="w-full flex items-center justify-between px-4 py-2.5 text-sm hover:bg-blush-50 text-gray-700"
+              className="w-full flex items-center justify-between px-4 py-2.5 text-sm hover:bg-blush-50 text-gray-700 cursor-pointer"
             >
-              <span>{r.region}</span>
-              <span className="text-xs text-gray-400">{r.count}</span>
+              <span>{c.country}</span>
+              <span className="text-xs text-gray-400">{c.count}</span>
             </button>
           ))}
-          {filtered.length === 0 && (
-            <div className="px-4 py-3 text-sm text-gray-400">No matching regions</div>
+
+          {filteredCountries.length === 0 && (
+            <div className="px-4 py-3 text-sm text-gray-400 text-center">No matching country</div>
           )}
         </div>
       )}
