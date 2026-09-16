@@ -28,7 +28,7 @@ export default function RegionFilterBox({ selectedRegion, onRegionChange }: Regi
     }
   }, []);
 
-  // Countries extract & count
+  // Countries extraction & list
   const countries = useMemo(() => {
     const countryMap = new Map<string, number>();
 
@@ -42,7 +42,6 @@ export default function RegionFilterBox({ selectedRegion, onRegionChange }: Regi
       }
     });
 
-    // Default common fallback list agar database khali ho
     const fallbackList = ['India', 'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'Bangladesh', 'Pakistan', 'Nepal', 'United Arab Emirates'];
     fallbackList.forEach((c) => {
       if (!countryMap.has(c)) countryMap.set(c, 0);
@@ -60,15 +59,20 @@ export default function RegionFilterBox({ selectedRegion, onRegionChange }: Regi
   }, [countries, query]);
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
+    function handleClickOutside(e: MouseEvent | TouchEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
+  // Instant trigger on mobile touch or click
   const handleSelectCountry = (country: string | null) => {
     onRegionChange(country);
     setQuery(country || '');
@@ -80,12 +84,12 @@ export default function RegionFilterBox({ selectedRegion, onRegionChange }: Regi
       e.preventDefault();
       const trimmed = query.trim();
       if (trimmed) {
-        // Agar exact match dropdown me mila to wo le lo, warna jo type kiya wahi search karo
         const found = countries.find((c) => c.country.toLowerCase() === trimmed.toLowerCase());
         handleSelectCountry(found ? found.country : trimmed);
       } else {
         handleSelectCountry(null);
       }
+      (e.target as HTMLInputElement).blur();
     }
   };
 
@@ -107,15 +111,20 @@ export default function RegionFilterBox({ selectedRegion, onRegionChange }: Regi
             if (selectedRegion && !query) setQuery(selectedRegion);
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Search country (e.g. India)..."
+          placeholder="Search country (e.g. Australia)..."
           className="bg-transparent text-xs sm:text-sm w-full outline-none placeholder:text-stone-400 text-stone-800"
         />
         {Boolean(selectedRegion || query) && (
           <button
             type="button"
             aria-label="Clear region filter"
-            onClick={(e) => {
-              e.stopPropagation();
+            onMouseDown={(e) => {
+              e.preventDefault();
+              handleSelectCountry(null);
+              setQuery('');
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault();
               handleSelectCountry(null);
               setQuery('');
             }}
@@ -128,23 +137,37 @@ export default function RegionFilterBox({ selectedRegion, onRegionChange }: Regi
 
       {open && (
         <div className="absolute left-0 right-0 mt-2 max-h-64 overflow-y-auto bg-white rounded-2xl shadow-2xl border border-stone-200 z-[100] p-1.5 animate-in fade-in zoom-in-95">
-          {/* All Worldwide Option */}
+          {/* All Worldwide Button */}
           <button
             type="button"
-            onClick={() => handleSelectCountry(null)}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              handleSelectCountry(null);
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              handleSelectCountry(null);
+            }}
             className="w-full flex items-center justify-between px-3 py-2 text-xs sm:text-sm rounded-xl hover:bg-rose-50 text-stone-700 cursor-pointer transition-colors"
           >
             <span className="font-semibold text-rose-600">All Worldwide (Global)</span>
             <span className="text-xs text-stone-400">{totalCount}</span>
           </button>
 
-          {/* Filtered Countries */}
+          {/* Filtered Country Items */}
           {filteredCountries.map((c) => (
             <button
               key={c.country}
               type="button"
-              onClick={() => handleSelectCountry(c.country)}
-              className="w-full flex items-center justify-between px-3 py-2 text-xs sm:text-sm rounded-xl hover:bg-rose-50 text-stone-700 cursor-pointer transition-colors"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSelectCountry(c.country);
+              }}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                handleSelectCountry(c.country);
+              }}
+              className="w-full flex items-center justify-between px-3 py-2.5 text-xs sm:text-sm rounded-xl hover:bg-rose-50 text-stone-800 font-medium cursor-pointer transition-colors active:bg-rose-100"
             >
               <span>{c.country}</span>
               {c.count > 0 && <span className="text-xs text-stone-400">{c.count}</span>}
@@ -152,12 +175,20 @@ export default function RegionFilterBox({ selectedRegion, onRegionChange }: Regi
           ))}
 
           {filteredCountries.length === 0 && (
-            <div 
-              onClick={() => handleSelectCountry(query.trim())}
-              className="px-3 py-2.5 text-xs sm:text-sm text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer text-center"
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSelectCountry(query.trim());
+              }}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                handleSelectCountry(query.trim());
+              }}
+              className="w-full px-3 py-2.5 text-xs sm:text-sm text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer text-center font-medium"
             >
               Search "{query.trim()}"
-            </div>
+            </button>
           )}
         </div>
       )}
