@@ -100,23 +100,38 @@ function extractAuthorName(item: any): string {
   return str;
 }
 
-// Helper to check if post matches selected Country
+// Robust Country Matching Function
 function matchesSelectedCountry(post: any, countryFilter: string | null): boolean {
-  if (!countryFilter) return true;
+  if (!countryFilter || !countryFilter.trim()) return true;
   const target = countryFilter.trim().toLowerCase();
 
+  // 1. Direct country property
   const postCountry = String(post.country || '').trim().toLowerCase();
-  if (postCountry && postCountry === target) return true;
-
-  const postRegion = String(post.region || '').trim().toLowerCase();
-  if (postRegion) {
-    const parts = postRegion.split(',').map((p) => p.trim());
-    if (parts.includes(target) || postRegion.endsWith(target)) return true;
+  if (postCountry && (postCountry.includes(target) || target.includes(postCountry))) {
+    return true;
   }
 
+  // 2. Region property (e.g. "Delhi, India" or "India")
+  const postRegion = String(post.region || '').trim().toLowerCase();
+  if (postRegion) {
+    const parts = postRegion.split(',').map((p) => p.trim().toLowerCase());
+    if (parts.includes(target) || postRegion.includes(target)) {
+      return true;
+    }
+  }
+
+  // 3. Location / City property
+  const postLocation = String(post.location || '').trim().toLowerCase();
   const postCity = String(post.city || '').trim().toLowerCase();
-  const locationStr = [postCity, postCountry].filter(Boolean).join(', ');
-  if (locationStr && locationStr.includes(target)) return true;
+  if (postLocation.includes(target) || postCity.includes(target)) {
+    return true;
+  }
+
+  // 4. Fallback search inside body/text if location wasn't tagged properly
+  const postText = String(post.text || post.content || post.body || '').toLowerCase();
+  if (postText.includes(target)) {
+    return true;
+  }
 
   return false;
 }
@@ -149,7 +164,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
 
   // Secret Admin check via URL query param: ?admin=ashim97
   const searchParams = new URLSearchParams(window.location.search);
-  const isAdmin = searchParams.get('admin') === 'ashim97'; //
+  const isAdmin = searchParams.get('admin') === 'ashim97';
 
   const modalPickerRef = useRef<HTMLDivElement>(null);
   const shareRef = useRef<HTMLDivElement>(null);
@@ -215,7 +230,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
 
   const loadInitial = useCallback(async () => {
     try {
-      // Pass null to fetchInitialFeed so all posts are loaded, and we filter locally by Country
+      // Pass undefined to fetch all posts, filtering is done cleanly on the feed
       const page = await fetchInitialFeed(undefined);
       const merged = applySavedActivity(page.posts);
       const sorted = sortPosts(merged, activeTab);
@@ -349,7 +364,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
     });
   }
 
-  // Filter first by Country selection, then by Hashtag
+  // Filter by Selected Country first, then by Hashtag
   const filteredPosts = useMemo(() => {
     let result = posts;
 
@@ -585,7 +600,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
 
   return (
     <div className="w-full min-h-screen bg-[#f3e6d8]">
-      {/* pt-28 (112px) taaki upar ka fixed header card ko na dabaye */}
+      {/* pt-28 (112px) taaki fixed header cards ko cover na kare */}
       <section className="w-full px-3 sm:px-6 md:px-8 pt-28 pb-20 space-y-6">
         {activeHashtagFilter && (
           <div className="flex items-center justify-center gap-2 mb-2">
