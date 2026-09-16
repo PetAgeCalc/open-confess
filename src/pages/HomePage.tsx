@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Loader2, X, Heart, MessageCircle, MapPin, Send, User, Share2, Copy, Check, Hash, RotateCw, Flame, Trash2 } from 'lucide-react';
+import { Loader2, X, Heart, MessageCircle, MapPin, Send, User, Share2, Copy, Check, Hash, Trash2 } from 'lucide-react';
 import { Confession } from '../types';
 import { fetchInitialFeed, fetchNextPage, FeedPage, setReaction, addComment, fetchComments, deleteConfession } from '../lib/confessionService';
 import CreateConfessionModal from '../components/CreateConfessionModal';
-import { getRealisticEngagement, RealisticComment } from '../lib/realisticEngagement';
+import { getRealisticEngagement } from '../lib/realisticEngagement';
 
 interface HomePageProps {
   regionFilter: string | null;
+  activeTab?: 'fresh' | 'trending';
 }
 
 interface CommentItem {
@@ -99,7 +100,7 @@ function extractAuthorName(item: any): string {
   return str;
 }
 
-export default function HomePage({ regionFilter }: HomePageProps) {
+export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePageProps) {
   const [posts, setPosts] = useState<Confession[]>(() => {
     try {
       const cached = localStorage.getItem(FEED_CACHE_KEY);
@@ -111,8 +112,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
   const [cursor, setCursor] = useState<FeedPage['cursor']>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState<boolean>(() => posts.length === 0);
-  const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'fresh' | 'trending'>('fresh');
   const [loadingMore, setLoadingMore] = useState(false);
   const [activePost, setActivePost] = useState<any | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -193,8 +192,7 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     }
   };
 
-  const loadInitial = useCallback(async (isManualRefresh = false) => {
-    if (isManualRefresh) setRefreshing(true);
+  const loadInitial = useCallback(async () => {
     try {
       const page = await fetchInitialFeed(regionFilter ?? undefined);
       const merged = applySavedActivity(page.posts);
@@ -212,9 +210,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
       console.error('Error in loadInitial:', err);
     } finally {
       setLoading(false);
-      if (isManualRefresh) {
-        setTimeout(() => setRefreshing(false), 500);
-      }
     }
   }, [regionFilter, activeTab]);
 
@@ -255,38 +250,6 @@ export default function HomePage({ regionFilter }: HomePageProps) {
     document.addEventListener('mousedown', handleOutside);
     return () => document.removeEventListener('mousedown', handleOutside);
   }, [modalPickerOpen, sharePopupPost, cardPickerPostId]);
-
-  async function handleFreshClick() {
-    setRefreshing(true);
-    setActiveTab('fresh');
-    try {
-      localStorage.removeItem(FEED_CACHE_KEY);
-      const page = await fetchInitialFeed(regionFilter ?? undefined);
-      const merged = applySavedActivity(page.posts);
-      const sorted = sortPosts(merged, 'fresh');
-      setPosts(sorted);
-      setCursor(page.cursor);
-      setHasMore(page.hasMore);
-      setVisibleCount(POSTS_PER_PAGE);
-      try {
-        localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(sorted.slice(0, 16)));
-      } catch {}
-    } catch (err) {
-      console.error('Failed to reload fresh posts:', err);
-      window.location.reload();
-    } finally {
-      setTimeout(() => setRefreshing(false), 500);
-    }
-  }
-
-  function handleTabChange(tab: 'fresh' | 'trending') {
-    if (tab === 'fresh') {
-      handleFreshClick();
-      return;
-    }
-    setActiveTab(tab);
-    setPosts((prev) => sortPosts(prev, tab));
-  }
 
   async function handleDeletePost(postId: string, e?: React.MouseEvent) {
     if (e) {
@@ -589,55 +552,8 @@ export default function HomePage({ regionFilter }: HomePageProps) {
 
   return (
     <div className="w-full min-h-screen bg-[#f3e6d8]">
-      {/* 3-Button Toolbar: Fresh, Trending, Confess */}
-      <section className="w-full px-4 py-2 text-center bg-[#f3e6d8] border-b border-[#ebd8c8]/70 shadow-sm">
-        <div className="flex items-center justify-center gap-2 max-w-sm mx-auto">
-          {/* Segmented Fresh & Trending */}
-          <div className="inline-flex items-center p-1 rounded-full bg-[#faefe6] border border-[#ebd8c8] shadow-sm">
-            <button
-              onClick={handleFreshClick}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'fresh'
-                  ? 'bg-[#2563eb] text-white shadow-sm'
-                  : 'text-stone-600 hover:text-stone-900'
-              }`}
-            >
-              <RotateCw 
-                className={`w-3.5 h-3.5 text-[#10b981] ${refreshing ? 'animate-spin' : ''}`} 
-              />
-              <span>Fresh</span>
-            </button>
-
-            <button
-              onClick={() => handleTabChange('trending')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'trending'
-                  ? 'bg-[#2563eb] text-white shadow-sm'
-                  : 'text-stone-600 hover:text-stone-900'
-              }`}
-            >
-              <Flame className="w-3.5 h-3.5" />
-              <span>Trending</span>
-            </button>
-          </div>
-
-          {/* Primary Confess Button */}
-          <button
-            onClick={() => setCreateOpen(true)}
-            className="inline-flex items-center justify-center gap-1 px-4 py-2 rounded-full text-white font-semibold text-xs md:text-sm shadow-md active:scale-95 transition-all cursor-pointer shrink-0"
-            style={{
-              background: 'linear-gradient(90deg, #059669 0%, #10b981 100%)',
-              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
-            }}
-          >
-            <Plus className="w-3.5 h-3.5 stroke-[3]" />
-            <span className="leading-none tracking-normal">Confess</span>
-          </button>
-        </div>
-      </section>
-
       {/* Feed Section */}
-      <section className="w-full px-3 sm:px-6 md:px-8 pt-2 pb-20 space-y-6">
+      <section className="w-full px-3 sm:px-6 md:px-8 pt-4 pb-20 space-y-6">
         {activeHashtagFilter && (
           <div className="flex items-center justify-center gap-2 mb-2">
             <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#e15b50] bg-[#faefe6] px-4 py-1.5 rounded-full border border-[#ebd8c8] shadow-sm">
