@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Loader2, X, Heart, MessageCircle, MapPin, Send, User, Share2, Copy, Check, Hash, Trash2 } from 'lucide-react';
 import { Confession } from '../types';
 import { fetchInitialFeed, fetchNextPage, FeedPage, setReaction, addComment, fetchComments, deleteConfession } from '../lib/confessionService';
@@ -100,6 +100,27 @@ function extractAuthorName(item: any): string {
   return str;
 }
 
+// Helper to check if post matches selected Country
+function matchesSelectedCountry(post: any, countryFilter: string | null): boolean {
+  if (!countryFilter) return true;
+  const target = countryFilter.trim().toLowerCase();
+
+  const postCountry = String(post.country || '').trim().toLowerCase();
+  if (postCountry && postCountry === target) return true;
+
+  const postRegion = String(post.region || '').trim().toLowerCase();
+  if (postRegion) {
+    const parts = postRegion.split(',').map((p) => p.trim());
+    if (parts.includes(target) || postRegion.endsWith(target)) return true;
+  }
+
+  const postCity = String(post.city || '').trim().toLowerCase();
+  const locationStr = [postCity, postCountry].filter(Boolean).join(', ');
+  if (locationStr && locationStr.includes(target)) return true;
+
+  return false;
+}
+
 export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePageProps) {
   const [posts, setPosts] = useState<Confession[]>(() => {
     try {
@@ -128,7 +149,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
 
   // Secret Admin check via URL query param: ?admin=ashim97
   const searchParams = new URLSearchParams(window.location.search);
-  const isAdmin = searchParams.get('admin') === 'ashim97';
+  const isAdmin = searchParams.get('admin') === 'ashim97'; //
 
   const modalPickerRef = useRef<HTMLDivElement>(null);
   const shareRef = useRef<HTMLDivElement>(null);
@@ -194,7 +215,8 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
 
   const loadInitial = useCallback(async () => {
     try {
-      const page = await fetchInitialFeed(regionFilter ?? undefined);
+      // Pass null to fetchInitialFeed so all posts are loaded, and we filter locally by Country
+      const page = await fetchInitialFeed(undefined);
       const merged = applySavedActivity(page.posts);
       const sorted = sortPosts(merged, activeTab);
 
@@ -211,7 +233,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
     } finally {
       setLoading(false);
     }
-  }, [regionFilter, activeTab]);
+  }, [activeTab]);
 
   useEffect(() => {
     loadInitial();
@@ -327,12 +349,23 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
     });
   }
 
-  const filteredPosts = activeHashtagFilter
-    ? posts.filter((p: any) => {
+  // Filter first by Country selection, then by Hashtag
+  const filteredPosts = useMemo(() => {
+    let result = posts;
+
+    if (regionFilter) {
+      result = result.filter((p) => matchesSelectedCountry(p, regionFilter));
+    }
+
+    if (activeHashtagFilter) {
+      result = result.filter((p: any) => {
         const text = (p.text || p.content || '').toLowerCase();
         return text.includes(activeHashtagFilter.toLowerCase());
-      })
-    : posts;
+      });
+    }
+
+    return result;
+  }, [posts, regionFilter, activeHashtagFilter]);
 
   async function handleLoadMore() {
     if (visibleCount < filteredPosts.length) {
@@ -344,7 +377,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
 
     setLoadingMore(true);
     try {
-      const page = await fetchNextPage(cursor, regionFilter ?? undefined);
+      const page = await fetchNextPage(cursor, undefined);
       const merged = applySavedActivity(page.posts);
       setPosts((prev) => sortPosts([...prev, ...merged], activeTab));
       setCursor(page.cursor);
@@ -582,7 +615,11 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
         ) : filteredPosts.length === 0 ? (
           <div className="text-center py-16 space-y-2">
             <p className="text-stone-500 text-sm">
-              {activeHashtagFilter ? `No confessions found with ${activeHashtagFilter}` : 'No confessions here yet. Be the first to share one.'}
+              {activeHashtagFilter
+                ? `No confessions found with ${activeHashtagFilter}`
+                : regionFilter
+                ? `No confessions found from ${regionFilter} yet.`
+                : 'No confessions here yet. Be the first to share one.'}
             </p>
             {activeHashtagFilter && (
               <button
