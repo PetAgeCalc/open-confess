@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MoreVertical, Heart, Search, MapPin, X } from 'lucide-react';
+import { MoreVertical, Heart, Search, MapPin, X, RotateCw, Flame, Plus } from 'lucide-react';
+import RegionFilterBox from './RegionFilterBox';
 
 export type LegalTopic = 'about' | 'contact' | 'privacy' | 'terms' | 'disclaimer';
 
@@ -7,37 +8,45 @@ export interface HeaderProps {
   selectedRegion?: string | null;
   onRegionChange?: (region: string | null) => void;
   onOpenLegal?: (topic: LegalTopic) => void;
+  activeTab?: 'fresh' | 'trending';
+  refreshing?: boolean;
+  onFreshClick?: () => void;
+  onTabChange?: (tab: 'fresh' | 'trending') => void;
+  onOpenCreate?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   selectedRegion,
   onRegionChange,
   onOpenLegal,
+  activeTab = 'fresh',
+  refreshing = false,
+  onFreshClick,
+  onTabChange,
+  onOpenCreate,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState('');
   const menuContainerRef = useRef<HTMLDivElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
-  // Screen par kahin bhi touch ya scroll karne par popup ko force close karein
+  // Outside click & scroll detection (capture phase true taaki mobile me miss na ho)
   useEffect(() => {
-    if (!menuOpen) return;
-
     const handleOutsideInteraction = (event: Event) => {
-      // Agar click menu button ya dropdown ke andar nahi hai, toh band kar dein
-      if (
-        menuContainerRef.current &&
-        !menuContainerRef.current.contains(event.target as Node)
-      ) {
+      const target = event.target as Node;
+      if (menuOpen && menuContainerRef.current && !menuContainerRef.current.contains(target)) {
         setMenuOpen(false);
+      }
+      if (searchOpen && searchContainerRef.current && !searchContainerRef.current.contains(target)) {
+        setSearchOpen(false);
       }
     };
 
     const handleScroll = () => {
-      setMenuOpen(false);
+      if (menuOpen) setMenuOpen(false);
+      if (searchOpen) setSearchOpen(false);
     };
 
-    // Capture phase true rakha hai taaki mobile browser event drop na kare
     document.addEventListener('touchstart', handleOutsideInteraction, true);
     document.addEventListener('mousedown', handleOutsideInteraction, true);
     window.addEventListener('scroll', handleScroll, true);
@@ -47,164 +56,188 @@ export const Header: React.FC<HeaderProps> = ({
       document.removeEventListener('mousedown', handleOutsideInteraction, true);
       window.removeEventListener('scroll', handleScroll, true);
     };
-  }, [menuOpen]);
+  }, [menuOpen, searchOpen]);
 
   function handleSelectRegion(region: string | null) {
     if (onRegionChange) {
       onRegionChange(region);
     }
     setSearchOpen(false);
-    setSearchValue('');
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-[#fff8f5]/95 backdrop-blur-md border-b border-[#f3e3dd] px-2.5 sm:px-4 py-2">
-      <div className="max-w-4xl mx-auto flex items-center justify-between gap-1.5">
-        
-        {/* Left: Bada Red Heart + Open Confess */}
-        <div 
-          onClick={() => handleSelectRegion(null)}
-          className="flex items-center gap-1.5 cursor-pointer select-none active:scale-95 transition-transform shrink-0"
-        >
+    <header className="sticky top-0 z-50 bg-[#fff8f5]/95 backdrop-blur-md border-b border-[#ebd8c8] shadow-sm">
+      {/* TOP ROW: Logo, Search Box, 3-Dots Menu */}
+      <div className="px-2.5 sm:px-4 pt-2 pb-1.5 border-b border-[#f3e3dd]/60">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-1.5">
+          
+          {/* Logo + Website Name */}
           <div 
-            className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-md shrink-0"
-            style={{
-              background: 'linear-gradient(135deg, #f95738 0%, #ee4266 100%)',
-              boxShadow: '0 3px 10px rgba(238, 66, 102, 0.35)'
-            }}
+            onClick={() => handleSelectRegion(null)}
+            className="flex items-center gap-1.5 cursor-pointer select-none active:scale-95 transition-transform shrink-0"
           >
-            <Heart className="w-5 h-5 text-white fill-white" />
+            <div 
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center shadow-md shrink-0"
+              style={{
+                background: 'linear-gradient(135deg, #f95738 0%, #ee4266 100%)',
+                boxShadow: '0 3px 10px rgba(238, 66, 102, 0.35)'
+              }}
+            >
+              <Heart className="w-5 h-5 text-white fill-white" />
+            </div>
+
+            <span 
+              className="text-lg sm:text-xl font-extrabold tracking-tight"
+              style={{ color: '#ee4266' }}
+            >
+              Open Confess
+            </span>
           </div>
 
-          <span 
-            className="text-xl font-extrabold tracking-tight"
-            style={{ color: '#ee4266' }}
-          >
-            Open Confess
-          </span>
-        </div>
-
-        {/* Center: Search Box */}
-        <div className="relative shrink min-w-0 max-w-[130px] sm:max-w-xs">
-          {selectedRegion ? (
-            <div className="flex items-center justify-between gap-1 px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-medium">
-              <span className="truncate flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
-                {selectedRegion}
-              </span>
-              <button 
-                onClick={() => handleSelectRegion(null)}
-                className="p-0.5 rounded-full hover:bg-rose-200"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="w-full flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#fcedea] text-stone-600 text-xs hover:bg-[#f8e0db] transition-colors border border-rose-100"
-            >
-              <Search className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-              <span className="truncate text-stone-500">Search</span>
-            </button>
-          )}
-
-          {/* Search Dropdown */}
-          {searchOpen && (
-            <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-stone-200 p-2 z-[99]">
-              <div className="flex items-center gap-1 px-2 py-1 bg-stone-50 rounded-xl border border-stone-200">
-                <Search className="w-3.5 h-3.5 text-stone-400 shrink-0" />
-                <input
-                  type="text"
-                  autoFocus
-                  placeholder="City or country..."
-                  value={searchValue}
-                  onChange={(e) => setSearchValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && searchValue.trim()) {
-                      handleSelectRegion(searchValue.trim());
-                    }
-                  }}
-                  className="w-full bg-transparent text-xs text-stone-800 outline-none placeholder:text-stone-400"
-                />
+          {/* Search Box / Region Filter Box */}
+          <div ref={searchContainerRef} className="relative shrink min-w-0 max-w-[135px] sm:max-w-xs">
+            {selectedRegion ? (
+              <div className="flex items-center justify-between gap-1 px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-medium">
+                <span className="truncate flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
+                  {selectedRegion}
+                </span>
                 <button 
-                  onClick={() => setSearchOpen(false)}
-                  className="p-1 text-stone-400 hover:text-stone-600"
+                  onClick={() => handleSelectRegion(null)}
+                  className="p-0.5 rounded-full hover:bg-rose-200"
                 >
                   <X className="w-3 h-3" />
                 </button>
               </div>
+            ) : (
+              <button
+                onClick={() => setSearchOpen(!searchOpen)}
+                className="w-full flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#fcedea] text-stone-600 text-xs hover:bg-[#f8e0db] transition-colors border border-rose-100"
+              >
+                <Search className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                <span className="truncate text-stone-500">Search</span>
+              </button>
+            )}
 
-              {searchValue.trim() && (
-                <button
-                  onClick={() => handleSelectRegion(searchValue.trim())}
-                  className="mt-1.5 w-full text-left px-2 py-1.5 text-xs text-rose-600 hover:bg-rose-50 rounded-lg flex items-center gap-1 font-medium"
-                >
-                  <MapPin className="w-3 h-3" />
-                  Filter by "{searchValue.trim()}"
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Right: 3 Dots Menu Container */}
-        <div ref={menuContainerRef} className="relative shrink-0">
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              setMenuOpen(!menuOpen);
-            }}
-            className="p-1.5 rounded-full hover:bg-stone-200/70 text-stone-700 transition-colors"
-            aria-label="Menu"
-          >
-            <MoreVertical className="w-5 h-5" />
-          </button>
-
-          {/* Dropdown Options */}
-          {menuOpen && (
-            <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-2xl border border-stone-200 py-2.5 z-[99] divide-y divide-stone-100 animate-in fade-in zoom-in-95 duration-100">
-              <div className="py-1">
-                <button
-                  onClick={() => { onOpenLegal?.('about'); setMenuOpen(false); }}
-                  style={{ fontSize: '16.5px', fontWeight: 600 }}
-                  className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
-                >
-                  About Us
-                </button>
-                <button
-                  onClick={() => { onOpenLegal?.('contact'); setMenuOpen(false); }}
-                  style={{ fontSize: '16.5px', fontWeight: 600 }}
-                  className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
-                >
-                  Contact Us
-                </button>
-                <button
-                  onClick={() => { onOpenLegal?.('privacy'); setMenuOpen(false); }}
-                  style={{ fontSize: '16.5px', fontWeight: 600 }}
-                  className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
-                >
-                  Privacy Policy
-                </button>
-                <button
-                  onClick={() => { onOpenLegal?.('terms'); setMenuOpen(false); }}
-                  style={{ fontSize: '16.5px', fontWeight: 600 }}
-                  className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
-                >
-                  Terms of Service
-                </button>
-                <button
-                  onClick={() => { onOpenLegal?.('disclaimer'); setMenuOpen(false); }}
-                  style={{ fontSize: '16.5px', fontWeight: 600 }}
-                  className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
-                >
-                  Disclaimer & Moderation
-                </button>
+            {/* Region Filter Popup */}
+            {searchOpen && (
+              <div className="absolute top-full right-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-stone-200 p-2 z-[99]">
+                <RegionFilterBox 
+                  selectedRegion={selectedRegion}
+                  onSelectRegion={(reg: string | null) => handleSelectRegion(reg)}
+                  onClose={() => setSearchOpen(false)}
+                />
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
+          {/* 3-Dots Menu */}
+          <div ref={menuContainerRef} className="relative shrink-0">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen(!menuOpen);
+              }}
+              className="p-1.5 rounded-full hover:bg-stone-200/70 text-stone-700 transition-colors"
+              aria-label="Menu"
+            >
+              <MoreVertical className="w-5 h-5" />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-2xl border border-stone-200 py-2.5 z-[99] divide-y divide-stone-100 animate-in fade-in zoom-in-95 duration-100">
+                <div className="py-1">
+                  <button
+                    onClick={() => { onOpenLegal?.('about'); setMenuOpen(false); }}
+                    style={{ fontSize: '16.5px', fontWeight: 600 }}
+                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
+                  >
+                    About Us
+                  </button>
+                  <button
+                    onClick={() => { onOpenLegal?.('contact'); setMenuOpen(false); }}
+                    style={{ fontSize: '16.5px', fontWeight: 600 }}
+                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
+                  >
+                    Contact Us
+                  </button>
+                  <button
+                    onClick={() => { onOpenLegal?.('privacy'); setMenuOpen(false); }}
+                    style={{ fontSize: '16.5px', fontWeight: 600 }}
+                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
+                  >
+                    Privacy Policy
+                  </button>
+                  <button
+                    onClick={() => { onOpenLegal?.('terms'); setMenuOpen(false); }}
+                    style={{ fontSize: '16.5px', fontWeight: 600 }}
+                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
+                  >
+                    Terms of Service
+                  </button>
+                  <button
+                    onClick={() => { onOpenLegal?.('disclaimer'); setMenuOpen(false); }}
+                    style={{ fontSize: '16.5px', fontWeight: 600 }}
+                    className="w-full text-left px-5 py-3 hover:bg-rose-50 text-stone-800 transition-colors block"
+                  >
+                    Disclaimer & Moderation
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
+
+      {/* BOTTOM ROW: Fresh, Trending, Confess Buttons */}
+      <div className="w-full px-4 py-1.5 text-center bg-[#f3e6d8]">
+        <div className="flex items-center justify-center gap-2 max-w-sm mx-auto">
+          {/* Segmented Fresh & Trending Control */}
+          <div className="inline-flex items-center p-1 rounded-full bg-[#faefe6] border border-[#ebd8c8] shadow-sm">
+            <button
+              type="button"
+              onClick={onFreshClick}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                activeTab === 'fresh'
+                  ? 'bg-[#2563eb] text-white shadow-sm'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              <RotateCw 
+                className={`w-3.5 h-3.5 text-[#10b981] ${refreshing ? 'animate-spin' : ''}`} 
+              />
+              <span>Fresh</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onTabChange?.('trending')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                activeTab === 'trending'
+                  ? 'bg-[#2563eb] text-white shadow-sm'
+                  : 'text-stone-600 hover:text-stone-900'
+              }`}
+            >
+              <Flame className="w-3.5 h-3.5" />
+              <span>Trending</span>
+            </button>
+          </div>
+
+          {/* Primary Confess Button */}
+          <button
+            type="button"
+            onClick={onOpenCreate}
+            className="inline-flex items-center justify-center gap-1 px-4 py-2 rounded-full text-white font-semibold text-xs md:text-sm shadow-md active:scale-95 transition-all cursor-pointer shrink-0"
+            style={{
+              background: 'linear-gradient(90deg, #059669 0%, #10b981 100%)',
+              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
+            }}
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[3]" />
+            <span className="leading-none tracking-normal">Confess</span>
+          </button>
+        </div>
       </div>
     </header>
   );
