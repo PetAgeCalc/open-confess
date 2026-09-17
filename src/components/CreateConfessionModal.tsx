@@ -295,7 +295,7 @@ export default function CreateConfessionModal({ onClose, onCreated }: CreateConf
                 ) : (
                   <>
                     <ImageIcon className="w-4 h-4" />
-                    Add one photo (compressed to ~50KB)
+                    Add one photo
                   </>
                 )}
               </button>
