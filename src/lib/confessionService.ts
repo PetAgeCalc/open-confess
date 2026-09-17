@@ -134,17 +134,15 @@ async function fetchFirestorePage(
 ): Promise<FeedPage> {
   const colRef = collection(postsDb!, 'confessions');
   
-  // FIX: Added orderBy('createdAt', 'desc') so newest posts always come first!
   let q;
   try {
     q = cursor
-      ? query(colRef, orderBy('createdAt', 'desc'), startAfter(cursor), limit(PAGE_SIZE * 2))
-      : query(colRef, orderBy('createdAt', 'desc'), limit(PAGE_SIZE * 2));
+      ? query(colRef, orderBy('createdAt', 'desc'), startAfter(cursor), limit(PAGE_SIZE * 3))
+      : query(colRef, orderBy('createdAt', 'desc'), limit(PAGE_SIZE * 3));
   } catch (err) {
-    // Fallback if index is creating
     q = cursor
-      ? query(colRef, startAfter(cursor), limit(PAGE_SIZE * 2))
-      : query(colRef, limit(PAGE_SIZE * 2));
+      ? query(colRef, startAfter(cursor), limit(PAGE_SIZE * 3))
+      : query(colRef, limit(PAGE_SIZE * 3));
   }
 
   const snap = await getDocs(q);
@@ -185,7 +183,6 @@ async function fetchFirestorePage(
   const resolvedPosts = await Promise.all(postsPromises);
   const validPosts = resolvedPosts.filter((post): post is Confession => post !== null);
 
-  // Strictly sort latest epoch timestamp on top
   validPosts.sort((a, b) => safeEpochMs(b.createdAt) - safeEpochMs(a.createdAt));
   const posts = validPosts.slice(0, PAGE_SIZE);
 
@@ -234,9 +231,10 @@ export interface CreateConfessionInput {
 
 export async function createConfession(input: CreateConfessionInput): Promise<Confession> {
   const region = [input.city, input.country].filter(Boolean).join(', ');
-  const nowIso = new Date().toISOString();
+  const nowMs = Date.now();
 
   if (isFirebaseConfigured && postsDb) {
+    // FIX: serverTimestamp() use kiya taaki AI generator aur manual posts ka sort order kabhi clash na ho
     const docRef = await addDoc(collection(postsDb, 'confessions'), {
       authorName: input.authorName || 'Anonymous',
       author: input.authorName || 'Anonymous',
@@ -249,9 +247,9 @@ export async function createConfession(input: CreateConfessionInput): Promise<Co
       country: input.country,
       city: input.city,
       region,
-      createdAt: nowIso, // Stores exact ISO string so it is immediately searchable
-      createdA: nowIso,
-      timestamp: Date.now(),
+      createdAt: serverTimestamp(), // Native Firestore Timestamp
+      createdA: new Date().toISOString(),
+      timestamp: nowMs,
       likesCount: 0,
       likes: 0,
       commentsCount: 0,
@@ -275,7 +273,7 @@ export async function createConfession(input: CreateConfessionInput): Promise<Co
       country: input.country,
       city: input.city,
       region,
-      createdAt: Date.now(),
+      createdAt: nowMs,
       viewsCount: 0,
       likesCount: 0,
       reactions: emptyReactions(),
@@ -284,14 +282,14 @@ export async function createConfession(input: CreateConfessionInput): Promise<Co
   }
 
   const newPost: Confession = {
-    id: `local-${Date.now()}`,
+    id: `local-${nowMs}`,
     authorName: input.authorName || 'Anonymous',
     text: input.text,
     imageUrl: input.imageUrl,
     country: input.country,
     city: input.city,
     region,
-    createdAt: Date.now(),
+    createdAt: nowMs,
     viewsCount: 0,
     likesCount: 0,
     reactions: emptyReactions(),
@@ -438,7 +436,6 @@ function findPostAnywhere(postId: string): Confession | undefined {
 export async function deleteConfession(postId: string): Promise<boolean> {
   let deleted = false;
 
-  // 1. Firebase Firestore se delete karein (posts & interactions dono se)
   if (isFirebaseConfigured) {
     try {
       if (postsDb) {
@@ -454,7 +451,6 @@ export async function deleteConfession(postId: string): Promise<boolean> {
     }
   }
 
-  // 2. Local fallback storage se bhi delete karein agar wahan save ho
   const localPosts = readLocalPosts();
   const updatedPosts = localPosts.filter((p) => p.id !== postId);
   if (updatedPosts.length !== localPosts.length) {
