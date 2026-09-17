@@ -10,6 +10,7 @@ import {
   serverTimestamp,
   setDoc,
   where,
+  orderBy,
   QueryDocumentSnapshot,
   deleteDoc,
 } from 'firebase/firestore';
@@ -133,10 +134,18 @@ async function fetchFirestorePage(
 ): Promise<FeedPage> {
   const colRef = collection(postsDb!, 'confessions');
   
-  // FIX: Firestore index/type clash se bachne ke liye safe query lagayi hai
-  const q = cursor
-    ? query(colRef, startAfter(cursor), limit(PAGE_SIZE * 4))
-    : query(colRef, limit(PAGE_SIZE * 4));
+  // FIX: Added orderBy('createdAt', 'desc') so newest posts always come first!
+  let q;
+  try {
+    q = cursor
+      ? query(colRef, orderBy('createdAt', 'desc'), startAfter(cursor), limit(PAGE_SIZE * 2))
+      : query(colRef, orderBy('createdAt', 'desc'), limit(PAGE_SIZE * 2));
+  } catch (err) {
+    // Fallback if index is creating
+    q = cursor
+      ? query(colRef, startAfter(cursor), limit(PAGE_SIZE * 2))
+      : query(colRef, limit(PAGE_SIZE * 2));
+  }
 
   const snap = await getDocs(q);
   const targetDb = interactionsDb || postsDb;
@@ -155,7 +164,7 @@ async function fetchFirestorePage(
       } catch (e) {}
     }
 
-    const rawTime = data.createdAt || data.timestamp || data.createdA || Date.now();
+    const rawTime = data.createdAt || data.createdA || data.timestamp || Date.now();
 
     return {
       id: docSnap.id,
@@ -176,7 +185,7 @@ async function fetchFirestorePage(
   const resolvedPosts = await Promise.all(postsPromises);
   const validPosts = resolvedPosts.filter((post): post is Confession => post !== null);
 
-  // Saare posts (Chahe String time ho, Number ho ya Timestamp) yahan perfect sort honge
+  // Strictly sort latest epoch timestamp on top
   validPosts.sort((a, b) => safeEpochMs(b.createdAt) - safeEpochMs(a.createdAt));
   const posts = validPosts.slice(0, PAGE_SIZE);
 
@@ -241,7 +250,7 @@ export async function createConfession(input: CreateConfessionInput): Promise<Co
       country: input.country,
       city: input.city,
       region,
-      createdAt: nowIso,
+      createdAt: nowMs, // FIX: Numeric timestamp taaki Firestore orderBy('createdAt', 'desc') ise drop na kare
       createdA: nowIso,
       timestamp: nowMs,
       likesCount: 0,
@@ -276,14 +285,14 @@ export async function createConfession(input: CreateConfessionInput): Promise<Co
   }
 
   const newPost: Confession = {
-    id: `local-${nowMs}`,
+    id: `local-${Date.now()}`,
     authorName: input.authorName || 'Anonymous',
     text: input.text,
     imageUrl: input.imageUrl,
     country: input.country,
     city: input.city,
     region,
-    createdAt: nowMs,
+    createdAt: Date.now(),
     viewsCount: 0,
     likesCount: 0,
     reactions: emptyReactions(),
@@ -430,6 +439,7 @@ function findPostAnywhere(postId: string): Confession | undefined {
 export async function deleteConfession(postId: string): Promise<boolean> {
   let deleted = false;
 
+  // 1. Firebase Firestore se delete karein (posts & interactions dono se)
   if (isFirebaseConfigured) {
     try {
       if (postsDb) {
@@ -445,6 +455,7 @@ export async function deleteConfession(postId: string): Promise<boolean> {
     }
   }
 
+  // 2. Local fallback storage se bhi delete karein agar wahan save ho
   const localPosts = readLocalPosts();
   const updatedPosts = localPosts.filter((p) => p.id !== postId);
   if (updatedPosts.length !== localPosts.length) {
