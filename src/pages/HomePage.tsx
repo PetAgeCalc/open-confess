@@ -230,11 +230,9 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
 
   const loadInitial = useCallback(async () => {
     try {
-      // Pass undefined to fetch all posts, filtering is handled by useMemo
       const page = await fetchInitialFeed(undefined);
       const merged = applySavedActivity(page.posts);
 
-      // FIX: Server fetch hone par newly created user posts ko drop hone se bachayein
       setPosts((prev) => {
         const serverMap = new Map(merged.map((p) => [String(p.id), p]));
         const recentLocalPosts = prev.filter((p) => {
@@ -265,7 +263,6 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
     loadInitial();
   }, [loadInitial, regionFilter]);
 
-  // When regionFilter changes, reset visible count so filtered items show on top
   useEffect(() => {
     setVisibleCount(POSTS_PER_PAGE);
   }, [regionFilter]);
@@ -437,7 +434,6 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
     };
 
     setPosts((prev) => {
-      // FIX: Ensure new post is strictly unshifted and not duplicated
       const filtered = prev.filter((p) => String(p.id) !== String(confession.id));
       const updated = [postWithTime, ...filtered];
       try {
@@ -606,12 +602,6 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
       e.preventDefault();
     }
     setSharePopupPost(post);
-  };
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.origin);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
   };
 
   const visiblePosts = filteredPosts.slice(0, visibleCount);
@@ -837,86 +827,142 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
       </section>
 
       {/* Share Popup */}
-      {sharePopupPost && (
-        <div 
-          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={() => setSharePopupPost(null)}
-        >
+      {sharePopupPost && (() => {
+        const postText = (sharePopupPost as any).text || (sharePopupPost as any).content || (sharePopupPost as any).body || '';
+        const cleanSnippet = postText.length > 140 ? postText.slice(0, 140) + '...' : postText;
+        const postUrl = `${window.location.origin}/?post=${encodeURIComponent(sharePopupPost.id)}`;
+        const shareMessage = `"${cleanSnippet}"\n\nRead more anonymously on OpenConfess: ${postUrl}`;
+
+        const handleNativeShare = async () => {
+          if (navigator.share) {
+            try {
+              await navigator.share({
+                title: 'Open Confess',
+                text: `"${cleanSnippet}"\n\nRead more anonymously:`,
+                url: postUrl,
+              });
+              setSharePopupPost(null);
+            } catch (err) {}
+          } else {
+            handleCopyPostLink(postUrl);
+          }
+        };
+
+        const handleCopyPostLink = (urlToCopy: string) => {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(urlToCopy).then(() => {
+              setCopiedLink(true);
+              setTimeout(() => setCopiedLink(false), 2000);
+            });
+          } else {
+            const tempInput = document.createElement('input');
+            tempInput.value = urlToCopy;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            setCopiedLink(true);
+            setTimeout(() => setCopiedLink(false), 2000);
+          }
+        };
+
+        return (
           <div 
-            ref={shareRef}
-            className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-stone-200 animate-in fade-in zoom-in-95 space-y-4 text-center"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setSharePopupPost(null)}
           >
-            <div className="flex items-center justify-between pb-2 border-b border-stone-100">
-              <h3 className="font-semibold text-stone-800 text-sm sm:text-base">Share Confession</h3>
-              <button 
-                onClick={() => setSharePopupPost(null)}
-                className="p-1 rounded-full text-stone-400 hover:text-stone-700 cursor-pointer"
+            <div 
+              ref={shareRef}
+              className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-stone-200 animate-in fade-in zoom-in-95 space-y-4 text-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-2 border-b border-stone-100">
+                <h3 className="font-semibold text-stone-800 text-sm sm:text-base">Share Confession</h3>
+                <button 
+                  onClick={() => setSharePopupPost(null)}
+                  className="p-1 rounded-full text-stone-400 hover:text-stone-700 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-4 gap-3 pt-2">
+                {/* WhatsApp */}
+                <a
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center gap-1 text-xs text-stone-700 hover:opacity-80 transition-opacity"
+                >
+                  <div className="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xl shadow-sm">
+                    💬
+                  </div>
+                  <span>WhatsApp</span>
+                </a>
+
+                {/* X (Twitter) */}
+                <a
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`"${cleanSnippet}"`)}&url=${encodeURIComponent(postUrl)}&hashtags=OpenConfess,Anonymous`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center gap-1 text-xs text-stone-700 hover:opacity-80 transition-opacity"
+                >
+                  <div className="w-12 h-12 rounded-full bg-black text-white flex items-center justify-center text-lg font-bold shadow-sm">
+                    𝕏
+                  </div>
+                  <span>X</span>
+                </a>
+
+                {/* Facebook */}
+                <a
+                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}&quote=${encodeURIComponent(`"${cleanSnippet}"`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center gap-1 text-xs text-stone-700 hover:opacity-80 transition-opacity"
+                >
+                  <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-bold shadow-sm">
+                    f
+                  </div>
+                  <span>Facebook</span>
+                </a>
+
+                {/* Telegram */}
+                <a
+                  href={`https://t.me/share/url?url=${encodeURIComponent(postUrl)}&text=${encodeURIComponent(`"${cleanSnippet}"\n\nRead anonymously on OpenConfess:`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center gap-1 text-xs text-stone-700 hover:opacity-80 transition-opacity"
+                >
+                  <div className="w-12 h-12 rounded-full bg-sky-500 text-white flex items-center justify-center text-xl shadow-sm">
+                    ✈️
+                  </div>
+                  <span>Telegram</span>
+                </a>
+              </div>
+
+              {/* Native Mobile Share Button */}
+              {typeof navigator !== 'undefined' && 'share' in navigator && (
+                <button
+                  onClick={handleNativeShare}
+                  className="w-full py-2.5 px-4 rounded-xl bg-rose-500 hover:bg-rose-600 active:scale-95 text-white flex items-center justify-center gap-2 text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                >
+                  <Share2 className="w-4 h-4" />
+                  <span>Share via Other Apps</span>
+                </button>
+              )}
+
+              {/* Copy Direct Post Link */}
+              <button
+                onClick={() => handleCopyPostLink(postUrl)}
+                className="w-full py-2.5 px-4 rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 flex items-center justify-center gap-2 text-xs font-semibold text-stone-700 transition-colors cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                <span>{copiedLink ? 'Direct Post Link Copied!' : 'Copy Post Link'}</span>
               </button>
             </div>
-
-            <div className="grid grid-cols-4 gap-3 pt-2">
-              <a
-                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`"${(sharePopupPost as any).text || ''}"\n\nRead more anonymously at: ${window.location.origin}`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex flex-col items-center gap-1 text-xs text-stone-700 hover:opacity-80"
-              >
-                <div className="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xl font-bold shadow-sm">
-                  💬
-                </div>
-                <span>WhatsApp</span>
-              </a>
-
-              <a
-                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`"${(sharePopupPost as any).text || ''}" via @OpenConfess`)}&url=${encodeURIComponent(window.location.origin)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex flex-col items-center gap-1 text-xs text-stone-700 hover:opacity-80"
-              >
-                <div className="w-12 h-12 rounded-full bg-black text-white flex items-center justify-center text-lg font-bold shadow-sm">
-                  𝕏
-                </div>
-                <span>X</span>
-              </a>
-
-              <a
-                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.origin)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex flex-col items-center gap-1 text-xs text-stone-700 hover:opacity-80"
-              >
-                <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center text-xl font-bold shadow-sm">
-                  f
-                </div>
-                <span>Facebook</span>
-              </a>
-
-              <a
-                href={`https://t.me/share/url?url=${encodeURIComponent(window.location.origin)}&text=${encodeURIComponent(`"${(sharePopupPost as any).text || ''}"`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex flex-col items-center gap-1 text-xs text-stone-700 hover:opacity-80"
-              >
-                <div className="w-12 h-12 rounded-full bg-sky-500 text-white flex items-center justify-center text-xl font-bold shadow-sm">
-                  ✈️
-                </div>
-                <span>Telegram</span>
-              </a>
-            </div>
-
-            <button
-              onClick={handleCopyLink}
-              className="w-full py-2.5 px-4 rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 flex items-center justify-center gap-2 text-xs font-semibold text-stone-700 transition-colors cursor-pointer"
-            >
-              {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-              <span>{copiedLink ? 'Link Copied!' : 'Copy Link'}</span>
-            </button>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Post Modal Detail with Fallback */}
       {activePost && (
