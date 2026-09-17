@@ -105,13 +105,11 @@ function matchesSelectedCountry(post: any, countryFilter: string | null): boolea
   if (!countryFilter || !countryFilter.trim()) return true;
   const target = countryFilter.trim().toLowerCase();
 
-  // 1. Direct country property
   const postCountry = String(post.country || '').trim().toLowerCase();
   if (postCountry && (postCountry === target || postCountry.includes(target) || target.includes(postCountry))) {
     return true;
   }
 
-  // 2. Region property (e.g. "Jaipur, India", "Sydney, Australia")
   const postRegion = String(post.region || '').trim().toLowerCase();
   if (postRegion) {
     const parts = postRegion.split(',').map((p) => p.trim().toLowerCase());
@@ -120,14 +118,12 @@ function matchesSelectedCountry(post: any, countryFilter: string | null): boolea
     }
   }
 
-  // 3. Location / City property
   const postLocation = String(post.location || '').trim().toLowerCase();
   const postCity = String(post.city || '').trim().toLowerCase();
   if (postLocation.includes(target) || postCity.includes(target)) {
     return true;
   }
 
-  // 4. Fallback search inside body/text
   const postText = String(post.text || post.content || post.body || '').toLowerCase();
   if (postText.includes(target)) {
     return true;
@@ -154,6 +150,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
   const [visibleCount, setVisibleCount] = useState<number>(POSTS_PER_PAGE);
   const [sharePopupPost, setSharePopupPost] = useState<Confession | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [sharingNative, setSharingNative] = useState(false);
   const [modalPickerOpen, setModalPickerOpen] = useState(false);
   const [cardPickerPostId, setCardPickerPostId] = useState<string | null>(null);
   const [commentName, setCommentName] = useState('');
@@ -162,7 +159,6 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
   const [activeHashtagFilter, setActiveHashtagFilter] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Secret Admin check via URL query param: ?admin=ashim97
   const searchParams = new URLSearchParams(window.location.search);
   const isAdmin = searchParams.get('admin') === 'ashim97';
 
@@ -236,7 +232,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
       setPosts((prev) => {
         const serverMap = new Map(merged.map((p) => [String(p.id), p]));
         const recentLocalPosts = prev.filter((p) => {
-          const isRecent = Date.now() - parsePostTimestamp(p) < 600000; // 10 minutes window
+          const isRecent = Date.now() - parsePostTimestamp(p) < 600000;
           return isRecent && !serverMap.has(String(p.id));
         });
 
@@ -377,7 +373,6 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
     });
   }
 
-  // Filter by Selected Country first, then by Hashtag
   const filteredPosts = useMemo(() => {
     let result = posts;
 
@@ -604,12 +599,29 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
     setSharePopupPost(post);
   };
 
+  const handleCopyPostLink = (urlToCopy: string) => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(urlToCopy).then(() => {
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2000);
+      });
+    } else {
+      const tempInput = document.createElement('input');
+      tempInput.value = urlToCopy;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
+  };
+
   const visiblePosts = filteredPosts.slice(0, visibleCount);
   const canLoadMore = visibleCount < filteredPosts.length || hasMore;
 
   return (
     <div className="w-full min-h-screen bg-[#f3e6d8]">
-      {/* pt-28 (112px) taaki fixed header cards ko cover na kare */}
       <section className="w-full px-3 sm:px-6 md:px-8 pt-28 pb-20 space-y-6">
         {activeHashtagFilter && (
           <div className="flex items-center justify-center gap-2 mb-2">
@@ -667,7 +679,6 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
                   onClick={() => handleOpenPost(post)}
                   className="w-full rounded-[26px] sm:rounded-[30px] overflow-hidden bg-[#faefe6] shadow-[0_4px_16px_rgba(0,0,0,0.05)] border border-[#ebd8c8] cursor-pointer hover:shadow-lg transition-all"
                 >
-                  {/* Image Banner */}
                   {Boolean((post as any).imageUrl || (post as any).image) && (
                     <div className="w-full h-64 sm:h-80 md:h-96 overflow-hidden bg-stone-200">
                       <img
@@ -685,7 +696,6 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
                     </div>
                   )}
 
-                  {/* Card Body */}
                   <div className="p-5 sm:p-7">
                     <div className="flex items-center gap-1.5 text-xs sm:text-sm text-stone-500 font-medium mb-3">
                       <span>{extractAuthorName(post)}</span>
@@ -704,8 +714,6 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
 
                     <div className="mt-5 flex items-center justify-between pt-3 border-t border-[#ebd8c8]/60">
                       <div className="flex items-center gap-2.5">
-                        
-                        {/* Interactive Reaction/Like on Card */}
                         <div 
                           className="relative card-reaction-container" 
                           onClick={(e) => e.stopPropagation()}
@@ -730,7 +738,6 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
                             <span>{safeLikesCount(post)}</span>
                           </button>
 
-                          {/* Card Emoji Picker Tray */}
                           {isCardPickerOpen && (
                             <div
                               onClick={(e) => e.stopPropagation()}
@@ -760,13 +767,11 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
                           )}
                         </div>
 
-                        {/* Comments Count */}
                         <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#eee0d2] text-stone-700 text-xs sm:text-sm font-medium">
                           <MessageCircle className="w-4 h-4 text-stone-500" />
                           <span>{safeCommentCount(post)}</span>
                         </div>
 
-                        {/* Share Button */}
                         <button
                           type="button"
                           onClick={(e) => triggerShare(post, e)}
@@ -778,7 +783,6 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {/* Secret Admin Delete Button on Card */}
                         {isAdmin && (
                           <button
                             type="button"
@@ -792,7 +796,6 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
                           </button>
                         )}
 
-                        {/* Tap to View */}
                         <span className="text-xs sm:text-sm font-medium text-[#e15b50] hover:underline cursor-pointer">
                           Tap to view
                         </span>
@@ -805,7 +808,6 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
           </div>
         )}
 
-        {/* Load More Button */}
         {!loading && canLoadMore && (
           <div className="flex justify-center pt-6">
             <button
@@ -826,43 +828,48 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
         )}
       </section>
 
-      {/* Share Popup */}
+      {/* Share Popup with Full Rich Media Support */}
       {sharePopupPost && (() => {
         const postText = (sharePopupPost as any).text || (sharePopupPost as any).content || (sharePopupPost as any).body || '';
-        const cleanSnippet = postText.length > 140 ? postText.slice(0, 140) + '...' : postText;
+        const cleanSnippet = postText.length > 120 ? postText.slice(0, 120) + '...' : postText;
         const postUrl = `${window.location.origin}/?post=${encodeURIComponent(sharePopupPost.id)}`;
-        const shareMessage = `"${cleanSnippet}"\n\nRead more anonymously on OpenConfess: ${postUrl}`;
+        const imageUrl = (sharePopupPost as any).imageUrl || (sharePopupPost as any).image;
+
+        const whatsappMsg = `"${cleanSnippet}"\n\nRead more anonymously on OpenConfess: ${postUrl}`;
+        const telegramMsg = `"${cleanSnippet}"\n\nRead more on OpenConfess:`;
 
         const handleNativeShare = async () => {
-          if (navigator.share) {
-            try {
-              await navigator.share({
+          setSharingNative(true);
+          try {
+            if (navigator.share) {
+              const shareData: ShareData = {
                 title: 'Open Confess',
-                text: `"${cleanSnippet}"\n\nRead more anonymously:`,
+                text: `"${cleanSnippet}"\n\nRead anonymously:`,
                 url: postUrl,
-              });
-              setSharePopupPost(null);
-            } catch (err) {}
-          } else {
-            handleCopyPostLink(postUrl);
-          }
-        };
+              };
 
-        const handleCopyPostLink = (urlToCopy: string) => {
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(urlToCopy).then(() => {
-              setCopiedLink(true);
-              setTimeout(() => setCopiedLink(false), 2000);
-            });
-          } else {
-            const tempInput = document.createElement('input');
-            tempInput.value = urlToCopy;
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            document.execCommand('copy');
-            document.body.removeChild(tempInput);
-            setCopiedLink(true);
-            setTimeout(() => setCopiedLink(false), 2000);
+              if (imageUrl && navigator.canShare) {
+                try {
+                  const res = await fetch(imageUrl);
+                  const blob = await res.blob();
+                  const file = new File([blob], 'confession.jpg', { type: blob.type || 'image/jpeg' });
+                  if (navigator.canShare({ files: [file] })) {
+                    shareData.files = [file];
+                  }
+                } catch (e) {
+                  console.warn('Image blob share skipped, sharing text only');
+                }
+              }
+
+              await navigator.share(shareData);
+              setSharePopupPost(null);
+            } else {
+              handleCopyPostLink(postUrl);
+            }
+          } catch (err) {
+            // Dismissed by user
+          } finally {
+            setSharingNative(false);
           }
         };
 
@@ -886,10 +893,22 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
                 </button>
               </div>
 
-              <div className="grid grid-cols-4 gap-3 pt-2">
+              {/* Preview Card */}
+              <div className="p-3 bg-stone-50 rounded-2xl border border-stone-100 text-left space-y-2">
+                {imageUrl && (
+                  <div className="w-full h-24 rounded-xl overflow-hidden bg-stone-200">
+                    <img src={imageUrl} alt="Card preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <p className="text-xs text-stone-600 italic line-clamp-2 font-serif">
+                  "{cleanSnippet}"
+                </p>
+              </div>
+
+              <div className="grid grid-cols-4 gap-3 pt-1">
                 {/* WhatsApp */}
                 <a
-                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`}
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappMsg)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex flex-col items-center gap-1 text-xs text-stone-700 hover:opacity-80 transition-opacity"
@@ -902,7 +921,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
 
                 {/* X (Twitter) */}
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`"${cleanSnippet}"`)}&url=${encodeURIComponent(postUrl)}&hashtags=OpenConfess,Anonymous`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`"${cleanSnippet}"`)}&url=${encodeURIComponent(postUrl)}&hashtags=OpenConfess`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex flex-col items-center gap-1 text-xs text-stone-700 hover:opacity-80 transition-opacity"
@@ -913,9 +932,9 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
                   <span>X</span>
                 </a>
 
-                {/* Facebook */}
+                {/* Facebook Feed Sharer */}
                 <a
-                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}&quote=${encodeURIComponent(`"${cleanSnippet}"`)}`}
+                  href={`https://www.facebook.com/dialog/share?app_id=966242223397117&display=popup&href=${encodeURIComponent(postUrl)}&quote=${encodeURIComponent(`"${cleanSnippet}"`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex flex-col items-center gap-1 text-xs text-stone-700 hover:opacity-80 transition-opacity"
@@ -928,7 +947,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
 
                 {/* Telegram */}
                 <a
-                  href={`https://t.me/share/url?url=${encodeURIComponent(postUrl)}&text=${encodeURIComponent(`"${cleanSnippet}"\n\nRead anonymously on OpenConfess:`)}`}
+                  href={`https://t.me/share/url?url=${encodeURIComponent(postUrl)}&text=${encodeURIComponent(telegramMsg)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex flex-col items-center gap-1 text-xs text-stone-700 hover:opacity-80 transition-opacity"
@@ -940,24 +959,25 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
                 </a>
               </div>
 
-              {/* Native Mobile Share Button */}
+              {/* Native Mobile Share Button with File Capability */}
               {typeof navigator !== 'undefined' && 'share' in navigator && (
                 <button
                   onClick={handleNativeShare}
-                  className="w-full py-2.5 px-4 rounded-xl bg-rose-500 hover:bg-rose-600 active:scale-95 text-white flex items-center justify-center gap-2 text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                  disabled={sharingNative}
+                  className="w-full py-2.5 px-4 rounded-xl bg-rose-500 hover:bg-rose-600 active:scale-95 text-white flex items-center justify-center gap-2 text-xs font-semibold shadow-sm transition-all cursor-pointer disabled:opacity-50"
                 >
-                  <Share2 className="w-4 h-4" />
-                  <span>Share via Other Apps</span>
+                  {sharingNative ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
+                  <span>{sharingNative ? 'Preparing Card...' : 'Share Image Card (All Apps)'}</span>
                 </button>
               )}
 
-              {/* Copy Direct Post Link */}
+              {/* Copy Post Link Button */}
               <button
                 onClick={() => handleCopyPostLink(postUrl)}
                 className="w-full py-2.5 px-4 rounded-xl border border-stone-200 bg-stone-50 hover:bg-stone-100 flex items-center justify-center gap-2 text-xs font-semibold text-stone-700 transition-colors cursor-pointer"
               >
                 {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                <span>{copiedLink ? 'Direct Post Link Copied!' : 'Copy Post Link'}</span>
+                <span>{copiedLink ? 'Direct Post Link Copied!' : 'Copy Direct Link'}</span>
               </button>
             </div>
           </div>
@@ -1025,7 +1045,6 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
                 {formatInteractiveText(activePost.text || activePost.content || '')}
               </p>
 
-              {/* Reactions & Social Share Bar */}
               <div className="flex items-center justify-between pt-4 border-t border-stone-100 text-sm">
                 <div className="flex items-center gap-4">
                   <div ref={modalPickerRef} className="relative">
@@ -1072,14 +1091,13 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {/* Secret Admin Delete Button inside Modal */}
                   {isAdmin && (
                     <button
                       type="button"
                       disabled={deletingId === activePost.id}
                       onClick={(e) => handleDeletePost(activePost.id, e)}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-red-100 hover:bg-red-200 border border-red-300 text-red-700 rounded-full text-xs font-semibold shadow-sm transition-all cursor-pointer disabled:opacity-50"
-                      title="Delete confession"
+                      className="flex items-center gap-1 px-3 py-1.5 bg-red-100 hover:bg-red-200 border border-red-300 text-red-700 rounded-full text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                      title="Delete this confession"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>{deletingId === activePost.id ? 'Deleting...' : 'Delete'}</span>
@@ -1097,7 +1115,6 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
                 </div>
               </div>
 
-              {/* Comments Section */}
               <div className="pt-2 border-t border-stone-100 space-y-4">
                 <h3 className="font-semibold text-stone-900 text-sm sm:text-base">
                   Comments ({safeCommentCount(activePost)})
@@ -1135,7 +1152,6 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
                   </div>
                 )}
 
-                {/* Add Comment Field */}
                 <div className="pt-3 space-y-2.5">
                   <input
                     type="text"
