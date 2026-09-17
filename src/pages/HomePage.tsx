@@ -105,11 +105,13 @@ function matchesSelectedCountry(post: any, countryFilter: string | null): boolea
   if (!countryFilter || !countryFilter.trim()) return true;
   const target = countryFilter.trim().toLowerCase();
 
+  // 1. Direct country property
   const postCountry = String(post.country || '').trim().toLowerCase();
   if (postCountry && (postCountry === target || postCountry.includes(target) || target.includes(postCountry))) {
     return true;
   }
 
+  // 2. Region property (e.g. "Jaipur, India", "Sydney, Australia")
   const postRegion = String(post.region || '').trim().toLowerCase();
   if (postRegion) {
     const parts = postRegion.split(',').map((p) => p.trim().toLowerCase());
@@ -118,12 +120,14 @@ function matchesSelectedCountry(post: any, countryFilter: string | null): boolea
     }
   }
 
+  // 3. Location / City property
   const postLocation = String(post.location || '').trim().toLowerCase();
   const postCity = String(post.city || '').trim().toLowerCase();
   if (postLocation.includes(target) || postCity.includes(target)) {
     return true;
   }
 
+  // 4. Fallback search inside body/text
   const postText = String(post.text || post.content || post.body || '').toLowerCase();
   if (postText.includes(target)) {
     return true;
@@ -160,7 +164,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const searchParams = new URLSearchParams(window.location.search);
-  const isAdmin = searchParams.get('admin') === 'ashim97';
+  const isAdmin = searchParams.get('admin') === 'ashim97' || searchParams.get('admin') === 'ashim97'; // Admin access
 
   const modalPickerRef = useRef<HTMLDivElement>(null);
   const shareRef = useRef<HTMLDivElement>(null);
@@ -232,7 +236,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
       setPosts((prev) => {
         const serverMap = new Map(merged.map((p) => [String(p.id), p]));
         const recentLocalPosts = prev.filter((p) => {
-          const isRecent = Date.now() - parsePostTimestamp(p) < 600000;
+          const isRecent = Date.now() - parsePostTimestamp(p) < 600000; // 10 minutes window
           return isRecent && !serverMap.has(String(p.id));
         });
 
@@ -373,6 +377,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
     });
   }
 
+  // Filter by Selected Country first, then by Hashtag
   const filteredPosts = useMemo(() => {
     let result = posts;
 
@@ -622,6 +627,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
 
   return (
     <div className="w-full min-h-screen bg-[#f3e6d8]">
+      {/* pt-28 (112px) taaki fixed header cards ko cover na kare */}
       <section className="w-full px-3 sm:px-6 md:px-8 pt-28 pb-20 space-y-6">
         {activeHashtagFilter && (
           <div className="flex items-center justify-center gap-2 mb-2">
@@ -679,6 +685,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
                   onClick={() => handleOpenPost(post)}
                   className="w-full rounded-[26px] sm:rounded-[30px] overflow-hidden bg-[#faefe6] shadow-[0_4px_16px_rgba(0,0,0,0.05)] border border-[#ebd8c8] cursor-pointer hover:shadow-lg transition-all"
                 >
+                  {/* Image Banner */}
                   {Boolean((post as any).imageUrl || (post as any).image) && (
                     <div className="w-full h-64 sm:h-80 md:h-96 overflow-hidden bg-stone-200">
                       <img
@@ -835,8 +842,11 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
         const postUrl = `${window.location.origin}/?post=${encodeURIComponent(sharePopupPost.id)}`;
         const imageUrl = (sharePopupPost as any).imageUrl || (sharePopupPost as any).image;
 
-        const whatsappMsg = `"${cleanSnippet}"\n\nRead more anonymously on OpenConfess: ${postUrl}`;
+        // WhatsApp, X & Facebook Payload URLs
+        const whatsappMsg = `"${cleanSnippet}"\n\nRead more on OpenConfess: ${postUrl}`;
         const telegramMsg = `"${cleanSnippet}"\n\nRead more on OpenConfess:`;
+        const fbShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`;
+        const xShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(`"${cleanSnippet}"`)}&url=${encodeURIComponent(postUrl)}&hashtags=OpenConfess`;
 
         const handleNativeShare = async () => {
           setSharingNative(true);
@@ -921,7 +931,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
 
                 {/* X (Twitter) */}
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`"${cleanSnippet}"`)}&url=${encodeURIComponent(postUrl)}&hashtags=OpenConfess`}
+                  href={xShareUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex flex-col items-center gap-1 text-xs text-stone-700 hover:opacity-80 transition-opacity"
@@ -932,9 +942,9 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
                   <span>X</span>
                 </a>
 
-                {/* Facebook Feed Sharer */}
+                {/* Facebook Standard Sharer */}
                 <a
-                  href={`https://www.facebook.com/dialog/share?app_id=966242223397117&display=popup&href=${encodeURIComponent(postUrl)}&quote=${encodeURIComponent(`"${cleanSnippet}"`)}`}
+                  href={fbShareUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex flex-col items-center gap-1 text-xs text-stone-700 hover:opacity-80 transition-opacity"
