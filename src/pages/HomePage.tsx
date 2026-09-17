@@ -842,10 +842,10 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
         const postUrl = `${window.location.origin}/?post=${encodeURIComponent(sharePopupPost.id)}`;
         const imageUrl = (sharePopupPost as any).imageUrl || (sharePopupPost as any).image;
 
-        // WhatsApp, X & Facebook Payload URLs
+        // WhatsApp, X & Clean Facebook Payload URLs
         const whatsappMsg = `"${cleanSnippet}"\n\nRead more on OpenConfess: ${postUrl}`;
         const telegramMsg = `"${cleanSnippet}"\n\nRead more on OpenConfess:`;
-        const fbShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`;
+        const fbShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent('https://openconfess.com/')}`;
         const xShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(`"${cleanSnippet}"`)}&url=${encodeURIComponent(postUrl)}&hashtags=OpenConfess`;
 
         const handleNativeShare = async () => {
@@ -942,7 +942,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
                   <span>X</span>
                 </a>
 
-                {/* Facebook Standard Sharer */}
+                {/* Facebook Standard Clean Sharer */}
                 <a
                   href={fbShareUrl}
                   target="_blank"
