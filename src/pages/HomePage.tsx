@@ -233,16 +233,27 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
       // Pass undefined to fetch all posts, filtering is handled by useMemo
       const page = await fetchInitialFeed(undefined);
       const merged = applySavedActivity(page.posts);
-      const sorted = sortPosts(merged, activeTab);
 
-      setPosts(sorted);
+      // FIX: Server fetch hone par newly created user posts ko drop hone se bachayein
+      setPosts((prev) => {
+        const serverMap = new Map(merged.map((p) => [String(p.id), p]));
+        const recentLocalPosts = prev.filter((p) => {
+          const isRecent = Date.now() - parsePostTimestamp(p) < 600000; // 10 minutes window
+          return isRecent && !serverMap.has(String(p.id));
+        });
+
+        const combined = [...recentLocalPosts, ...merged];
+        const sorted = sortPosts(combined, activeTab);
+
+        try {
+          localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(sorted.slice(0, 16)));
+        } catch {}
+        return sorted;
+      });
+
       setCursor(page.cursor);
       setHasMore(page.hasMore);
       setVisibleCount(POSTS_PER_PAGE);
-
-      try {
-        localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(sorted.slice(0, 16)));
-      } catch {}
     } catch (err) {
       console.error('Error in loadInitial:', err);
     } finally {
@@ -416,6 +427,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
     const postWithTime = {
       ...confession,
       createdAt: postTimestamp,
+      timestamp: postTimestamp,
       userReaction: null,
       commentsCount: 0,
       comments: 0,
@@ -425,7 +437,9 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
     };
 
     setPosts((prev) => {
-      const updated = [postWithTime, ...prev];
+      // FIX: Ensure new post is strictly unshifted and not duplicated
+      const filtered = prev.filter((p) => String(p.id) !== String(confession.id));
+      const updated = [postWithTime, ...filtered];
       try {
         localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(updated.slice(0, 16)));
       } catch {}
