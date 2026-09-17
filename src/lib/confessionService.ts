@@ -10,7 +10,6 @@ import {
   serverTimestamp,
   setDoc,
   where,
-  orderBy,
   QueryDocumentSnapshot,
   deleteDoc,
 } from 'firebase/firestore';
@@ -134,16 +133,10 @@ async function fetchFirestorePage(
 ): Promise<FeedPage> {
   const colRef = collection(postsDb!, 'confessions');
   
-  let q;
-  try {
-    q = cursor
-      ? query(colRef, orderBy('createdAt', 'desc'), startAfter(cursor), limit(PAGE_SIZE * 3))
-      : query(colRef, orderBy('createdAt', 'desc'), limit(PAGE_SIZE * 3));
-  } catch (err) {
-    q = cursor
-      ? query(colRef, startAfter(cursor), limit(PAGE_SIZE * 3))
-      : query(colRef, limit(PAGE_SIZE * 3));
-  }
+  // FIX: Firestore index/type clash se bachne ke liye safe query lagayi hai
+  const q = cursor
+    ? query(colRef, startAfter(cursor), limit(PAGE_SIZE * 4))
+    : query(colRef, limit(PAGE_SIZE * 4));
 
   const snap = await getDocs(q);
   const targetDb = interactionsDb || postsDb;
@@ -162,7 +155,7 @@ async function fetchFirestorePage(
       } catch (e) {}
     }
 
-    const rawTime = data.createdAt || data.createdA || data.timestamp || Date.now();
+    const rawTime = data.createdAt || data.timestamp || data.createdA || Date.now();
 
     return {
       id: docSnap.id,
@@ -183,6 +176,7 @@ async function fetchFirestorePage(
   const resolvedPosts = await Promise.all(postsPromises);
   const validPosts = resolvedPosts.filter((post): post is Confession => post !== null);
 
+  // Saare posts (Chahe String time ho, Number ho ya Timestamp) yahan perfect sort honge
   validPosts.sort((a, b) => safeEpochMs(b.createdAt) - safeEpochMs(a.createdAt));
   const posts = validPosts.slice(0, PAGE_SIZE);
 
@@ -232,9 +226,9 @@ export interface CreateConfessionInput {
 export async function createConfession(input: CreateConfessionInput): Promise<Confession> {
   const region = [input.city, input.country].filter(Boolean).join(', ');
   const nowMs = Date.now();
+  const nowIso = new Date().toISOString();
 
   if (isFirebaseConfigured && postsDb) {
-    // FIX: serverTimestamp() use kiya taaki AI generator aur manual posts ka sort order kabhi clash na ho
     const docRef = await addDoc(collection(postsDb, 'confessions'), {
       authorName: input.authorName || 'Anonymous',
       author: input.authorName || 'Anonymous',
@@ -247,8 +241,8 @@ export async function createConfession(input: CreateConfessionInput): Promise<Co
       country: input.country,
       city: input.city,
       region,
-      createdAt: serverTimestamp(), // Native Firestore Timestamp
-      createdA: new Date().toISOString(),
+      createdAt: nowIso,
+      createdA: nowIso,
       timestamp: nowMs,
       likesCount: 0,
       likes: 0,
