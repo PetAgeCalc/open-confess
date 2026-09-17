@@ -134,20 +134,22 @@ async function fetchFirestorePage(
 ): Promise<FeedPage> {
   const colRef = collection(postsDb!, 'confessions');
   
-  // FIX: Added orderBy('createdAt', 'desc') so newest posts always come first!
-  let q;
+  let snap;
   try {
-    q = cursor
-      ? query(colRef, orderBy('createdAt', 'desc'), startAfter(cursor), limit(PAGE_SIZE * 2))
-      : query(colRef, orderBy('createdAt', 'desc'), limit(PAGE_SIZE * 2));
+    // 1. Try fetching ordered by createdAt
+    const q = cursor
+      ? query(colRef, orderBy('createdAt', 'desc'), startAfter(cursor), limit(40))
+      : query(colRef, orderBy('createdAt', 'desc'), limit(40));
+    snap = await getDocs(q);
   } catch (err) {
-    // Fallback if index is creating
-    q = cursor
-      ? query(colRef, startAfter(cursor), limit(PAGE_SIZE * 2))
-      : query(colRef, limit(PAGE_SIZE * 2));
+    // 2. Fallback if composite index is missing in Firestore
+    console.warn("Falling back to unordered fetch due to Firestore index:", err);
+    const q = cursor
+      ? query(colRef, startAfter(cursor), limit(40))
+      : query(colRef, limit(40));
+    snap = await getDocs(q);
   }
 
-  const snap = await getDocs(q);
   const targetDb = interactionsDb || postsDb;
 
   const postsPromises = snap.docs.map(async (docSnap) => {
@@ -175,6 +177,7 @@ async function fetchFirestorePage(
       city: data.city || '',
       region: data.region || data.category || '',
       createdAt: safeEpochMs(rawTime),
+      timestamp: safeEpochMs(rawTime),
       viewsCount: data.viewsCount ?? 0,
       likesCount: Number(reactionData?.likesCount ?? data.likesCount ?? data.likes ?? 0),
       reactions: reactionData?.reactions ?? emptyReactions(),
@@ -183,7 +186,19 @@ async function fetchFirestorePage(
   });
 
   const resolvedPosts = await Promise.all(postsPromises);
-  const validPosts = resolvedPosts.filter((post): post is Confession => post !== null);
+  const serverPosts = resolvedPosts.filter((post): post is Confession => post !== null);
+
+  // Local saved posts merge karein taaki user ka naya post turant top par dikhe
+  const localPosts = readLocalPosts();
+  const allPostsMap = new Map<string, Confession>();
+
+  [...localPosts, ...serverPosts].forEach((p) => {
+    if (p && p.id) {
+      allPostsMap.set(String(p.id), p);
+    }
+  });
+
+  const validPosts = Array.from(allPostsMap.values());
 
   // Strictly sort latest epoch timestamp on top
   validPosts.sort((a, b) => safeEpochMs(b.createdAt) - safeEpochMs(a.createdAt));
@@ -237,70 +252,66 @@ export async function createConfession(input: CreateConfessionInput): Promise<Co
   const nowMs = Date.now();
   const nowIso = new Date().toISOString();
 
+  let createdPostId = `local-${nowMs}`;
+
   if (isFirebaseConfigured && postsDb) {
-    const docRef = await addDoc(collection(postsDb, 'confessions'), {
-      authorName: input.authorName || 'Anonymous',
-      author: input.authorName || 'Anonymous',
-      body: input.text,
-      text: input.text,
-      content: input.text,
-      imageUrl: input.imageUrl,
-      image: input.imageUrl,
-      category: input.category || 'General',
-      country: input.country,
-      city: input.city,
-      region,
-      createdAt: nowMs, // FIX: Numeric timestamp taaki Firestore orderBy('createdAt', 'desc') ise drop na kare
-      createdA: nowIso,
-      timestamp: nowMs,
-      likesCount: 0,
-      likes: 0,
-      commentsCount: 0,
-      comments: 0,
-      viewsCount: 0,
-    });
-
-    const targetDb = interactionsDb || postsDb;
-    if (targetDb) {
-      await setDoc(doc(targetDb, 'reactions', docRef.id), {
+    try {
+      const docRef = await addDoc(collection(postsDb, 'confessions'), {
+        authorName: input.authorName || 'Anonymous',
+        author: input.authorName || 'Anonymous',
+        body: input.text,
+        text: input.text,
+        content: input.text,
+        imageUrl: input.imageUrl,
+        image: input.imageUrl,
+        category: input.category || 'General',
+        country: input.country,
+        city: input.city,
+        region,
+        createdAt: nowMs,
+        createdA: nowIso,
+        timestamp: nowMs,
         likesCount: 0,
-        reactions: emptyReactions(),
-      }, { merge: true });
-    }
+        likes: 0,
+        commentsCount: 0,
+        comments: 0,
+        viewsCount: 0,
+      });
 
-    return {
-      id: docRef.id,
-      authorName: input.authorName || 'Anonymous',
-      text: input.text,
-      imageUrl: input.imageUrl,
-      country: input.country,
-      city: input.city,
-      region,
-      createdAt: nowMs,
-      viewsCount: 0,
-      likesCount: 0,
-      reactions: emptyReactions(),
-      comments: [],
-    };
+      createdPostId = docRef.id;
+
+      const targetDb = interactionsDb || postsDb;
+      if (targetDb) {
+        await setDoc(doc(targetDb, 'reactions', docRef.id), {
+          likesCount: 0,
+          reactions: emptyReactions(),
+        }, { merge: true });
+      }
+    } catch (e) {
+      console.error("Firestore post creation error:", e);
+    }
   }
 
   const newPost: Confession = {
-    id: `local-${Date.now()}`,
+    id: createdPostId,
     authorName: input.authorName || 'Anonymous',
     text: input.text,
     imageUrl: input.imageUrl,
     country: input.country,
     city: input.city,
     region,
-    createdAt: Date.now(),
+    createdAt: nowMs,
     viewsCount: 0,
     likesCount: 0,
     reactions: emptyReactions(),
     comments: [],
   };
+
+  // Local storage me unshift karein taaki refresh karne par bhi gayab na ho
   const posts = readLocalPosts();
-  posts.unshift(newPost);
-  writeLocalPosts(posts);
+  const updatedLocal = [newPost, ...posts.filter((p) => String(p.id) !== String(createdPostId))];
+  writeLocalPosts(updatedLocal);
+
   return newPost;
 }
 
@@ -439,7 +450,6 @@ function findPostAnywhere(postId: string): Confession | undefined {
 export async function deleteConfession(postId: string): Promise<boolean> {
   let deleted = false;
 
-  // 1. Firebase Firestore se delete karein (posts & interactions dono se)
   if (isFirebaseConfigured) {
     try {
       if (postsDb) {
@@ -455,7 +465,6 @@ export async function deleteConfession(postId: string): Promise<boolean> {
     }
   }
 
-  // 2. Local fallback storage se bhi delete karein agar wahan save ho
   const localPosts = readLocalPosts();
   const updatedPosts = localPosts.filter((p) => p.id !== postId);
   if (updatedPosts.length !== localPosts.length) {
