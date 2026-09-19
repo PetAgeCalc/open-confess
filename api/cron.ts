@@ -1,471 +1,49 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// ============================================================
-// DUAL FIREBASE SETUP
-// ============================================================
 const POSTS_PROJECT_ID = 'open-confees';
 const POSTS_API_KEY = 'AIzaSyApMJTBvr7zbzJTP85xZAb994NfLWUBSz8';
-
 const INTERACTIONS_PROJECT_ID = 'ageless-lamp-461817-i8';
 const INTERACTIONS_API_KEY = 'AIzaSyBnbNobd6s1GY9c7bdt6aEhPxP26Wa2VF4';
-
-// Cloudinary Cloud Name
 const CLOUD_NAME = 'xjdv4l6v';
 
-// ============================================================
-// COMPLETE 15 CATEGORIES REGISTRY (World-Way, English/Hindi/Bengali)
-// ============================================================
-interface FeedConfig {
+interface RealSource {
   category: string;
   lang: 'English' | 'Hindi' | 'Bengali';
   city: string;
   country: string;
-  rssUrl: string;
-  photoFallbackId: string;
+  query: string;
   tags: string;
 }
 
-const FEEDS_REGISTRY: FeedConfig[] = [
-  // 1. News & Breaking Headlines
-  {
-    category: 'News & Breaking Headlines',
-    lang: 'English',
-    city: 'London',
-    country: 'UK',
-    rssUrl: 'https://feeds.bbci.co.uk/news/world/rss.xml',
-    photoFallbackId: 'photo-1585829365295-ab7cd400c167',
-    tags: '#BreakingNews #WorldNews #Headlines #GlobalUpdate'
-  },
-  {
-    category: 'News & Breaking Headlines',
-    lang: 'Hindi',
-    city: 'Delhi',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=india+samachar+when:24h&hl=hi&gl=IN&ceid=IN:hi',
-    photoFallbackId: 'photo-1495020689067-958852a7765e',
-    tags: '#ताज़ाखबर #BreakingNews #देशदुनिया #TrendingHindi'
-  },
-  {
-    category: 'News & Breaking Headlines',
-    lang: 'Bengali',
-    city: 'Kolkata',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=kolkata+bangla+khobor+when:24h&hl=bn&gl=IN&ceid=IN:bn',
-    photoFallbackId: 'photo-1504711434969-e33886168f5c',
-    tags: '#ব্রেকিংনিউজ #আজকেরখবর #কলকাতা #TrendingBangla'
-  },
+const SOURCES: RealSource[] = [
+  // News & Politics
+  { category: 'News & Breaking Headlines', lang: 'English', city: 'London', country: 'UK', query: 'world+breaking+news', tags: '#BreakingNews #WorldNews #Headlines' },
+  { category: 'News & Breaking Headlines', lang: 'Hindi', city: 'Delhi', country: 'India', query: 'bharat+samachar+breaking', tags: '#ताज़ाखबर #BreakingNews #देशदुनिया' },
+  { category: 'News & Breaking Headlines', lang: 'Bengali', city: 'Kolkata', country: 'India', query: 'kolkata+khobor+breaking', tags: '#ব্রেকিংনিউজ #আজকেরখবর #কলকাতা' },
+  
+  // Cricket & Football
+  { category: 'Cricket Mania', lang: 'English', city: 'Dubai', country: 'UAE', query: 'international+cricket+match', tags: '#CricketTwitter #MatchDay #ICC' },
+  { category: 'Cricket Mania', lang: 'Hindi', city: 'Mumbai', country: 'India', query: 'cricket+ipl+bcci+match', tags: '#CricketHindi #IPL #BCCI' },
+  { category: 'Cricket Mania', lang: 'Bengali', city: 'Chittagong', country: 'Bangladesh', query: 'cricket+khela+live', tags: '#ক্রিকেট #টিমবাংলাদেশ #CricketCraze' },
+  { category: 'Football & World Sports', lang: 'English', city: 'Manchester', country: 'UK', query: 'premier+league+football', tags: '#FootballLive #UCL #MatchDay' },
 
-  // 2. Politics & Public Debate
-  {
-    category: 'Politics & Public Debate',
-    lang: 'English',
-    city: 'Washington',
-    country: 'USA',
-    rssUrl: 'https://news.google.com/rss/search?q=world+politics+when:24h&hl=en-US&gl=US&ceid=US:en',
-    photoFallbackId: 'photo-1541872703-74c5e44368f9',
-    tags: '#PoliticsToday #Democracy #GlobalPolitics #PublicDebate'
-  },
-  {
-    category: 'Politics & Public Debate',
-    lang: 'Hindi',
-    city: 'Lucknow',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=rajneeti+chunav+when:24h&hl=hi&gl=IN&ceid=IN:hi',
-    photoFallbackId: 'photo-1540910419892-4a36d2c3266c',
-    tags: '#राजनीति #जनताकीआवाज #BharatPolitics'
-  },
-  {
-    category: 'Politics & Public Debate',
-    lang: 'Bengali',
-    city: 'Dhaka',
-    country: 'Bangladesh',
-    rssUrl: 'https://news.google.com/rss/search?q=bangladesh+rajniti+when:24h&hl=bn&gl=IN&ceid=IN:bn',
-    photoFallbackId: 'photo-1529107386315-e1a2ed48a620',
-    tags: '#রাজনীতি #জনমত #গণতন্ত্র'
-  },
+  // Entertainment
+  { category: 'Entertainment, Cinema & Pop Culture', lang: 'English', city: 'Los Angeles', country: 'USA', query: 'hollywood+movies+box+office', tags: '#CinemaLovers #Hollywood #PopCulture' },
+  { category: 'Entertainment, Cinema & Pop Culture', lang: 'Hindi', city: 'Mumbai', country: 'India', query: 'bollywood+cinema+release', tags: '#बॉलीवुड #CinemaReview #BoxOfficeHit' },
+  { category: 'Entertainment, Cinema & Pop Culture', lang: 'Bengali', city: 'Kolkata', country: 'India', query: 'tollywood+bangla+cinema', tags: '#টলিউড #বাংলাসিনেমা #বিনোদনবার্তা' },
 
-  // 3. Cricket Mania
-  {
-    category: 'Cricket Mania',
-    lang: 'English',
-    city: 'Dubai',
-    country: 'UAE',
-    rssUrl: 'https://news.google.com/rss/search?q=international+cricket+icc+when:24h&hl=en-IN&gl=IN&ceid=IN:en',
-    photoFallbackId: 'photo-1531415074868-036b1c57e329',
-    tags: '#CricketTwitter #MatchDay #ICC #CricketFever'
-  },
-  {
-    category: 'Cricket Mania',
-    lang: 'Hindi',
-    city: 'Mumbai',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=cricket+ipl+bcci+when:24h&hl=hi&gl=IN&ceid=IN:hi',
-    photoFallbackId: 'photo-1540747913346-19e32dc3e97e',
-    tags: '#CricketHindi #IPL #BCCI #TeamIndia'
-  },
-  {
-    category: 'Cricket Mania',
-    lang: 'Bengali',
-    city: 'Chittagong',
-    country: 'Bangladesh',
-    rssUrl: 'https://news.google.com/rss/search?q=cricket+khela+when:24h&hl=bn&gl=IN&ceid=IN:bn',
-    photoFallbackId: 'photo-1531415074868-036b1c57e329',
-    tags: '#ক্রিকেট #টিমবাংলাদেশ #CricketCraze'
-  },
-
-  // 4. Football & World Sports
-  {
-    category: 'Football & World Sports',
-    lang: 'English',
-    city: 'Manchester',
-    country: 'UK',
-    rssUrl: 'https://www.espn.com/espn/rss/football/news',
-    photoFallbackId: 'photo-1508098682722-e99c43a406b2',
-    tags: '#FootballLive #UCL #PremierLeague #MatchDay'
-  },
-  {
-    category: 'Football & World Sports',
-    lang: 'Hindi',
-    city: 'Kolkata',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=football+match+isl+when:24h&hl=hi&gl=IN&ceid=IN:hi',
-    photoFallbackId: 'photo-1518091043644-c1d4457512c6',
-    tags: '#भारतीयफुटबॉल #ISL #FootballFever'
-  },
-
-  // 5. Entertainment, Cinema & Pop Culture
-  {
-    category: 'Entertainment, Cinema & Pop Culture',
-    lang: 'English',
-    city: 'Los Angeles',
-    country: 'USA',
-    rssUrl: 'https://variety.com/feed/',
-    photoFallbackId: 'photo-1489599849927-2ee91cede3ba',
-    tags: '#CinemaLovers #HollywoodNews #BoxOffice #PopCulture'
-  },
-  {
-    category: 'Entertainment, Cinema & Pop Culture',
-    lang: 'Hindi',
-    city: 'Mumbai',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=bollywood+cinema+when:24h&hl=hi&gl=IN&ceid=IN:hi',
-    photoFallbackId: 'photo-1514525253161-7a46d19cd819',
-    tags: '#बॉलीवुड #CinemaReview #BoxOfficeHit #BollywoodNews'
-  },
-  {
-    category: 'Entertainment, Cinema & Pop Culture',
-    lang: 'Bengali',
-    city: 'Kolkata',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=tollywood+bangla+cinema+when:24h&hl=bn&gl=IN&ceid=IN:bn',
-    photoFallbackId: 'photo-1478720568477-152d9b164e26',
-    tags: '#টলিউড #বাংলাসিনেমা #বিনোদনবার্তা'
-  },
-
-  // 6. Funny, Memes & Sarcasm
-  {
-    category: 'Funny, Memes & Sarcasm',
-    lang: 'English',
-    city: 'New York',
-    country: 'USA',
-    rssUrl: 'https://news.google.com/rss/search?q=viral+funny+memes+when:24h&hl=en-IN&gl=IN&ceid=IN:en',
-    photoFallbackId: 'photo-1514888286974-6c03e2ca1dba',
-    tags: '#FunnyTweet #MemeDaily #DesiHumor #Sarcasm'
-  },
-  {
-    category: 'Funny, Memes & Sarcasm',
-    lang: 'Hindi',
-    city: 'Pune',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=funny+jokes+memes+when:24h&hl=hi&gl=IN&ceid=IN:hi',
-    photoFallbackId: 'photo-1537151608828-ea2b11777ee8',
-    tags: '#मजेदारमीम्स #देसीह्यूमर #हंसतेरहो'
-  },
-  {
-    category: 'Funny, Memes & Sarcasm',
-    lang: 'Bengali',
-    city: 'Howrah',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=bangla+comedy+viral+when:24h&hl=bn&gl=IN&ceid=IN:bn',
-    photoFallbackId: 'photo-1543610892-0b1f7e6d8ac1',
-    tags: '#মজারপোস্ট #হাসিরট্রিক #বাঙালিমিমস'
-  },
-
-  // 7. True Love & Soul Connections
-  {
-    category: 'True Love & Soul Connections',
-    lang: 'English',
-    city: 'Paris',
-    country: 'France',
-    rssUrl: 'https://news.google.com/rss/search?q=relationships+love+stories+when:7d&hl=en-US&gl=US&ceid=US:en',
-    photoFallbackId: 'photo-1518199266791-5375a83190b7',
-    tags: '#TrueLove #Soulmate #DeepConnection #LoveStory'
-  },
-  {
-    category: 'True Love & Soul Connections',
-    lang: 'Hindi',
-    city: 'Jaipur',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=sachha+pyar+kahani+when:7d&hl=hi&gl=IN&ceid=IN:hi',
-    photoFallbackId: 'photo-1516589178581-6cd7833ae3b2',
-    tags: '#सच्चाप्यार #रूहानीरिश्ता #LoveDiary'
-  },
-  {
-    category: 'True Love & Soul Connections',
-    lang: 'Bengali',
-    city: 'Kolkata',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=valobasha+golpo+when:7d&hl=bn&gl=IN&ceid=IN:bn',
-    photoFallbackId: 'photo-1529333166437-7750a6dd5a70',
-    tags: '#খাঁটিভালোবাসা #ভালোবাসারগল্প #অনুভূতি'
-  },
-
-  // 8. Heartbreak & Pain
-  {
-    category: 'Heartbreak & Pain',
-    lang: 'English',
-    city: 'Chicago',
-    country: 'USA',
-    rssUrl: 'https://news.google.com/rss/search?q=heartbreak+breakup+recovery+when:7d&hl=en-US&gl=US&ceid=US:en',
-    photoFallbackId: 'photo-1534528741775-53994a69daeb',
-    tags: '#Heartbreak #BrokenHeart #MovingOn #PainfulMemories'
-  },
-  {
-    category: 'Heartbreak & Pain',
-    lang: 'Hindi',
-    city: 'Delhi',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=dard+tanhai+judai+when:7d&hl=hi&gl=IN&ceid=IN:hi',
-    photoFallbackId: 'photo-1516589178581-6cd7833ae3b2',
-    tags: '#टूटादिल #तन्हाई #अधूरीमोहब्बत #Dard'
-  },
-  {
-    category: 'Heartbreak & Pain',
-    lang: 'Bengali',
-    city: 'Dhaka',
-    country: 'Bangladesh',
-    rssUrl: 'https://news.google.com/rss/search?q=biroho+kosto+golpo+when:7d&hl=bn&gl=IN&ceid=IN:bn',
-    photoFallbackId: 'photo-1518199266791-5375a83190b7',
-    tags: '#হৃদয়ভাঙ্গা #বিরহবেদনা #স্মৃতি'
-  },
-
-  // 9. Motivational Quotes & Resilience
-  {
-    category: 'Motivational Quotes & Resilience',
-    lang: 'English',
-    city: 'Toronto',
-    country: 'Canada',
-    rssUrl: 'https://news.google.com/rss/search?q=resilience+success+stories+when:7d&hl=en-US&gl=US&ceid=US:en',
-    photoFallbackId: 'photo-1499209974431-9dddcece7f88',
-    tags: '#Motivation #NeverGiveUp #StayStrong #RiseAndGrind'
-  },
-  {
-    category: 'Motivational Quotes & Resilience',
-    lang: 'Hindi',
-    city: 'Mumbai',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=prerna+sangharsh+safalta+when:7d&hl=hi&gl=IN&ceid=IN:hi',
-    photoFallbackId: 'photo-1470246973918-29a93221c455',
-    tags: '#प्रेरणा #हौसलेकीउड़ान #संघर्षहीजीवनहै'
-  },
-  {
-    category: 'Motivational Quotes & Resilience',
-    lang: 'Bengali',
-    city: 'Kolkata',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=prerona+safollo+when:7d&hl=bn&gl=IN&ceid=IN:bn',
-    photoFallbackId: 'photo-1500530855697-b586d89ba3ee',
-    tags: '#অনুপ্রেরণা #লড়াইকরো #হালছেড়োনা'
-  },
-
-  // 10. Real Life Struggles & Stories
-  {
-    category: 'Real Life Struggles & Stories',
-    lang: 'English',
-    city: 'New York',
-    country: 'USA',
-    rssUrl: 'https://news.google.com/rss/search?q=ordinary+people+struggles+when:7d&hl=en-US&gl=US&ceid=US:en',
-    photoFallbackId: 'photo-1477959858617-67f30bc75b82',
-    tags: '#RealLife #LifeStruggles #CommonMan #RealityCheck'
-  },
-  {
-    category: 'Real Life Struggles & Stories',
-    lang: 'Hindi',
-    city: 'Patna',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=aam+aadmi+sangharsh+when:7d&hl=hi&gl=IN&ceid=IN:hi',
-    photoFallbackId: 'photo-1480714378408-67cf0d13bc1b',
-    tags: '#मध्यमवर्ग #आमइंसान #जिंदगीकीसच्चाई'
-  },
-  {
-    category: 'Real Life Struggles & Stories',
-    lang: 'Bengali',
-    city: 'Siliguri',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=sadharan+manusher+jibon+when:7d&hl=bn&gl=IN&ceid=IN:bn',
-    photoFallbackId: 'photo-1449824913935-59a10b8d2000',
-    tags: '#বাস্তবজীবন #মধ্যবিত্তেরলড়াই #জীবনসংগ্রাম'
-  },
-
-  // 11. Work & Corporate Hustle
-  {
-    category: 'Work & Corporate Hustle',
-    lang: 'English',
-    city: 'Singapore',
-    country: 'Singapore',
-    rssUrl: 'https://news.google.com/rss/search?q=corporate+burnout+workplace+when:7d&hl=en-US&gl=US&ceid=US:en',
-    photoFallbackId: 'photo-1486312338219-ce68d2c6f44d',
-    tags: '#CorporateLife #WorkHustle #Burnout #9to5Life'
-  },
-  {
-    category: 'Work & Corporate Hustle',
-    lang: 'Hindi',
-    city: 'Bengaluru',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=office+life+corporate+job+when:7d&hl=hi&gl=IN&ceid=IN:hi',
-    photoFallbackId: 'photo-1498050108023-c5249f4df085',
-    tags: '#कॉर्पोरेटलाइफ #नौकरीपेशा #WorkStress'
-  },
-  {
-    category: 'Work & Corporate Hustle',
-    lang: 'Bengali',
-    city: 'Kolkata',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=chakri+jibon+office+when:7d&hl=bn&gl=IN&ceid=IN:bn',
-    photoFallbackId: 'photo-1519389950473-47ba0277781c',
-    tags: '#অফিসজীবন #চাকরিরচাপ #কর্মব্যস্ততা'
-  },
-
-  // 12. Family & Home Bonds
-  {
-    category: 'Family & Home Bonds',
-    lang: 'English',
-    city: 'Melbourne',
-    country: 'Australia',
-    rssUrl: 'https://news.google.com/rss/search?q=family+love+parents+bonding+when:7d&hl=en-US&gl=US&ceid=US:en',
-    photoFallbackId: 'photo-1511895426328-dc8714191300',
-    tags: '#FamilyFirst #ParentsLove #HomeVibes #Togetherness'
-  },
-  {
-    category: 'Family & Home Bonds',
-    lang: 'Hindi',
-    city: 'Bhopal',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=parivar+ka+pyar+mata+pita+when:7d&hl=hi&gl=IN&ceid=IN:hi',
-    photoFallbackId: 'photo-1609220136736-443140cffec6',
-    tags: '#परिवारकाप्यार #मातापिता #घरकासुकून'
-  },
-  {
-    category: 'Family & Home Bonds',
-    lang: 'Bengali',
-    city: 'Dhaka',
-    country: 'Bangladesh',
-    rssUrl: 'https://news.google.com/rss/search?q=paribarer+valobasha+when:7d&hl=bn&gl=IN&ceid=IN:bn',
-    photoFallbackId: 'photo-1476703993599-0035a21b17a9',
-    tags: '#পারিবারিকভালোবাসা #মাটিরমায়া #আপনজন'
-  },
-
-  // 13. Travel & Global Adventures
-  {
-    category: 'Travel & Global Adventures',
-    lang: 'English',
-    city: 'San Francisco',
-    country: 'USA',
-    rssUrl: 'https://news.google.com/rss/search?q=travel+adventure+destinations+when:7d&hl=en-US&gl=US&ceid=US:en',
-    photoFallbackId: 'photo-1488646953014-85cb44e25828',
-    tags: '#TravelDiaries #Wanderlust #ExploreTheWorld #TravelGram'
-  },
-  {
-    category: 'Travel & Global Adventures',
-    lang: 'Hindi',
-    city: 'Manali',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=travel+yatra+pahad+when:7d&hl=hi&gl=IN&ceid=IN:hi',
-    photoFallbackId: 'photo-1476514525535-07fb3b4ae5f1',
-    tags: '#यात्राडायरी #पहाड़ोंकासफर #घुमक्कड़ी'
-  },
-  {
-    category: 'Travel & Global Adventures',
-    lang: 'Bengali',
-    city: 'Darjeeling',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=bhromon+pahad+ghora+when:7d&hl=bn&gl=IN&ceid=IN:bn',
-    photoFallbackId: 'photo-1503220317375-aaad61436b1b',
-    tags: '#ভ্রমণকাহিনী #পাহাড়েরটান #পথেরনেশা'
-  },
-
-  // 14. Tech, AI & Future World
-  {
-    category: 'Tech, AI & Future World',
-    lang: 'English',
-    city: 'San Francisco',
-    country: 'USA',
-    rssUrl: 'https://techcrunch.com/feed/',
-    photoFallbackId: 'photo-1518770660439-4636190af475',
-    tags: '#TechNews #ArtificialIntelligence #FutureTech #Innovation'
-  },
-  {
-    category: 'Tech, AI & Future World',
-    lang: 'Hindi',
-    city: 'Noida',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=technology+ai+smartphones+when:24h&hl=hi&gl=IN&ceid=IN:hi',
-    photoFallbackId: 'photo-1526374965328-7f61d4dc18c5',
-    tags: '#तकनीक #एआईक्रांति #TechHindi'
-  },
-  {
-    category: 'Tech, AI & Future World',
-    lang: 'Bengali',
-    city: 'Dhaka',
-    country: 'Bangladesh',
-    rssUrl: 'https://news.google.com/rss/search?q=projukti+ai+notun+gadgets+when:24h&hl=bn&gl=IN&ceid=IN:bn',
-    photoFallbackId: 'photo-1486312338219-ce68d2c6f44d',
-    tags: '#প্রযুক্তি #কৃত্রিমবুদ্ধিমত্তা #ডিজিটালবিশ্ব'
-  },
-
-  // 15. Fitness, Health & Lifestyle
-  {
-    category: 'Fitness, Health & Lifestyle',
-    lang: 'English',
-    city: 'Sydney',
-    country: 'Australia',
-    rssUrl: 'https://news.google.com/rss/search?q=fitness+workout+wellness+when:7d&hl=en-US&gl=US&ceid=US:en',
-    photoFallbackId: 'photo-1517838277536-f5f99be501cd',
-    tags: '#FitnessMotivation #HealthyLiving #WorkoutDaily #Wellness'
-  },
-  {
-    category: 'Fitness, Health & Lifestyle',
-    lang: 'Hindi',
-    city: 'Chandigarh',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=sehat+fitness+vyayam+when:7d&hl=hi&gl=IN&ceid=IN:hi',
-    photoFallbackId: 'photo-1534438327276-14e5300c3a48',
-    tags: '#स्वास्थ्य #फिटनेसकीबात #स्वस्थरहो'
-  },
-  {
-    category: 'Fitness, Health & Lifestyle',
-    lang: 'Bengali',
-    city: 'Kolkata',
-    country: 'India',
-    rssUrl: 'https://news.google.com/rss/search?q=shastho+byayam+fitness+when:7d&hl=bn&gl=IN&ceid=IN:bn',
-    photoFallbackId: 'photo-1517838277536-f5f99be501cd',
-    tags: '#সুস্বাস্থ্য #ব্যায়াম #শরীরচর্চা'
-  }
+  // Memes / Funny
+  { category: 'Funny, Memes & Sarcasm', lang: 'English', city: 'New York', country: 'USA', query: 'trending+memes+funny', tags: '#FunnyTweet #MemeDaily #Sarcasm' },
+  { category: 'Funny, Memes & Sarcasm', lang: 'Hindi', city: 'Pune', country: 'India', query: 'funny+jokes+memes+viral', tags: '#मजेदारमीम्स #देसीह्यूमर #हंसतेरहो' },
+  { category: 'Funny, Memes & Sarcasm', lang: 'Bengali', city: 'Howrah', country: 'India', query: 'bangla+comedy+memes+viral', tags: '#মজারপোস্ট #হাসিরট্রিক #বাঙালিমিমস' }
 ];
 
-// ============================================================
-// 15 CATEGORY SPECIFIC COMMENTS (Strictly Matched)
-// ============================================================
+// Strict Category Comments
 const CATEGORY_COMMENTS: Record<string, { English: string[]; Hindi: string[]; Bengali: string[] }> = {
   'News & Breaking Headlines': {
     English: ['Following this breaking situation closely.', 'Hope the authorities take immediate action.', 'Thanks for the timely update.'],
     Hindi: ['सुबह से इस खबर की चर्चा चल रही है।', 'प्रशासन को तुरंत ध्यान देना चाहिए।', 'सटीक और जरूरी अपडेट भाई।'],
     Bengali: ['সকাল থেকেই এই খবরটা নিয়ে তোলপাড় চলছে।', 'প্রশাসনের দ্রুত ব্যবস্থা নেওয়া দরকার।', 'সঠিক সময় লাইভ আপডেট দেওয়ার জন্য ধন্যবাদ।']
-  },
-  'Politics & Public Debate': {
-    English: ['A very rational and balanced viewpoint on this policy.', 'Ground reality is always different from promises.', 'Spot on analysis.'],
-    Hindi: ['वादे बड़े होते हैं पर जमीनी हकीकत कुछ और है।', 'बिल्कुल निष्पक्ष राय रखी है आपने।', 'इस मुद्दे पर बात होना बहुत जरूरी था।'],
-    Bengali: ['রাজনীতিতে সাধারণ মানুষের স্বার্থটাই হারিয়ে যায়।', 'যুক্তিপূর্ণ বিশ্লেষণ, একমত হলাম।', 'এই বিষয়ে আলোচনা হওয়া প্রয়োজন ছিল।']
   },
   'Cricket Mania': {
     English: ['What an absolute nail-biting encounter!', 'That over was pure cinema.', 'Cricket at its absolute peak!'],
@@ -486,51 +64,6 @@ const CATEGORY_COMMENTS: Record<string, { English: string[]; Hindi: string[]; Be
     English: ['I cannot stop laughing at this!', 'The accuracy in this hurts.', 'Shared to my group chat immediately!'],
     Hindi: ['हंसते-हंसते लोटपोट हो गए!', 'ये तो मेरे ही दोस्त की हरकत लग रही है।', 'सेंस ऑफ ह्यूमर कमाल है भाई आपका।'],
     Bengali: ['হাসতে হাসতে পেট ব্যথা হয়ে গেল ভাই!', 'একদম নিখুঁত কমেডি টাইমিং।', 'বন্ধুদের গ্রুপে এখনই পাঠাচ্ছি হাসির জন্য।']
-  },
-  'True Love & Soul Connections': {
-    English: ['Beautifully written and deeply moving.', 'Pure love stories like this are rare now.', 'Made me smile so genuinely.'],
-    Hindi: ['सच्ची मोहब्बत की बात ही अलग होती है।', 'दिल को छू लेने वाले सच्चे शब्द हैं।', 'काश हर किसी को ऐसा प्यार मिले।'],
-    Bengali: ['পড়ে চোখে জল চলে এলো, খুব সুন্দর লিখেছো।', 'ভালোবাসা এমনই অমূল্য হওয়া উচিত।', 'নিজের মিষ্টি স্মৃতিগুলোর কথা মনে পড়ে গেল।']
-  },
-  'Heartbreak & Pain': {
-    English: ['Healing takes time, stay strong.', 'Felt every single word of this.', 'Better days are ahead, hang in there.'],
-    Hindi: ['वक्त हर जख्म भर देता है भाई, हिम्मत रखो।', 'अधूरी मोहब्बत का दर्द सबसे गहरा होता है।', 'महसूस हुआ तुम्हारा हर एक लफ्ज।'],
-    Bengali: ['শক্ত হও বন্ধু, সময় সব ক্ষত সারিয়ে দেবে।', 'আমরা সবাই কোনো না কোনো রাতে এভাবে ভেঙেছি।', 'লেখাটা মনের গভীরে দাগ কেটে গেল।']
-  },
-  'Motivational Quotes & Resilience': {
-    English: ['Exactly the motivation I needed today.', 'Never back down, keep grinding.', 'Solid perspective, respect.'],
-    Hindi: ['दिन की शुरुआत के लिए यही हौसला चाहिए था!', 'हार मानना कोई विकल्प नहीं है।', 'बहुत ही शानदार और हिम्मत देने वाला पोस्ट।'],
-    Bengali: ['ঠিক এই কথাটাই আজ শোনার খুব দরকার ছিল!', 'হাল ছাড়া যাবে না, লড়াই চলবে।', 'দারুণ প্রেরণাদায়ক লেখা, ধন্যবাদ।']
-  },
-  'Real Life Struggles & Stories': {
-    English: ['The raw honesty in this story is unmatched.', 'Reminds me of my family struggles.', 'Respect for everyone fighting silent battles.'],
-    Hindi: ['यही तो असल जिंदगी की जमीनी सच्चाई है।', 'मध्यम वर्ग का दर्द कोई नहीं समझता।', 'दिल को छू लेने वाली सच्ची बात।'],
-    Bengali: ['একদম আমাদের জীবনের বাস্তব রূপ ফুটে উঠেছে।', 'লড়াইটাই সাধারণ মানুষের আসল পরিচয়।', 'সত্যি কথা সাহসের সাথে তুলে ধরেছো।']
-  },
-  'Work & Corporate Hustle': {
-    English: ['Every corporate employee felt this deep in their soul.', 'Work life balance has become completely fictional.', 'Counting down the hours until Friday night.'],
-    Hindi: ['ये तो मेरी ही ऑफिस लाइफ की कहानी है।', 'सैलरी आते ही बिल भरने में उड़ जाती है।', 'वीकेंड कब आएगा बस इसी का इंतजार रहता है।'],
-    Bengali: ['অফিসে বসে এই পোস্টটা পড়তে গিয়ে দীর্ঘশ্বাস বেরোল।', 'ছুটির দিনটাও অফিস মেইল চেক করতে করতে যায়।', 'কাজের চাপে নিজের জীবনটাই হারিয়ে গেছে।']
-  },
-  'Family & Home Bonds': {
-    English: ['Nothing in this world replaces family warmth.', 'Calling my parents right now after reading this.', 'Cherishing these precious memories forever.'],
-    Hindi: ['मां-बाप के बिना घर सूना लगता है।', 'परिवार की अहमियत हर सुख से ऊपर है।', 'पढ़कर मन बहुत भावुक हो गया।'],
-    Bengali: ['পোস্টটা পড়ে মায়ের হাতের রান্নার কথা খুব মনে পড়ল।', 'পরিবারের চেয়ে বড় শান্তির আশ্রয় আর কিছু নেই।', 'খুব মিষ্টি আর আবেগঘন একটা লেখা।']
-  },
-  'Travel & Global Adventures': {
-    English: ['Adding this location to my bucket list right now!', 'Breathtaking visual and great trip notes.', 'Traveling keeps the human spirit alive.'],
-    Hindi: ['तस्वीर देखकर ही दिल खुश हो गया!', 'अगली ट्रिप की प्लानिंग अब पक्की है।', 'सफर का असली आनंद ऐसे ही अनछुए रास्तों में है।'],
-    Bengali: ['ছবিটা দেখে এখনই ব্যাগ গুছিয়ে বেরিয়ে পড়তে ইচ্ছে করছে!', 'এই জায়গাটার বিস্তারিত রুট ম্যাপটা দিও।', 'ভ্রমণের অনুভূতি নিখুঁত বর্ণনা করেছো।']
-  },
-  'Tech, AI & Future World': {
-    English: ['AI pace is truly mind-boggling right now.', 'Continuous learning is the only shield.', 'Insightful perspective on modern tech culture.'],
-    Hindi: ['AI जिस तेजी से बढ़ रहा है, अपडेट रहना जरूरी है।', 'टेक्नोलॉजी ने काम आसान किया है पर नई चुनौतियां भी हैं।', 'बेहतरीन और उपयोगी टेक अपडेट।'],
-    Bengali: ['প্রযুক্তি যে গতিতে এগোচ্ছে তাতে তৈরি থাকতেই হবে।', 'এআই নিয়ে আলোচনাটা বর্তমান সময়ের জন্য খুবই প্রাসঙ্গিক।', 'নতুন টেকনোলজি সত্যিই চমৎকার।']
-  },
-  'Fitness, Health & Lifestyle': {
-    English: ['Consistency is the key to healthy living.', 'Setting goals and smashing them every single day.', 'Great daily reminder!'],
-    Hindi: ['सेहत ही असली दौलत है, सही बात कही।', 'रोज अनुशासन बनाए रखना सबसे जरूरी है।', 'शानदार फिटनेस मोटिवेशन!'],
-    Bengali: ['শারীরিক সুস্থতাই জীবনের সবচেয়ে বড় সম্পদ।', 'নিয়ম মেনে চলাই দীর্ঘমেয়াদী উন্নতির চাবিকাঠি।', 'দারুণ পোস্ট, ধন্যবাদ।']
   }
 };
 
@@ -557,79 +90,93 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    // 1. Randomly pick from 15 categories pool
-    const target = FEEDS_REGISTRY[Math.floor(Math.random() * FEEDS_REGISTRY.length)];
-    const rssJsonUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(target.rssUrl)}`;
+    const target = SOURCES[Math.floor(Math.random() * SOURCES.length)];
+    
+    // Live Real News/Topic Fetching from Google News RSS
+    const hlCode = target.lang === 'Bengali' ? 'bn' : target.lang === 'Hindi' ? 'hi' : 'en-IN';
+    const glCode = target.lang === 'English' ? 'US' : 'IN';
+    const rssUrl = `https://news.google.com/rss/search?q=${target.query}+when:24h&hl=${hlCode}&gl=${glCode}&ceid=${glCode}:${hlCode}`;
+    const rssJsonUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
 
-    let headline = '';
-    let rawPhotoUrl = '';
+    let realHeadline = '';
+    let realMediaPhoto = '';
 
     try {
-      const feedRes = await fetch(rssJsonUrl, { signal: AbortSignal.timeout(4000) });
+      const feedRes = await fetch(rssJsonUrl, { signal: AbortSignal.timeout(4500) });
       if (feedRes.ok) {
         const feedData = await feedRes.json();
         const items = feedData.items || [];
-        if (items.length > 0) {
-          const item = items[Math.floor(Math.random() * Math.min(items.length, 5))];
-          headline = item.title || '';
-
-          if (item.enclosure && item.enclosure.link && !item.enclosure.link.endsWith('.mp4')) {
-            rawPhotoUrl = item.enclosure.link;
-          } else {
-            const desc = item.description || '';
-            const match = desc.match(/<img[^>]+src="([^">]+)"/i);
-            if (match && match[1]) rawPhotoUrl = match[1];
+        for (const item of items) {
+          if (item.title && item.title.length > 20) {
+            realHeadline = item.title.split(' - ')[0]; // Source name hatana
+            
+            // Image extract karna
+            if (item.enclosure && item.enclosure.link && !item.enclosure.link.endsWith('.mp4')) {
+              realMediaPhoto = item.enclosure.link;
+            } else if (item.description) {
+              const m = item.description.match(/src="([^"]+)"/i);
+              if (m && m[1]) realMediaPhoto = m[1];
+            }
+            if (realHeadline) break;
           }
         }
       }
     } catch (e) {}
 
-    // Agar RSS image na de, toh verified category photography (No random wallpapers)
-    if (!rawPhotoUrl) {
-      rawPhotoUrl = `https://images.unsplash.com/${target.photoFallbackId}?auto=format&fit=crop&w=720&h=480&q=80`;
+    // Agar RSS image na de toh us specific category ki exact real photo (No puppy/dog photo in news!)
+    if (!realMediaPhoto) {
+      const tagMap: Record<string, string> = {
+        'News & Breaking Headlines': 'breaking-news',
+        'Cricket Mania': 'cricket-match',
+        'Football & World Sports': 'football-stadium',
+        'Entertainment, Cinema & Pop Culture': 'movie-theater',
+        'Funny, Memes & Sarcasm': 'funny-meme'
+      };
+      const cleanTag = tagMap[target.category] || 'world-city';
+      realMediaPhoto = `https://loremflickr.com/720/480/${cleanTag}?random=${Date.now() % 1000}`;
     }
 
-    // 2. Strict 90-100 Words AI X-Style Generation
-    const promptTopic = headline || `${target.category} ongoing discussion in ${target.city}`;
-    const langRule = target.lang === 'Bengali' ? 'Bengali (বাংলা লিপি)' : target.lang === 'Hindi' ? 'Hindi (देवनागरी)' : 'English';
+    // AI se 90-100 words ka proper ground-reality tweet
+    const topicText = realHeadline || `${target.category} ground discussion in ${target.city}`;
+    const langRule = target.lang === 'Bengali' ? 'Bengali (বাংলা হরফ)' : target.lang === 'Hindi' ? 'Hindi (देवनागरी)' : 'English';
 
-    const prompt = `Convert this real current topic into a viral authentic post for X (formerly Twitter): "${promptTopic}".
-Location: ${target.city}, ${target.country} (citizen/eyewitness perspective).
+    const prompt = `Write a viral real-world citizen post for X (formerly Twitter) about: "${topicText}".
+Location: ${target.city}, ${target.country}.
 Language: Strictly ${langRule}.
-MANDATORY RULES:
-1. WORD COUNT: Strictly between 90 and 100 words in total. (Do not write a short 20-word summary, write a full 90-100 words thought).
-2. TONE: Everyday citizen sharing on X, emotional public reaction, no robotic introductions.
-3. HASHTAGS: End with 3-4 trending hashtags: ${target.tags} #${target.city.replace(/\s+/g, '')}.
-4. Return clean plain text only.`;
+STRICT MANDATORY RULES:
+1. TOTAL WORD COUNT: MUST be strictly between 90 and 100 words. (Do not write a short summary).
+2. TONE: Common citizen eyewitness voice, authentic reaction, no greetings, no robotic setups.
+3. HASHTAGS: Finish with 3-4 trending hashtags: ${target.tags} #${target.city.replace(/\s+/g, '')}.
+4. Return raw text only.`;
 
     let postText = '';
     try {
       const aiRes = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}?seed=${Date.now()}&model=openai`, {
-        signal: AbortSignal.timeout(4500)
+        signal: AbortSignal.timeout(6000)
       });
       if (aiRes.ok) {
         const raw = (await aiRes.text()).trim().replace(/^["']|["']$/g, '');
-        if (raw && !raw.includes('error') && raw.split(/\s+/).length >= 75) {
+        if (raw && !raw.includes('error') && raw.split(/\s+/).filter(Boolean).length >= 75) {
           postText = raw;
         }
       }
     } catch (e) {}
 
-    // Fallback if AI delays
+    // Full 90-100 words fallback agar AI late kare (Headline ke saath jud kar real lagega)
     if (!postText) {
       if (target.lang === 'Bengali') {
-        postText = `আজকের সকালে ${target.city} শহরে এই ঘটনাকে কেন্দ্র করে স্থানীয় বাসিন্দাদের মধ্যে তীব্র আলোচনা শুরু হয়েছে। সাধারণ মানুষ প্রশাসনের দ্রুত হস্তক্ষেপ দাবি করছেন। নিত্যদিনের কাজের মাঝে এমন পরিস্থিতি সত্যিই উদ্বেগজনক। পরিকাঠামোর স্থায়ী সমাধান না হলে এই সমস্যার পুনরাবৃত্তি ঘটবেই। ডিজিটাল যুগে উন্নয়নের কথা বলা হলেও সাধারণ মানুষের অভিজ্ঞতা কিন্তু ভিন্ন কথা বলছে। জনস্বার্থে এই বিষয়ে সবার সোচ্চার হওয়া উচিত। ${target.tags} #${target.city.replace(/\s+/g, '')}`;
+        postText = `আজকের সকালে ${target.city} শহরে "${topicText}" নিয়ে মানুষের মধ্যে ব্যাপক আলোচনা ও আলোড়ন তৈরি হয়েছে। প্রত্যক্ষদর্শীদের মতে পরিস্থিতি কিন্তু সাধারণ মানুষের পক্ষে বেশ জটিল হয়ে উঠছে। সামাজিক মাধ্যমে প্রত্যেকেই নিজেদের মতামত প্রকাশ করছেন এবং প্রশাসনের কার্যকর ভূমিকার অপেক্ষায় রয়েছেন। ডিজিটাল যুগের বড় বড় প্রতিশ্রুতির তুলনায় বাস্তব জীবনের অভিজ্ঞতা একেবারেই আলাদা। পরিকাঠামোর সঠিক সংস্কার না হলে সাধারণ নাগরিকের সমস্যা দূর হবে না। এই বিষয়ে অবিলম্বে সবার একজোট হয়ে সঠিক পদক্ষেপ চাওয়া উচিত। ${target.tags} #${target.city.replace(/\s+/g, '')}`;
       } else if (target.lang === 'Hindi') {
-        postText = `आज सुबह ${target.city} से सामने आई इस घटना ने आम जनता का ध्यान अपनी तरफ खींच लिया है। सोशल मीडिया पर लोग लगातार अपनी राय रख रहे हैं और प्रशासन से कड़े कदमों की उम्मीद कर रहे हैं। रोजमर्रा की जिंदगी में ऐसी परेशानियां नागरिकों के सब्र का इम्तिहान लेती हैं। बुनियादी व्यवस्था को मजबूत किए बिना कोई भी शहर आगे नहीं बढ़ सकता। जमीनी हकीकत को समझना और उसे सुधारना सबसे बड़ी प्राथमिकता होनी चाहिए। ${target.tags} #${target.city.replace(/\s+/g, '')}`;
+        postText = `आज सुबह ${target.city} से सामने आई खबर "${topicText}" ने आम नागरिकों और सोशल मीडिया पर सभी का ध्यान खींच लिया है। जमीनी स्तर पर मौजूद लोग इस स्थिति को लेकर लगातार अपनी चिंता व्यक्त कर रहे हैं। रोजमर्रा की भागदौड़ में ऐसी घटनाएं जनता के सब्र का कड़ा इम्तिहान लेती हैं। सरकारी दावों और जमीनी हकीकत के बीच का यह अंतर साफ दिखाई देता है। जब तक बुनियादी व्यवस्थाओं में सुधार नहीं होगा, तब तक आम इंसान राहत की सांस नहीं ले पाएगा। प्रशासन को इस दिशा में तुरंत जिम्मेदारी लेनी चाहिए। ${target.tags} #${target.city.replace(/\s+/g, '')}`;
       } else {
-        postText = `Significant conversations are unfolding across ${target.city} today as citizens actively debate the ongoing developments on ground. Public accountability and transparent communication from local authorities remain essential right now. While progressive planning is regularly promised, the day-to-day reality experienced by common residents tells a completely different story. Structured long-term reforms are urgently required to ensure community welfare and stability moving forward. ${target.tags} #${target.city.replace(/\s+/g, '')}`;
+        postText = `Significant conversations are erupting across ${target.city} today regarding "${topicText}" as local citizens actively debate the ongoing developments on ground. Eyewitness accounts emphasize that transparent accountability and swift administrative intervention are desperately required right now. While visionary promises are routinely shared online, the tangible day-to-day challenges experienced by common residents reflect an entirely different truth. Systematic structural reforms must be implemented promptly to restore stability and secure long-term public welfare. ${target.tags} #${target.city.replace(/\s+/g, '')}`;
       }
     }
 
-    // 3. Cloudinary ~45-50KB Auto-Compression
-    const imageUrl = `https://res.cloudinary.com/${CLOUD_NAME}/image/fetch/f_auto,q_auto:eco,w_720,h_480,c_fill/${encodeURIComponent(rawPhotoUrl)}`;
+    // Cloudinary auto compression to ~50KB
+    const imageUrl = `https://res.cloudinary.com/${CLOUD_NAME}/image/fetch/f_auto,q_auto:eco,w_720,h_480,c_fill/${encodeURIComponent(realMediaPhoto)}`;
 
-    // 4. Save Main Post in 'open-confees' DB
+    // Save in Main Firestore DB ('open-confees')
     const nowIso = new Date().toISOString();
     const nowTime = Date.now();
     const author = getUsername(target.lang);
@@ -666,7 +213,7 @@ MANDATORY RULES:
     const postDoc = await postRes.json();
     const newPostId = postDoc.name?.split('/').pop();
 
-    // 5. Natural Slow Comments on Previous Posts (Interactions DB)
+    // Natural Slow Comments & Likes Growth
     try {
       const listRes = await fetch(
         `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions?pageSize=15&key=${POSTS_API_KEY}`
@@ -685,7 +232,6 @@ MANDATORY RULES:
         const currentLikes = parseInt(fields.likesCount?.integerValue || fields.likes?.integerValue || '0', 10);
         const pLang = detectLang(pText);
 
-        // 22% chance taaki har post ek hi sath na bhare (Slow organic growth)
         if (Math.random() < 0.22 && currentComments < 15) {
           const catPool = CATEGORY_COMMENTS[pCategory] || CATEGORY_COMMENTS['News & Breaking Headlines'];
           const commentPool = catPool[pLang] || catPool['English'];
@@ -739,10 +285,8 @@ MANDATORY RULES:
       success: true,
       id: newPostId,
       category: target.category,
-      language: target.lang,
-      location: `${target.city}, ${target.country}`,
-      imageUrl,
-      wordCount: postText.split(/\s+/).length
+      headline: realHeadline,
+      wordCount: postText.split(/\s+/).filter(Boolean).length
     });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
