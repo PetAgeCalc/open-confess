@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Header, { LegalTopic } from './components/Header';
 import HomePage from './pages/HomePage';
 import LegalPage from './pages/LegalPage';
 import { InstallModal } from './components/InstallModal';
 import CreateConfessionModal from './components/CreateConfessionModal';
+import { runAutoFeedBot } from './lib/autoFeedBot';
 
 export default function App() {
   const [regionFilter, setRegionFilter] = useState<string | null>(null);
@@ -12,6 +13,17 @@ export default function App() {
   const [refreshing, setRefreshing] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Background Auto Feed Bot: Har 15 minute me fresh worldwide post add karega
+  useEffect(() => {
+    runAutoFeedBot();
+
+    const timer = setInterval(() => {
+      runAutoFeedBot();
+    }, 15 * 60 * 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   // 1. Fresh button action
   const handleFreshClick = () => {
