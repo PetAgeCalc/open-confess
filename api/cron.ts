@@ -22,7 +22,7 @@ interface LocationProfile {
 }
 
 const LOCATIONS: LocationProfile[] = [
-  // ---- 30% INDIA + BANGLADESH (9) ----
+  // ---- 30% INDIA + BANGLADESH ----
   { city: 'Kolkata', country: 'India', langGroup: 'Bengali' },
   { city: 'Dhaka', country: 'Bangladesh', langGroup: 'Bengali' },
   { city: 'Chittagong', country: 'Bangladesh', langGroup: 'Bengali' },
@@ -32,7 +32,7 @@ const LOCATIONS: LocationProfile[] = [
   { city: 'Jaipur', country: 'India', langGroup: 'Hindi' },
   { city: 'Lucknow', country: 'India', langGroup: 'Hindi' },
   { city: 'Pune', country: 'India', langGroup: 'Hindi' },
-  // ---- 70% WORLD (21) ----
+  // ---- 70% WORLD ----
   { city: 'London', country: 'UK', langGroup: 'English' },
   { city: 'New York', country: 'USA', langGroup: 'English' },
   { city: 'Los Angeles', country: 'USA', langGroup: 'English' },
@@ -89,195 +89,76 @@ interface CategoryDef {
 
 const CATEGORIES: CategoryDef[] = [
   {
-    category: 'True Love & Soul Connections',
-    photoIds: ['photo-1518199266791-5375a83190b7', 'photo-1529333166437-7750a6dd5a70', 'photo-1516589178581-6cd7833ae3b2'],
-    bengali: 'খাঁটি ভালোবাসার গভীর টান, নিঃস্বার্থ অনুভূতি এবং আজীবন পাশে থাকার নীরব প্রতিশ্রুতি',
-    hindi: 'सच्चा प्यार, रूहानी रिश्ता और हर मुश्किल घड़ी में बिना शर्त साथ निभाने का एहसास',
-    english: 'pure unconditional love, deep emotional connection and finding home in a person',
-    tags: '#TrueLove #Soulmate #UnconditionalLove #LoveStory',
+    category: 'News & Breaking Headlines',
+    photoIds: ['photo-1495020689067-958852a7765e', 'photo-1504711434969-e33886168f5c', 'photo-1585829365295-ab7cd400c167'],
+    bengali: 'আজকের তাজা খবর, শহরের গুরুত্বপূর্ণ ঘটনা, তীব্র যানজট এবং সাধারণ মানুষের সমস্যা',
+    hindi: 'आज की बड़ी ब्रेकिंग खबर, शहर की हलचल, नए नियम और जनता पर उसका सीधा असर',
+    english: 'breaking news developments, civic infrastructure updates, inflation and daily public issues',
+    tags: '#BreakingNews #NewsAlert #CurrentAffairs #TrendingNow',
     comments: {
-      bengali: ['এই লেখাটা পড়ে চোখে জল চলে এলো, খুব সুন্দর লিখেছো।', 'ভালোবাসা এমনই হওয়া উচিত, দামি কিছু নয় দামি অনুভূতি।', 'তোমার লেখায় নিজের গল্পটা খুঁজে পেলাম।'],
-      hindi: ['काश हर किसी को ऐसा प्यार मिले, दिल छू गया।', 'सच्चे प्यार की ताकत ही अलग होती है, शानदार लिखा।', 'इसे पढ़कर अपनी कहानी याद आ गई।'],
-      english: ['This is what real love looks like, beautifully written.', 'Made me believe in love stories again.', 'Every word felt so genuine, thank you for sharing.']
+      bengali: ['এই খবরটা সকাল থেকেই দেখছি, পরিস্থিতি সত্যিই জটিল।', 'প্রশাসন কবে যে ব্যবস্থা নেবে!', 'খবরটি শেয়ার করার জন্য ধন্যবাদ।'],
+      hindi: ['सुबह से इस खबर की ही चर्चा है, प्रशासन को संज्ञान लेना चाहिए।', 'हर बार आम जनता ही पिसती है।', 'सटीक और सही अपडेट भाई।'],
+      english: ['Been monitoring this situation all morning.', 'Accountability from authorities is long overdue.', 'Critical update, thanks for posting.']
     }
   },
   {
-    category: 'Heartbreak & Pain',
-    photoIds: ['photo-1518199266791-5375a83190b7', 'photo-1516589178581-6cd7833ae3b2', 'photo-1534528741775-53994a69daeb'],
-    bengali: 'ভালোবাসার চরম বিচ্ছেদ, পুরোনো স্মৃতি আর গভীর একাকিত্ব নিয়ে বাস্তব মনের কথা',
-    hindi: 'सच्चा प्यार टूटने का दर्द, पुरानी यादें और सीने में चुभती खामोशी पर दिल की बात',
-    english: 'the quiet agony of a sudden breakup and learning to survive without them',
-    tags: '#Heartbreak #SilentPain #BrokenHeart #MovingOn',
+    category: 'Politics & Public Debate',
+    photoIds: ['photo-1541872703-74c5e44368f9', 'photo-1540910419892-4a36d2c3266c', 'photo-1529107386315-e1a2ed48a620'],
+    bengali: 'চলমান রাজনৈতিক বিতর্ক, নির্বাচনের উত্তাপ, নতুন সরকারি নীতি এবং নাগরিক অধিকার',
+    hindi: 'गरमा-गरम राजनीतिक बहस, चुनावी माहौल, नई नीतियां और आम नागरिक के हक की बात',
+    english: 'ongoing political debates, policy changes, election campaigns and citizens ground reality',
+    tags: '#PoliticsToday #PoliticalDebate #PolicyWatch #DemocracyInAction',
     comments: {
-      bengali: ['সময় সব ক্ষত সারিয়ে দেবে, শক্ত হও বন্ধু।', 'একা নও, আমরা সবাই কোনো না কোনো রাতে ভেঙেছি।', 'লেখাটা বুকের গভীরে লেগেছে।'],
-      hindi: ['वक्त सब ठीक कर देगा भाई, हिम्मत रखो।', 'दर्द बांटने से कम होता है, यहां सब अपने हैं।', 'दिल की बात बेधड़क लिखी है।'],
-      english: ['Healing is not linear, be gentle with yourself.', 'Felt every word of this. Stay strong.', 'Thank you for putting this pain into words.']
+      bengali: ['রাজনীতিতে সাধারণ মানুষের কথা কেউ ভাবে না।', 'বিতর্কের চেয়ে কাজের কাজ হওয়া জরুরি।', 'একদম স্পষ্ট মতামত, সহমত।'],
+      hindi: ['बात बिल्कुल पते की कही है आपने।', 'नेताओं के वादे और हकीकत में जमीन-आसमान का फर्क है।', 'इस मुद्दे पर बात होना बहुत जरूरी था।'],
+      english: ['Spot on analysis of modern politics.', 'Policies look good on paper, ground reality is completely different.', 'Solid perspective.']
     }
   },
   {
-    category: 'Motivational Quotes & Resilience',
-    photoIds: ['photo-1499209974431-9dddcece7f88', 'photo-1470246973918-29a93221c455', 'photo-1500530855697-b586d89ba3ee'],
-    bengali: 'হেরে না যাওয়ার প্রেরণা, জীবনের কঠিন পরিস্থিতিতে ঘুরে দাঁড়ানো এবং নিজের ওপর অটুট বিশ্বাস',
-    hindi: 'हालातों से लड़कर उठ खड़े होने की प्रेरणा, हौसलों की उड़ान और खुद पर अटूट यकीन',
-    english: 'unbreakable resilience, rising from rock bottom and conquering personal fears',
-    tags: '#Motivation #NeverGiveUp #MindsetMatters #StayStrong',
+    category: 'Entertainment, Cinema & Pop Culture',
+    photoIds: ['photo-1489599849927-2ee91cede3ba', 'photo-1514525253161-7a46d19cd819', 'photo-1478720568477-152d9b164e26'],
+    bengali: 'নতুন সিনেমার রিভিউ, বক্স অফিস ট্রেন্ড, তারকাদের খবর এবং বিনোদন জগতের চমক',
+    hindi: 'नई फिल्मों का क्रेज, बॉक्स ऑफिस रिकॉर्ड्स, सेलिब्रिटी लाइफ और ओटीटी का नया धमाका',
+    english: 'blockbuster movie reviews, box office numbers, celebrity updates and viral pop culture',
+    tags: '#EntertainmentNews #CinemaLovers #Bollywood #PopCulture',
     comments: {
-      bengali: ['ঠিক সময়ে এই পোস্টটা পড়লাম, ধন্যবাদ।', 'হাল ছাড়লে তো আর কিছুই নেই, এগিয়ে চলো।', 'প্রেরণার আসল সংজ্ঞা এই লেখায়।'],
-      hindi: ['बहुत जरूरी बात लिखी है, शुक्रिया।', 'हार मान ली तो सब खत्म, लड़ते रहो।', 'ये पढ़कर फिर से उठने का मन कर रहा है।'],
-      english: ['Exactly what I needed to hear today.', 'Never quit, this post says it all.', 'Saving this for the hard days. Respect.']
+      bengali: ['সিনেমাটা আমিও দেখেছি, অনবদ্য কাজ!', 'গানগুলো অসাধারণ হয়েছে।', 'উইকএন্ডে টিকিট বুক করতে হবে এবার।'],
+      hindi: ['फर्स्ट डे फर्स्ट शो देखा था, पैसा वसूल!', 'अभिनय कमाल का था सबका।', 'OTT पर आने का इंतजार नहीं हो रहा।'],
+      english: ['The cinematography in this was top tier.', 'Totally agreed with your take on this release.', 'Going to watch it this weekend for sure.']
     }
   },
   {
-    category: 'Real Life Struggles & True Stories',
-    photoIds: ['photo-1477959858617-67f30bc75b82', 'photo-1480714378408-67cf0d13bc1b', 'photo-1449824913935-59a10b8d2000'],
-    bengali: 'মধ্যবিত্ত পরিবারের লড়াই, সমাজের ভণ্ডামি আর সাধারণ মানুষের টিকে থাকার বাস্তব গল্প',
-    hindi: 'मिडिल क्लास की बेबसी, महंगाई और समाज के दोगलेपन पर एक आम इंसान की सच्ची कहानी',
-    english: 'raw real-life struggles of ordinary people surviving an unfair system with dignity',
-    tags: '#RealStory #LifeStruggles #RealityCheck #CommonMan',
+    category: 'Funny, Memes & Sarcasm',
+    photoIds: ['photo-1514888286974-6c03e2ca1dba', 'photo-1537151608828-ea2b11777ee8', 'photo-1543610892-0b1f7e6d8ac1'],
+    bengali: 'সোশ্যাল মিডিয়ার মজার ভাইরাল কাণ্ড, ব্যঙ্গাত্মক রসিকতা এবং দৈনন্দিন জীবনের হাসির গল্প',
+    hindi: 'इंटरनेट के फनी वायरल मोमेंट्स, मजेदार व्यंग्य और जिंदगी के अजीबोगरीब हास्य',
+    english: 'viral internet memes, witty sarcasm, awkward fails and hilarious everyday relatable irony',
+    tags: '#FunnyTweet #MemeDaily #SarcasmCentral #DesiHumor',
     comments: {
-      bengali: ['একদম বাস্তব কথা, সাধারণ মানুষের জীবন এমনই।', 'তোমার গল্পে আমার বাবার ছায়া দেখলাম।', 'সত্যি লিখেছো, এই সমাজে টিকে থাকাটাই যুদ্ধ।'],
-      hindi: ['यही तो असली जिंदगी है, सटीक लिखा।', 'इसमें मेरे पिताजी की कहानी दिखी।', 'सच कड़वा होता है, लेकिन जरूरी भी।'],
-      english: ['This is the reality nobody talks about.', 'Your story sounds like my father\'s life.', 'Honest writing like this is rare now.']
-    }
-  },
-  {
-    category: 'Local News & Public Reality',
-    photoIds: ['photo-1495020689067-958852a7765e', 'photo-1504711434969-e33886168f5c', 'photo-1477959858617-67f30bc75b82'],
-    bengali: 'শহরের প্রতিদিনের বাস্তব সমস্যা, যানজট, ভাড়া বৃদ্ধি আর সাধারণ মানুষের ভোগান্তি',
-    hindi: 'शहर की ताजा खबरें, ट्रैफिक, बढ़ती कीमतें और आम जनता की रोजमर्रा की परेशानी',
-    english: 'today\'s local city issues, traffic chaos, rising prices and everyday civic struggles',
-    tags: '#LocalNews #CityLife #PublicIssues #TrendingNow',
-    comments: {
-      bengali: ['এই সমস্যাটা আমাদের এলাকাতেও একই।', 'প্রশাসন কবে চোখ খুলবে কে জানে।', 'সত্যি কথা, প্রতিদিনই এটা মাথায় নিয়ে বেরোই।'],
-      hindi: ['हमारे इलाके में भी यही हाल है।', 'प्रशासन कब जागेगा, कोई नहीं जानता।', 'रोज इसी झमेले से गुजरना पड़ता है।'],
-      english: ['Same story in every corner of this city.', 'When will the authorities actually wake up?', 'Dealing with this every single day is exhausting.']
-    }
-  },
-  {
-    category: 'Global News & World Affairs',
-    photoIds: ['photo-1451187580459-43490279c0fa', 'photo-1521295121783-8a321d551ad2', 'photo-1454165804606-c3d57bc86b40'],
-    bengali: 'বিশ্বজুড়ে চলমান বড় ঘটনা, আন্তর্জাতিক রাজনীতি এবং গ্লোবাল অর্থনীতির প্রভাব নিয়ে আলোচনা',
-    hindi: 'दुनिया भर की बड़ी घटनाएं, अंतरराष्ट्रीय राजनीति और वैश्विक मंदी का असर',
-    english: 'major world events, international politics and how global changes affect ordinary lives',
-    tags: '#WorldNews #GlobalAffairs #BreakingNews #Geopolitics',
-    comments: {
-      bengali: ['বিশ্ব পরিস্থিতি সত্যিই চিন্তার, ভালো বিশ্লেষণ।', 'এই খবরটা আমিও ফলো করছি।', 'সাধারণ মানুষের ওপর এর প্রভাবটাই সবচেয়ে বড়।'],
-      hindi: ['वैश्विक हालात सच में चिंताजनक हैं।', 'ये खबर मैं भी फॉलो कर रहा हूं।', 'आम आदमी पर इसका असर सबसे ज्यादा है।'],
-      english: ['The world situation is genuinely concerning.', 'Been following this story closely too.', 'Ordinary people always pay the price.']
-    }
-  },
-  {
-    category: 'Funny & Relatable Moments',
-    photoIds: ['photo-1514888286974-6c03e2ca1dba', 'photo-1543610892-0b1f7e6d8ac1', 'photo-1537151608828-ea2b11777ee8'],
-    bengali: 'দৈনন্দিন জীবনের মজার কাণ্ড, ব্যর্থ সোশ্যাল ইন্টারেকশন এবং হাসির অভিজ্ঞতা',
-    hindi: 'लाइफ के मजेदार और अजीबोगरीब किस्से, अजीब सोशल सिचुएशंस और फनी गलतियां',
-    english: 'funny everyday awkward moments and hilarious realizations about adult life',
-    tags: '#RelatableHumor #AwkwardMoments #FunnyFails #LaughOutLoud',
-    comments: {
-      bengali: ['হাসতে হাসতে পেট ব্যথা করে গেল!', 'এটা তো আমার সাথেই হয়েছে গতকাল।', 'অন্যরকম কমেডি, দারুণ লিখেছো।'],
-      hindi: ['हंसते हंसते पेट दुख गया!', 'ये तो कल मेरे साथ भी हुआ था।', 'कमाल की sense of humour है आपकी।'],
-      english: ['I laughed way too hard at this.', 'This literally happened to me yesterday.', 'Your sense of humour is unmatched.']
-    }
-  },
-  {
-    category: 'Gaming & Esports News',
-    photoIds: ['photo-1538481199705-c710c4e965fc', 'photo-1542751371-adc38448a05e', 'photo-1511512578047-dfb367046420'],
-    bengali: 'নতুন গেম রিলিজ, এসপোর্টস টুর্নামেন্ট আপডেট, মাঝরাতের গেমিং সেশন আর ক্ল্যাচ মোমেন্ট',
-    hindi: 'नए गेम रिलीज, एस्पोर्ट्स टूर्नामेंट अपडेट, देर रात की गेमिंग और आखिरी मोमेंट की क्लच फाइट',
-    english: 'new game releases, esports tournament updates, late night grinds and clutch moments',
-    tags: '#GamingNews #Esports #GamerLife #NewReleases',
-    comments: {
-      bengali: ['কোন গেমটার কথা বলছো বলো তো, ডাউনলোড করে ফেলবো।', 'এই টুর্নামেন্টটা আমিও দেখছিলাম।', 'ক্ল্যাচটার বর্ণনা একদম সিনেমার মতো!'],
-      hindi: ['कौन सा गेम है ये, बता दो डाउनलोड करूंगा।', 'ये टूर्नामेंट मैंने भी देखा था।', 'क्लच मोमेंट का description वाह!'],
-      english: ['Which game is this? Downloading tonight.', 'Watched that tournament live, insane plays.', 'That clutch description gave me goosebumps.']
-    }
-  },
-  {
-    category: 'Work & Corporate Hustle',
-    photoIds: ['photo-1486312338219-ce68d2c6f44d', 'photo-1498050108023-c5249f4df085', 'photo-1519389950473-47ba0277781c'],
-    bengali: 'অফিসের অমানবিক প্রেশার, বসের টক্সিক রাজনীতি আর ক্যারিয়ারের ক্লান্তিকর লড়াই',
-    hindi: 'कॉर्पोरेट की 9-to-5 गुलामी, टॉक्सिक बॉस और ईএমআই के चक्कर में पिसती जिंदगी',
-    english: 'corporate burnout, impossible deadlines and pretending to love a toxic job',
-    tags: '#CorporateLife #Burnout #9to5Hustle #WorkLife',
-    comments: {
-      bengali: ['অফিসের এই গল্পটা যেন আমারটাই।', 'মাস শেষে ব্যাংক ব্যালান্স দেখলে কাঁদতে ইচ্ছে করে।', 'ছুটির দিনটাও ফোনে কাটে, কী আর বলবো।'],
-      hindi: ['ये तो मेरी ही कहानी लग रही है।', 'सैलरी आते ही EMI खा जाती है।', 'छुट्टी में भी लैपटॉप खोलना पड़ता है, क्या जीवन है।'],
-      english: ['This is literally my daily routine.', 'Salary arrives and the bills swallow it instantly.', 'Even weekends are just work from home now.']
-    }
-  },
-  {
-    category: 'Family & Relationships',
-    photoIds: ['photo-1511895426328-dc8714191300', 'photo-1609220136736-443140cffec6', 'photo-1476703993599-0035a21b17a9'],
-    bengali: 'পরিবারের ভালোবাসা, মা-বাবার ত্যাগ, ভাইবোনের ঝগড়া-মিল আর আত্মীয়দের আড্ডার গল্প',
-    hindi: 'परिवार का प्यार, मां-बाप के बलिदान, भाई-बहन की नोकझोंक और रिश्तों की मिठास',
-    english: 'family bonds, parents\' sacrifices, sibling chaos and the warmth of home',
-    tags: '#FamilyFirst #FamilyLove #HomeSweetHome #Togetherness',
-    comments: {
-      bengali: ['মা-বাবার কথা পড়ে চোখ ভিজে গেল।', 'পরিবারের চেয়ে বড় সম্পদ আর কিছু নেই।', 'ভাইবোনের এই ঝগড়াটা আমাদের বাড়িতেও হয়।'],
-      hindi: ['मां-बाप को याद कर आंख भर आई।', 'परिवार से बड़ी कोई दौलत नहीं।', 'भाई-बहन की ये नोकझोंक हर घर की कहानी है।'],
-      english: ['This made me call my mom immediately.', 'Nothing beats family, nothing at all.', 'Sibling fights are universal, I swear.']
-    }
-  },
-  {
-    category: 'Travel & Tourism',
-    photoIds: ['photo-1488646953014-85cb44e25828', 'photo-1476514525535-07fb3b4ae5f1', 'photo-1503220317375-aaad61436b1b'],
-    bengali: 'নতুন শহর ঘোরা, পাহাড়ি রাস্তা, স্থানীয় খাবার আর ভ্রমণের অভিজ্ঞতা নিয়ে বাস্তব অভিজ্ঞতা',
-    hindi: 'नई जगहों की सैर, पहाड़ी रास्ते, लोकल खाना और यात्रा के असली अनुभव',
-    english: 'exploring new cities, mountain roads, local food and real travel experiences',
-    tags: '#TravelDiaries #Wanderlust #Tourism #TravelGram',
-    comments: {
-      bengali: ['ছবিগুলো দেখে নিজেই যেতে ইচ্ছে করছে।', 'এই জায়গাটার নাম জানাবে? লিস্টে রাখছি।', 'ভ্রমণের অভিজ্ঞতা খুব সুন্দর করে লিখেছো।'],
-      hindi: ['फोटो देखकर मन कर रहा है कहीं निकल जाऊं।', 'ये जगह कहां है? बकेट लिस्ट में डाल दी।', 'ट्रैवल एक्सपीरियंस बहुत खूबसूरत लिखा है।'],
-      english: ['These photos are making me book a ticket.', 'Where is this place? Adding to my bucket list.', 'Such vivid travel writing, loved it.']
-    }
-  },
-  {
-    category: 'Pet Care & Love',
-    photoIds: ['photo-1543466835-00a7907e9de1', 'photo-1548199973-03cce0bbc87b', 'photo-1583511655857-d19b40a7a54e'],
-    bengali: 'পোষা প্রাণীর সাথে ভালোবাসার সম্পর্ক, তাদের যত্ন আর ছোট্ট পোষার মজার মুহূর্ত',
-    hindi: 'पालतू जानवरों से प्यार, उनकी देखभाल और छोटी सी जान की मस्ती भरे पल',
-    english: 'the unconditional love of pets, caring for them and their adorable daily mischief',
-    tags: '#PetLove #DogLovers #CatLovers #PetCare',
-    comments: {
-      bengali: ['আমার বাড়িতেও একটা আছে, একদম এই রকম দুষ্টু।', 'পোষা মানুষের সবচেয়ে বিশ্বস্ত বন্ধু।', 'এর মুখের ছবিটা দেখে হাসি পেল।'],
-      hindi: ['मेरे घर में भी एक ऐसा ही शैतान है।', 'पालतू जानवर सबसे वफादार दोस्त होते हैं।', 'इसकी फोटो देखकर दिल खुश हो गया।'],
-      english: ['I have one just like this at home, equally naughty.', 'Pets are the most loyal friends we get.', 'That face just made my whole day.']
-    }
-  },
-  {
-    category: 'Tech, AI & Future Anxiety',
-    photoIds: ['photo-1518770660439-4636190af475', 'photo-1526374965328-7f61d4dc18c5', 'photo-1486312338219-ce68d2c6f44d'],
-    bengali: 'প্রযুক্তির দ্রুত বদল, এআই বিপ্লব এবং ভবিষ্যতের চাকরি নিয়ে তরুণদের উদ্বেগ',
-    hindi: 'तेजी से बदलती टेक्नोलॉजी, एআই का खौफ और भविष्य के करियर की बेचैनी',
-    english: 'artificial intelligence revolution, tech burnout and anxiety about future careers',
-    tags: '#TechTrends #ArtificialIntelligence #FutureOfWork #CodingLife',
-    comments: {
-      bengali: ['এআই নিয়ে এই ভাবনাটা আমারও মাথায় ঘুরছে।', 'টেক সেক্টরের চাপ সত্যিই দিন দিন বাড়ছে।', 'নতুন স্কিল শেখা ছাড়া আর কোনো পথ নেই।'],
-      hindi: ['AI को लेकर यही डर मुझे भी सताता है।', 'टेक इंडस्ट्री का प्रेशर सच में बढ़ रहा है।', 'नई स्किल सीखे बिना कोई रास्ता नहीं।'],
-      english: ['This AI anxiety is so real right now.', 'The pressure in tech keeps increasing every year.', 'Upskilling is the only way forward now.']
+      bengali: ['হাসতে হাসতে শেষ! একদম খাটি কথা।', 'টাইমিংটা দারুণ ছিল ভাই।', 'বন্ধুদের সাথে এখনই শেয়ার করছি এটা।'],
+      hindi: ['हंसते-हंसते लोटपोट हो गए भाई!', 'ये तो मेरे दोस्त की ही कहानी लग रही है।', 'सेंस ऑफ ह्यूमर कमाल है आपका।'],
+      english: ['I cannot stop laughing at this!', 'The accuracy in this post hurts.', 'Sending this to the group chat immediately.']
     }
   }
 ];
 
+// Fallbacks strictly calibrated between 90-100 words
 const BENGALI_FALLBACKS = [
-  "যখন সব পথ বন্ধ মনে হয়, তখনই বিশ্বাস রাখতে হয় যে ভাঙা মন দিয়েই জীবনের সেরা গল্পটা শুরু হয়। হেরে যাওয়া কোনো লজ্জা নয়, কিন্তু আবার ঘুরে না দাঁড়ানোই সবচেয়ে বড় পরাজয়। সময়ের সাথে সব অন্ধকার কেটে নতুন ভোরের আলো ফুটবেই। #Motivation #NeverGiveUp #StayStrong",
-  "মেট্রোর ভিড়ে আজও তোর পরিচিত গন্ধটা যেন বাতাসে ভেসে আসে। সম্পর্ক শেষ হয়েছে ঠিকই, কিন্তু তোর জন্য বুকের ভেতরের ভালোবাসাটা এতটুকু মলিন হয়নি। হয়তো তোর গল্পে আমি নেই, কিন্তু আমার নীরব প্রার্থনায় আজও তুই আছিস। #TrueLove #Soulmate #UnspokenLove",
-  "অফিসের এই কিউবিকলে বসে প্রতিদিন কম্পিউটারের স্ক্রিনের দিকে তাকিয়ে মনে হয়, শৈশবে এই জীবনের জন্যই কি এত বড় হওয়ার স্বপ্ন দেখেছিলাম? মাস শেষে অ্যাকাউন্টে টাকা ঢোকে, কিন্তু বুকের শান্তি কোথায় যেন হারিয়ে গেছে। #CorporateLife #Burnout #9to5Hustle",
-  "ভোর পাঁচটায় জিমের মেঝে, ঘামে ভেজা টি-শার্ট আর নিজের সাথে নিজের প্রতিদিনের চুক্তি — কেউ দেখছে না, কেউ জানছেও না, তবু থামা যায় না। কারণ এই নীরব অনুশাসনই একদিন জীবনের সবচেয়ে বড় প্রতিদান দেবে, আলস্যকে হারানোর এই যুদ্ধে জয় আসবেই। #Fitness #Discipline #SelfImprovement"
+  "আজকের সকালে শহরের প্রধান রাস্তায় যে তীব্র যানজট তৈরি হয়েছিল, তাতে সাধারণ নিত্যযাত্রীদের চরম ভোগান্তির শিকার হতে হয়েছে। সময়মতো কর্মস্থলে পৌঁছানো একপ্রকার অসম্ভব হয়ে পড়েছিল। ট্রাফিক পুলিশের তৎপরতা চোখে পড়লেও পরিকাঠামোর অপ্রতুলতা স্পষ্ট। প্রতিদিন এই একই দৃশ্য দেখে মনে প্রশ্ন জাগে, প্রশাসনের স্থায়ী সমাধান কবে মিলবে? ডিজিটাল শহরের গল্প কাগজে-কলমেই সীমাবদ্ধ থেকে যাচ্ছে, অথচ সাধারণ মানুষের প্রতিদিনের জীবনের লড়াইটা এতটুকুও সহজ হচ্ছে না। উন্নয়ন তখনই সার্থক যখন রাস্তাঘাটে মানুষ স্বস্তিতে চলাচল করতে পারবে। এই বিষয়ে নাগরিক সমাজকে এখনই আরও সোচ্চার হতে হবে। #BreakingNews #LocalUpdate #CityTraffic #TrendingNow #PublicSafety",
+  "সিনেমাহলের সামনে আজকের উপচে পড়া ভিড় প্রমাণ করে দিল যে মৌলিক গল্পের কদর দর্শকরা আজও ভোলেননি। সাধারণ সংলাপের মধ্যেও যে অদ্ভুত টান লুকিয়ে ছিল, তা প্রতিটি দর্শকের মনকে নাড়া দিয়ে গেছে। সাম্প্রতিক সময়ে এত চমৎকার অভিনয় এবং আবহ সঙ্গীত সত্যিই চোখে পড়েনি। তথাকথিত তারকা খ্যাতির চেয়েও চিত্রনাট্যের শক্তি যে কত বড়, এই ছবিটি তারই বাস্তব উদাহরণ। পরিবার নিয়ে দেখার মতো এমন ইতিবাচক বিনোদন বর্তমান সময়ে খুব দরকার ছিল। উইকএন্ডে এই বিনোদন অভিজ্ঞতা সকলের মনে অনেকদিন থেকে যাবে। আশা করি বাংলা সিনেমা এমন কাজের মাধ্যমে নতুন দিগন্ত তৈরি করবে। #EntertainmentNews #CinemaLovers #MovieReview #BoxOfficeHit #PopCulture",
+  "সোশ্যাল মিডিয়ার দেওয়ালে আজ সকাল থেকেই অদ্ভুত একটি ভাইরাল মিম ঘুরছে যা দেখে হাসির দমক থামানো মুশকিল। মানুষের কল্পনাশক্তি আর দৈনন্দিন ব্যস্ততার মাঝে নিখাদ কৌতুকের মেলবন্ধন সত্যিই প্রশংসনীয়। অফিসের হাজারো কাজের চাপ আর একঘেয়েমি দূর করতে এমন হালকা ব্যঙ্গাত্মক রসিকতার বিকল্প নেই। বন্ধুদের আড্ডায় এই পোস্টটি নিয়ে যে তুমুল হাসাহাসি চলছে, তা বলাই বাহুল্য। কঠিন বাস্তবতা মেনে নিয়েও মাঝেমধ্যে মন খুলে হেসে ওঠা জীবনের জন্য অত্যন্ত জরুরি। যারা এই কঠিন সময়েও মানুষকে হাসাতে পারেন, তারা সত্যিই ধন্যবাদ পাওয়ার যোগ্য। দিনটি এক নিমেষেই সুন্দর হয়ে উঠল। #FunnyTweet #MemeDaily #SarcasmCentral #DesiHumor #LaughOutLoud"
 ];
 
 const HINDI_FALLBACKS = [
-  "जिंदगी जब इम्तिहान लेती है, तो रास्ता खुद ढूंढना पड़ता है। ठोकरें हमें गिराने के लिए नहीं, बल्कि संभलकर चलना सिखाने के लिए आती हैं। अपनी मेहनत और हिम्मत पर भरोसा रखो, वक्त तुम्हारा भी बदलेगा। #Motivation #NeverGiveUp #StayStrong",
-  "सच्चा प्यार वो नहीं जो सिर्फ हासिल करने की ख्वाहिश रखे, बल्कि वो है जो दूर रहकर भी उसकी खुशियों की दुआ मांगे। लोग कहते हैं कि वक्त सब भुला देता है, पर कुछ नाम दिल पर हमेशा के लिए छप जाते हैं। #TrueLove #Soulmate #PureLove",
-  "शहर की इस भागदौड़ में बाहर से सब कुछ बहुत सामान्य नजर आता है, लेकिन इस किराए के कमरे में हर शाम जिम्मेदारियों का बोझ घेर लेता है। मुस्कुराना तो बस एक आदत बन गई है, अंदर से तो थक चुके हैं। #MiddleClassLife #Burnout #RealityCheck",
-  "सुबह पांच बजे जिम का फर्श, पसीने से भीगी टी-शर्ट और खुद से रोज़ का वादा — कोई देख नहीं रहा, कोई जान भी नहीं रहा, फिर भी रुकना मंजूर नहीं। क्योंकि यही खामोश अनुशासन एक दिन ज़िंदगी का सबसे बड़ा इनाम बनेगा। #Fitness #Discipline #Hustle"
+  "आज सुबह से शहर के मुख्य मार्ग पर जो भारी ट्रैफिक देखने को मिला, उसने आम जनता के पसीने छुड़ा दिए। दफ्तर और जरूरी कामों के लिए निकले लोग घंटों जाम में फंसे रहे। मेट्रो और बसों में पैर रखने की जगह नहीं थी और हर कोई सिर्फ परेशान नजर आ रहा था। प्रशासन को बार-बार शिकायत करने के बाद भी व्यवस्था में कोई ठोस बदलाव नहीं दिख रहा है। बड़े-बड़े वादों और विज्ञापनों के बीच आम नागरिक की रोजमर्रा की बुनियादी समस्याएं आज भी जस की तस खड़ी हैं। यह स्थिति वास्तव में चिंताजनक है। #BreakingNews #CurrentAffairs #CityTraffic #LocalUpdate #CivicIssues",
+  "सिनेमाघरों में आज नई रिलीज हुई फिल्म को लेकर दर्शकों का उत्साह देखते ही बनता है। पहले ही दिन सिनेमा हॉल के बाहर लगी लंबी कतारें यह साबित करती हैं कि बेहतरीन कहानी का जादू कभी कम नहीं होता। कलाकारों का सधा हुआ अभिनय, दमदार बैकग्राउंड स्कोर और दिल को छू लेने वाले संवाद सीधे दर्शकों के दिलों में उतर रहे हैं। सोशल मीडिया पर भी इस फिल्म की चौतरफा तारीफ हो रही है और बॉक्स ऑफिस पर नए रिकॉर्ड बनते नजर आ रहे हैं। इस हफ्ते की यह सबसे बड़ी ब्लॉकबस्टर साबित हो चुकी है। #EntertainmentNews #Bollywood #CinemaLovers #BoxOffice #MustWatch",
+  "इंटरनेट की दुनिया में आज एक ऐसा मजेदार और व्यंग्यात्मक पोस्ट वायरल हुआ है, जिसे देखकर अपनी हंसी रोक पाना नामुमकिन है। रोजमर्रा की भागदौड़, ईएमआई की टेंशन और ऑफिस के भारी काम के बीच ऐसे फनी मोमेंट्स एक ताजी हवा के झोंके की तरह आते हैं। लोग लगातार इस पर मजेदार कमेंट्स कर रहे हैं और दोस्तों को टैग कर रहे हैं। जिंदगी चाहे कितनी भी मुश्किल क्यों न हो, ऐसे हल्के-फुल्के पल चेहरे पर मुस्कान ला ही देते हैं। सोशल मीडिया का असली मजा ऐसे ही देसी ह्यूमर में है। #FunnyTweet #MemeDaily #DesiHumor #SarcasmCentral #TrendingFun"
 ];
 
 const ENGLISH_FALLBACKS = [
-  "You did not survive all those silent battles just to give up now. Rock bottom will always teach you lessons that success never could. Keep your head up, dust yourself off, and keep moving forward. #Motivation #NeverGiveUp #Resilience",
-  "True love is quiet. It is not about grand gestures or public declarations; it is about knowing someone completely and still choosing to be their peace in a chaotic world. #TrueLove #Soulmate #DeepConnection",
-  "Adult life is just sitting in traffic after a ten-hour shift realizing how easily childhood happiness was taken for granted. We grew up only to chase deadlines and monthly bills. #CorporateLife #Burnout #AdultingHard",
-  "5 AM gym floor, a sweat-soaked t-shirt and a daily promise to myself — nobody is watching, nobody even knows, but quitting is not an option. This silent discipline will one day become the greatest reward of my life. #Fitness #Discipline #NoExcuses"
+  "The current public discourse surrounding the latest policy update has sparked widespread conversations across international platforms. Citizens are actively expressing their genuine concerns regarding the rapid economic fluctuations and public infrastructure limitations. Analysts observe that while progressive planning sounds impressive during press conferences, the tangible impact on ordinary households remains minimal and challenging. Transparent communication and swift execution from local authorities are urgently required right now. Without structured reforms, the growing divide between executive decisions and ground realities will only widen further as public dissatisfaction continues to escalate globally today. #BreakingNews #WorldNews #CurrentAffairs #PublicVoice #TrendingAlert",
+  "The latest global cinematic release has officially shattered expectations with its breathtaking visual storytelling and deeply moving character performances. Fans worldwide are packing theaters, creating a vibrant buzz rarely seen in contemporary cinema lately. The meticulous direction and compelling narrative explore profound emotional themes while delivering unmatched entertainment value from start to finish. Critics and casual moviegoers alike are sharing unanimous praise across social feeds, making it the most discussed pop culture phenomenon this month. Truly a landmark artistic triumph that reminds everyone why going to the big screen will always be special. #EntertainmentNews #BoxOffice #CinemaLovers #MovieReview #PopCulture",
+  "A hilarious internet meme comparing adult work life to modern existential crises is currently breaking timelines with unmatched engagement. The biting sarcasm and painfully relatable humor have struck an instant chord with millions navigating grueling weekly schedules and corporate burnout. People are joyfully flooding replies with personal anecdotes that turn daily frustrations into collective comedic relief. Sometimes pure unhinged laughter remains the healthiest coping mechanism available to survive chaotic adulting routines. A brilliant reminder not to take every single stressful situation too seriously when you can simply choose to smile instead. #FunnyTweet #MemeDaily #SarcasmCentral #RelatableHumor #ViralLaughs"
 ];
 
 function detectLang(text: string, city: string): 'Bengali' | 'Hindi' | 'English' {
@@ -317,54 +198,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const nowIso = new Date().toISOString();
     const nowTime = Date.now();
 
-    // 1. AI Post Generation (Strict 2.8s Timeout for Instant Delivery)
+    // 1. AI Real X (Twitter) Post Generation (Strict 90-100 Words + Hashtags)
     let postText = '';
     const promptTopic = targetLang === 'Bengali' ? cat.bengali : targetLang === 'Hindi' ? cat.hindi : cat.english;
     const langRule = targetLang === 'Bengali' ? 'Bengali (বাংলা লিপি)' : targetLang === 'Hindi' ? 'Hindi (देवनागरी लिपि)' : 'English';
 
-    const prompt = `Write an authentic Facebook trending feed post about: "${promptTopic}".
-Location: ${loc.city}, ${loc.country} (mention this place naturally in the post).
+    const prompt = `Write a viral, authentic real-world post for the platform X (formerly Twitter) about: "${promptTopic}".
+Location reference: ${loc.city}, ${loc.country} (incorporate this naturally as a real eyewitness/citizen perspective).
 Category: ${cat.category}.
 Language: Strictly ${langRule}.
-MANDATORY RULES:
-- Length: STRICTLY between 90 and 100 words.
-- Tone: Emotional, highly engaging, authentic human voice.
-- HASHTAGS: At the very end append exactly 3 to 5 trending hashtags (e.g., ${cat.tags} #${loc.city.replace(/\s+/g, '')}).
-- Plain raw text only.`;
+MANDATORY CONSTRAINTS:
+- Length: STRICTLY between 90 and 100 words in total.
+- Tone: Real human post on X, raw citizen reaction, no AI clichés, no introductory meta-announcements.
+- HASHTAGS: End the post with exactly 3 to 5 realistic trending hashtags (e.g., ${cat.tags} #${loc.city.replace(/\s+/g, '')}).
+- Return plain raw post text only.`;
 
     try {
       const aiRes = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}?seed=${nowTime}&model=openai`, {
-        signal: AbortSignal.timeout(2800)
+        signal: AbortSignal.timeout(3000)
       });
       if (aiRes.ok) {
         const raw = (await aiRes.text()).trim().replace(/^["']|["']$/g, '');
         if (raw && !raw.includes('"error"') && !raw.includes('deprecat')) {
-          const words = raw.split(/\s+/).length;
-          if (words >= 75 && words <= 125) postText = raw;
+          const words = raw.split(/\s+/).filter(Boolean).length;
+          if (words >= 80 && words <= 115) postText = raw;
         }
       }
     } catch (e) {}
 
-    // Fallback if AI delays
+    // Fallback if AI delays or breaches word count
     if (!postText) {
       if (targetLang === 'Bengali') {
-        postText = BENGALI_FALLBACKS[Math.floor(Math.random() * BENGALI_FALLBACKS.length)].replace('এই শহরের', `${loc.city} শহরের`).replace('শহরের', `${loc.city} শহরের`);
+        postText = BENGALI_FALLBACKS[Math.floor(Math.random() * BENGALI_FALLBACKS.length)].replace('শহরের', `${loc.city} শহরের`);
       } else if (targetLang === 'Hindi') {
-        postText = HINDI_FALLBACKS[Math.floor(Math.random() * HINDI_FALLBACKS.length)].replace('शहर की', `${loc.city} की`);
+        postText = HINDI_FALLBACKS[Math.floor(Math.random() * HINDI_FALLBACKS.length)].replace('शहर के', `${loc.city} के`);
       } else {
         postText = ENGLISH_FALLBACKS[Math.floor(Math.random() * ENGLISH_FALLBACKS.length)];
-        if (postText.includes('this city')) postText = postText.replace('this city', loc.city);
       }
     }
 
-    // 2. Ultra-Fast Cloudinary Auto-Compression URL (0.01 sec execution, ~45KB WebP)
-    const validPhotoIds = cat.photoIds && cat.photoIds.length > 0 ? cat.photoIds : ['photo-1518199266791-5375a83190b7'];
+    // 2. Real Photography Cloudinary Image Fetch (Clean candid photos)
+    const validPhotoIds = cat.photoIds && cat.photoIds.length > 0 ? cat.photoIds : ['photo-1495020689067-958852a7765e'];
     const selectedPhotoId = validPhotoIds[Math.floor(Math.random() * validPhotoIds.length)];
-    const rawSourceUrl = `https://images.unsplash.com/${selectedPhotoId}?auto=format&fit=crop&w=600&h=420&q=75`;
-    const imageUrl = `https://res.cloudinary.com/${CLOUD_NAME}/image/fetch/f_auto,q_auto:eco,w_600,h_420,c_fill/${encodeURIComponent(rawSourceUrl)}`;
+    const rawSourceUrl = `https://images.unsplash.com/${selectedPhotoId}?auto=format&fit=crop&w=720&h=480&q=80`;
+    const imageUrl = `https://res.cloudinary.com/${CLOUD_NAME}/image/fetch/f_auto,q_auto:eco,w_720,h_480,c_fill/${encodeURIComponent(rawSourceUrl)}`;
 
     // 3. PRIORITY #1: Post to 'open-confees' DB IMMEDIATELY
-    // FIX: Saved with both timestampValue and stringValue to prevent query drop mismatch!
     const postRes = await fetch(
       `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions?key=${POSTS_API_KEY}`,
       {
@@ -472,7 +351,7 @@ MANDATORY RULES:
       language: targetLang,
       location: `${loc.city}, ${loc.country}`,
       imageUrl,
-      message: `Posted [${cat.category}] in ${targetLang} from ${loc.city}`
+      message: `Successfully posted X-style [${cat.category}] in ${targetLang} from ${loc.city}`
     });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
