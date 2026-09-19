@@ -1,230 +1,239 @@
-import { db } from './firebase';
-import { collection, addDoc } from 'firebase/firestore';
+// Dual Firebase Configuration (Same as your verified Vercel backend)
+const POSTS_PROJECT_ID = 'open-confees';
+const POSTS_API_KEY = 'AIzaSyApMJTBvr7zbzJTP85xZAb994NfLWUBSz8';
 
-// 1. Worldwide Authors (English, Desi Diaspora, Global users)
-const WORLDWIDE_AUTHORS = [
-  'Anonymous',
-  'GlobalNomad',
-  'Alex M.',
-  'Sarah Jenkins',
-  'Aarav Patel',
-  'Liam K.',
-  'Priya Sharma',
-  'David Chen',
-  'Subhashis Roy',
-  'Elena Rostova',
-  'Tariq Al-Mansoor',
-  'Kavita D.',
-  'Marcus V.',
-  'Rohan K.',
-  'Maya Lin'
+const INTERACTIONS_PROJECT_ID = 'ageless-lamp-461817-i8';
+const INTERACTIONS_API_KEY = 'AIzaSyBnbNobd6s1GY9c7bdt6aEhPxP26Wa2VF4';
+
+const CLOUD_NAME = 'xjdv4l6v';
+const BOT_STORAGE_LOCK = 'openconfess_bot_last_post_time_v2';
+const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+
+interface LocationProfile {
+  city: string;
+  country: string;
+  langGroup: 'Bengali' | 'Hindi' | 'English';
+}
+
+const LOCATIONS: LocationProfile[] = [
+  { city: 'Kolkata', country: 'India', langGroup: 'Bengali' },
+  { city: 'Dhaka', country: 'Bangladesh', langGroup: 'Bengali' },
+  { city: 'Chittagong', country: 'Bangladesh', langGroup: 'Bengali' },
+  { city: 'Howrah', country: 'India', langGroup: 'Bengali' },
+  { city: 'Delhi', country: 'India', langGroup: 'Hindi' },
+  { city: 'Mumbai', country: 'India', langGroup: 'Hindi' },
+  { city: 'Jaipur', country: 'India', langGroup: 'Hindi' },
+  { city: 'Lucknow', country: 'India', langGroup: 'Hindi' },
+  { city: 'Pune', country: 'India', langGroup: 'Hindi' },
+  { city: 'London', country: 'UK', langGroup: 'English' },
+  { city: 'New York', country: 'USA', langGroup: 'English' },
+  { city: 'Los Angeles', country: 'USA', langGroup: 'English' },
+  { city: 'Paris', country: 'France', langGroup: 'English' },
+  { city: 'Tokyo', country: 'Japan', langGroup: 'English' },
+  { city: 'Sydney', country: 'Australia', langGroup: 'English' },
+  { city: 'Melbourne', country: 'Australia', langGroup: 'English' },
+  { city: 'Berlin', country: 'Germany', langGroup: 'English' },
+  { city: 'Toronto', country: 'Canada', langGroup: 'English' },
+  { city: 'Dubai', country: 'UAE', langGroup: 'English' },
+  { city: 'Singapore', country: 'Singapore', langGroup: 'English' },
+  { city: 'Amsterdam', country: 'Netherlands', langGroup: 'English' },
+  { city: 'Chicago', country: 'USA', langGroup: 'English' }
 ];
 
-// 2. Worldwide Locations (Major Global Hubs & Cities)
-const WORLDWIDE_LOCATIONS = [
-  { city: 'New York', country: 'United States', region: 'North America' },
-  { city: 'London', country: 'United Kingdom', region: 'Europe' },
-  { city: 'Toronto', country: 'Canada', region: 'North America' },
-  { city: 'Dubai', country: 'United Arab Emirates', region: 'Middle East' },
-  { city: 'Singapore', country: 'Singapore', region: 'Asia' },
-  { city: 'Sydney', country: 'Australia', region: 'Oceania' },
-  { city: 'Berlin', country: 'Germany', region: 'Europe' },
-  { city: 'Tokyo', country: 'Japan', region: 'Asia' },
-  { city: 'Kolkata', country: 'India', region: 'Asia' },
-  { city: 'New Delhi', country: 'India', region: 'Asia' },
-  { city: 'Dhaka', country: 'Bangladesh', region: 'Asia' }
+const BENGALI_USERNAMES = [
+  'KolkataGhumonto', 'MeghBalika', 'BhalobasharKobi', 'NisshoPothik',
+  'ChaKhorKolkata', 'Anamika_99', 'ShohorerChithi', 'Nil_Kabbo',
+  'EkaPothik', 'SondhaTara', 'BristirGaan', 'HariyeJawaMon'
 ];
 
-// 3. 4 Main Categories: News, Politics, Entertainment & Funny (Worldwide View in EN, HI, BN)
-const WORLDWIDE_TEMPLATES = [
-  // --- NEWS ---
-  {
-    lang: 'en',
-    category: 'News',
-    texts: [
-      'Global renewable energy generation reached a historic new peak this quarter! Cleaner grids worldwide #News #Sustainability',
-      'International aviation consortium announces faster transatlantic electric flight trials for next year #News #Aviation',
-      'Smart city tech rollouts expand across major transport hubs to reduce daily commuter delays #News #TechUpdate'
-    ],
-    images: [
-      'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80'
-    ]
-  },
-  {
-    lang: 'hi',
-    category: 'News',
-    texts: [
-      'अंतरराष्ट्रीय स्तर पर ग्रीन एनर्जी प्रोजेक्ट्स को बढ़ावा देने के लिए नए समझौते पर हस्ताक्षर हुए #News #WorldUpdate',
-      'वैश्विक बाजारों में नई तकनीकों और स्टार्टअप्स को लेकर सकारात्मक रुख देखने को मिल रहा है #News #Economy'
-    ],
-    images: [
-      'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80'
-    ]
-  },
-  {
-    lang: 'bn',
-    category: 'News',
-    texts: [
-      'বিশ্বজুড়ে পরিবেশবান্ধব শক্তি ব্যবহারের ক্ষেত্রে নতুন রেকর্ড তৈরি হলো এই বছর #News #GlobalNews',
-      'আন্তর্জাতিক বিজ্ঞানীদের নতুন গবেষণায় মহাকাশ বিজ্ঞানের নতুন দিগন্ত উন্মোচিত হয়েছে #News #Science'
-    ],
-    images: [
-      'https://images.unsplash.com/photo-1517685352821-92cf88aee5a5?auto=format&fit=crop&w=800&q=80'
-    ]
-  },
+const HINDI_USERNAMES = [
+  'KhamoshMusafir', 'DilliWalaShayar', 'TanhaiKaSafar', 'SukoonKiKhoj',
+  'RasteKeMusafir', 'ZindagiDiary', 'NeendUdi', 'AlfaazMere',
+  'BefikraRooh', 'YaadonKiDukaan'
+];
 
-  // --- POLITICS ---
-  {
-    lang: 'en',
-    category: 'Politics',
-    texts: [
-      'World leaders finalize the joint climate and digital trade policy framework at the global summit #Politics #GlobalAffairs',
-      'Heated discussions underway across municipal councils regarding citizen data privacy laws #Politics #Policy'
-    ],
-    images: [
-      'https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&w=800&q=80'
-    ]
-  },
-  {
-    lang: 'hi',
-    category: 'Politics',
-    texts: [
-      'वैश्विक स्तर पर डिजिटल प्राइवेसी और नए नागरिक नियमों को लेकर महत्वपूर्ण बैठक हुई #Politics #GlobalPolitics',
-      'युवाओं के अंतरराष्ट्रीय रोजगार मंच को सशक्त बनाने पर विभिन्न देशों की सहमति #Politics #Diplomacy'
-    ],
-    images: [
-      'https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?auto=format&fit=crop&w=800&q=80'
-    ]
-  },
-  {
-    lang: 'bn',
-    category: 'Politics',
-    texts: [
-      'আন্তর্জাতিক বাণিজ্য ও জলবায়ু পরিবর্তন নীতি নিয়ে বিভিন্ন দেশের প্রতিনিধিদের মধ্যে জরুরি আলোচনা #Politics #WorldAffairs'
-    ],
-    images: [
-      'https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=800&q=80'
-    ]
-  },
+const GLOBAL_USERNAMES = [
+  'SilentVoyager', 'NeonDrifter', 'MidnightEcho', 'QuietRebel',
+  'CityLightsSoul', 'AuraSeeker', 'SolitaryThinker', 'UrbanSoul',
+  'WanderlustWren', 'GreySkyDiary', 'PixelNomad'
+];
 
-  // --- ENTERTAINMENT ---
-  {
-    lang: 'en',
-    category: 'Entertainment',
-    texts: [
-      'World tour tickets sold out in under 3 minutes worldwide! What an incredible musical sensation #Entertainment #ConcertVibes',
-      'The international film festival kicked off with breathtaking independent cinema and global talent #Entertainment #Cinema'
-    ],
-    images: [
-      'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80'
-    ]
-  },
-  {
-    lang: 'hi',
-    category: 'Entertainment',
-    texts: [
-      'वर्ल्ड सिनेमा फेस्टिवल में नई फिल्मों को स्टैंडिंग ओवेशन मिला, अद्भुत कहानियां! #Entertainment #Movies',
-      'ग्लोबल म्यूजिक कॉन्सर्ट की वाइब बिल्कुल नेक्स्ट लेवल थी, म्यूजिक सच में सबको जोड़ता है #Entertainment #MusicFestival'
-    ],
-    images: [
-      'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=800&q=80'
-    ]
-  },
-  {
-    lang: 'bn',
-    category: 'Entertainment',
-    texts: [
-      'আন্তর্জাতিক ফিল্ম ফেস্টিভ্যালে নতুন চিত্রনাট্যের ভূয়সী প্রশংসা করলেন সমালোচকেরা #Entertainment #WorldCinema',
-      'বিশ্বের নানা প্রান্তের শিল্পীদের নিয়ে জমকালো লাইভ মিউজিক কনসার্ট অনুষ্ঠিত হলো #Entertainment #LiveMusic'
-    ],
-    images: [
-      'https://images.unsplash.com/photo-1469488865564-c2de10f69f96?auto=format&fit=crop&w=800&q=80'
-    ]
-  },
+interface CategoryDef {
+  category: string;
+  photoIds: string[];
+  bengali: string;
+  hindi: string;
+  english: string;
+  tags: string;
+  comments: { bengali: string[]; hindi: string[]; english: string[] };
+}
 
-  // --- FUNNY ---
+const CATEGORIES: CategoryDef[] = [
   {
-    lang: 'en',
-    category: 'Funny',
-    texts: [
-      'Traveling to a different timezone just to experience sleep deprivation in 4K resolution 😂 #Funny #JetlagLife',
-      'My computer has 47 open tabs and I am convinced every single one of them is emotionally supporting my career #Funny #WorkLife'
-    ],
-    images: [
-      'https://images.unsplash.com/photo-1534972195531-a756b1126f24?auto=format&fit=crop&w=800&q=80'
-    ]
+    category: 'True Love & Soul Connections',
+    photoIds: ['photo-1518199266791-5375a83190b7', 'photo-1529333166437-7750a6dd5a70', 'photo-1516589178581-6cd7833ae3b2'],
+    bengali: 'খাঁটি ভালোবাসার গভীর টান, নিঃস্বার্থ অনুভূতি এবং আজীবন পাশে থাকার নীরব প্রতিশ্রুতি',
+    hindi: 'सच्चा प्यार, रूहानी रिश्ता और हर मुश्किल घड़ी में बिना शर्त साथ निभाने का एहसास',
+    english: 'pure unconditional love, deep emotional connection and finding home in a person',
+    tags: '#TrueLove #Soulmate #UnconditionalLove',
+    comments: {
+      bengali: ['এই লেখাটা পড়ে চোখে জল চলে এলো, খুব সুন্দর লিখেছো।', 'ভালোবাসা এমনই হওয়া উচিত।'],
+      hindi: ['काश हर किसी को ऐसा प्यार मिले, दिल छू गया।', 'सच्चे प्यार की ताकत ही अलग होती है।'],
+      english: ['This is what real love looks like, beautifully written.', 'Made me believe in love stories again.']
+    }
   },
   {
-    lang: 'hi',
-    category: 'Funny',
-    texts: [
-      'जब भी डाइट शुरू करने का फैसला करो, तभी दुनिया का सबसे स्वादिष्ट खाना सामने आ जाता है 😅 #Funny #FoodieLife',
-      'अलार्म बजने के बाद वो "बस 5 मिनट और" वाली नींद दुनिया का सबसे बड़ा भ्रम है 😂 #Funny #Relatable'
-    ],
-    images: [
-      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80'
-    ]
+    category: 'Motivational Quotes & Resilience',
+    photoIds: ['photo-1499209974431-9dddcece7f88', 'photo-1470246973918-29a93221c455', 'photo-1500530855697-b586d89ba3ee'],
+    bengali: 'হেরে না যাওয়ার প্রেরণা, জীবনের কঠিন পরিস্থিতিতে ঘুরে দাঁড়ানো এবং নিজের ওপর অটুট বিশ্বাস',
+    hindi: 'हालातों से लड़कर उठ खड़े होने की प्रेरणा, हौसलों की उड़ान और खुद पर अटूट यकीन',
+    english: 'unbreakable resilience, rising from rock bottom and conquering personal fears',
+    tags: '#Motivation #NeverGiveUp #Resilience',
+    comments: {
+      bengali: ['ঠিক সময়ে এই পোস্টটা পড়লাম, ধন্যবাদ।', 'হাল ছাড়লে তো আর কিছুই নেই, এগিয়ে চলো।'],
+      hindi: ['बहुत जरूरी बात लिखी है, शुक्रिया।', 'हार मान ली तो सब खत्म, लड़ते रहो।'],
+      english: ['Exactly what I needed to hear today.', 'Never quit, this post says it all.']
+    }
   },
   {
-    lang: 'bn',
-    category: 'Funny',
-    texts: [
-      'ভেবেছিলাম সময়মতো ঘুমাতে যাবো, কিন্তু সোশ্যাল মিডিয়া স্ক্রোল করতে করতে ভোর হয়ে গেল! 😴 #Funny #NightOwl',
-      'ডায়েট করবো ভেবে রেস্তোরাঁয় ঢুকি, কিন্তু মেনু কার্ড দেখলেই ডায়েট ভুলে যাই! 😋 #Funny #FoodAddict'
-    ],
-    images: [
-      'https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=800&q=80'
-    ]
+    category: 'Work & Corporate Hustle',
+    photoIds: ['photo-1486312338219-ce68d2c6f44d', 'photo-1498050108023-c5249f4df085', 'photo-1519389950473-47ba0277781c'],
+    bengali: 'অফিসের অমানবিক প্রেশার, বসের টক্সিক রাজনীতি আর ক্যারিয়ারের ক্লান্তিকর লড়াই',
+    hindi: 'कॉर्पोरेट की 9-to-5 गुलामी, टॉक्सिक बॉस और ईएमआई के चक्कर में पिसती जिंदगी',
+    english: 'corporate burnout, impossible deadlines and pretending to love a toxic job',
+    tags: '#CorporateLife #Burnout #9to5Hustle',
+    comments: {
+      bengali: ['অফিসের এই গল্পটা যেন আমারটাই।', 'মাস শেষে ব্যাংক ব্যালান্স দেখলে কাঁদতে ইচ্ছে করে।'],
+      hindi: ['ये तो मेरी ही कहानी लग रही है।', 'सैलरी आते ही EMI खा जाती है।'],
+      english: ['This is literally my daily routine.', 'Salary arrives and the bills swallow it instantly.']
+    }
   }
 ];
 
-const LAST_POST_TIME_KEY = 'openconfess_bot_last_post_time';
-const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+const BENGALI_FALLBACKS = [
+  "যখন সব পথ বন্ধ মনে হয়, তখনই বিশ্বাস রাখতে হয় যে ভাঙা মন দিয়েই জীবনের সেরা গল্পটা শুরু হয়। হেরে যাওয়া কোনো লজ্জা নয়, কিন্তু আবার ঘুরে না দাঁড়ানোই সবচেয়ে বড় পরাজয়। #Motivation #NeverGiveUp #StayStrong",
+  "মেট্রোর ভিড়ে আজও তোর পরিচিত গন্ধটা যেন বাতাসে ভেসে আসে। সম্পর্ক শেষ হয়েছে ঠিকই, কিন্তু বুকের ভেতরের অনুভূতিটা মলিন হয়নি। #TrueLove #Soulmate #UnspokenLove"
+];
 
-export async function runAutoFeedBot(): Promise<boolean> {
+const HINDI_FALLBACKS = [
+  "जिंदगी जब इम्तिहान लेती है, तो रास्ता खुद ढूंढना पड़ता है। ठोकरें हमें गिराने के लिए नहीं, बल्कि संभलकर चलना सिखाने के लिए आती हैं। #Motivation #NeverGiveUp #StayStrong",
+  "सच्चा प्यार वो नहीं जो सिर्फ हासिल करने की ख्वाहिश रखे, बल्कि वो है जो दूर रहकर भी उसकी खुशियों की दुआ मांगे। #TrueLove #Soulmate #PureLove"
+];
+
+const ENGLISH_FALLBACKS = [
+  "You did not survive all those silent battles just to give up now. Rock bottom will always teach you lessons that success never could. Keep your head up. #Motivation #NeverGiveUp #Resilience",
+  "Adult life is just sitting in traffic after a ten-hour shift realizing how easily childhood happiness was taken for granted. #CorporateLife #Burnout #AdultingHard"
+];
+
+function getUsername(lang: 'Bengali' | 'Hindi' | 'English'): string {
+  if (Math.random() < 0.35) return 'Anonymous';
+  if (lang === 'Bengali') return BENGALI_USERNAMES[Math.floor(Math.random() * BENGALI_USERNAMES.length)];
+  if (lang === 'Hindi') return HINDI_USERNAMES[Math.floor(Math.random() * HINDI_USERNAMES.length)];
+  return GLOBAL_USERNAMES[Math.floor(Math.random() * GLOBAL_USERNAMES.length)];
+}
+
+// Main Runner Function
+export async function runAutoFeedBot(force = false): Promise<boolean> {
   try {
-    const lastPosted = localStorage.getItem(LAST_POST_TIME_KEY);
     const now = Date.now();
+    const lastPosted = localStorage.getItem(BOT_STORAGE_LOCK);
 
-    // 15-Minute strict interval check: koi purana ya repeated post nahi aayega
-    if (lastPosted && now - Number(lastPosted) < FIFTEEN_MINUTES_MS) {
+    // Agar force nahi hai aur 15 minute poore nahi hue to skip
+    if (!force && lastPosted && now - Number(lastPosted) < FIFTEEN_MINUTES_MS) {
       return false;
     }
 
-    // Pick random category template, location and author
-    const template = WORLDWIDE_TEMPLATES[Math.floor(Math.random() * WORLDWIDE_TEMPLATES.length)];
-    const text = template.texts[Math.floor(Math.random() * template.texts.length)];
-    const image = template.images[Math.floor(Math.random() * template.images.length)];
-    const loc = WORLDWIDE_LOCATIONS[Math.floor(Math.random() * WORLDWIDE_LOCATIONS.length)];
-    const author = WORLDWIDE_AUTHORS[Math.floor(Math.random() * WORLDWIDE_AUTHORS.length)];
+    const loc = LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)];
+    let targetLang: 'Bengali' | 'Hindi' | 'English' = 'English';
+    if (loc.langGroup === 'Bengali') targetLang = 'Bengali';
+    else if (loc.langGroup === 'Hindi') targetLang = Math.random() < 0.7 ? 'Hindi' : 'English';
 
-    // Exact confession document schema matching your app
-    const newConfession = {
-      text,
-      imageUrl: image,
-      authorName: author,
-      city: loc.city,
-      country: loc.country,
-      region: loc.region || loc.country,
-      createdAt: now,
-      likesCount: 0,
-      likes: 0,
-      commentsCount: 0,
-      comments: 0,
-      commentsList: [],
-      userReaction: null
-    };
+    const cat = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
+    const author = getUsername(targetLang);
+    const nowIso = new Date().toISOString();
 
-    const confessionsRef = collection(db, 'confessions');
-    await addDoc(confessionsRef, newConfession);
+    // 1. AI Post Generation (pollinations with fast timeout)
+    let postText = '';
+    const promptTopic = targetLang === 'Bengali' ? cat.bengali : targetLang === 'Hindi' ? cat.hindi : cat.english;
+    const langRule = targetLang === 'Bengali' ? 'Bengali (বাংলা)' : targetLang === 'Hindi' ? 'Hindi (हिंदी)' : 'English';
 
-    // Save timestamp to prevent repeat
-    localStorage.setItem(LAST_POST_TIME_KEY, String(now));
-    return true;
+    const prompt = `Write an authentic short social confession post about: "${promptTopic}".
+Location: ${loc.city}, ${loc.country}.
+Language: Strictly ${langRule}.
+Length: 75 to 95 words.
+Must append hashtags at end: ${cat.tags} #${loc.city.replace(/\s+/g, '')}.
+Plain text only.`;
+
+    try {
+      const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}?seed=${now}&model=openai`, {
+        signal: AbortSignal.timeout(3000)
+      });
+      if (res.ok) {
+        const text = (await res.text()).trim().replace(/^["']|["']$/g, '');
+        if (text && !text.includes('error') && text.length > 50) {
+          postText = text;
+        }
+      }
+    } catch {}
+
+    // Fallback if AI is slow
+    if (!postText) {
+      if (targetLang === 'Bengali') {
+        postText = BENGALI_FALLBACKS[Math.floor(Math.random() * BENGALI_FALLBACKS.length)];
+      } else if (targetLang === 'Hindi') {
+        postText = HINDI_FALLBACKS[Math.floor(Math.random() * HINDI_FALLBACKS.length)];
+      } else {
+        postText = ENGLISH_FALLBACKS[Math.floor(Math.random() * ENGLISH_FALLBACKS.length)];
+      }
+    }
+
+    // 2. Cloudinary Optimized Image
+    const photoId = cat.photoIds[Math.floor(Math.random() * cat.photoIds.length)];
+    const rawSourceUrl = `https://images.unsplash.com/${photoId}?auto=format&fit=crop&w=600&h=420&q=75`;
+    const imageUrl = `https://res.cloudinary.com/${CLOUD_NAME}/image/fetch/f_auto,q_auto:eco,w_600,h_420,c_fill/${encodeURIComponent(rawSourceUrl)}`;
+
+    // 3. Post to 'open-confees' Firestore (Standard REST Payload)
+    const postRes = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions?key=${POSTS_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fields: {
+            authorName: { stringValue: author },
+            author: { stringValue: author },
+            text: { stringValue: postText },
+            body: { stringValue: postText },
+            content: { stringValue: postText },
+            imageUrl: { stringValue: imageUrl },
+            image: { stringValue: imageUrl },
+            city: { stringValue: loc.city },
+            country: { stringValue: loc.country },
+            category: { stringValue: cat.category },
+            likesCount: { integerValue: '0' },
+            likes: { integerValue: '0' },
+            commentsCount: { integerValue: '0' },
+            comments: { integerValue: '0' },
+            createdAt: { stringValue: nowIso },
+            createdA: { stringValue: nowIso },
+            timestamp: { integerValue: String(now) }
+          }
+        })
+      }
+    );
+
+    if (postRes.ok) {
+      localStorage.setItem(BOT_STORAGE_LOCK, String(now));
+      // Feed cache clear karte hain taaki fresh post screen par turant aaye
+      localStorage.removeItem('open_confess_feed_cache_instant_v1');
+      console.log('✅ AutoFeedBot: Successfully published new post from', loc.city);
+      return true;
+    } else {
+      console.error('❌ AutoFeedBot: Firebase rejected post', await postRes.text());
+      return false;
+    }
   } catch (err) {
-    console.error('AutoFeedBot error:', err);
+    console.error('❌ AutoFeedBot Error:', err);
     return false;
   }
 }
