@@ -18,7 +18,7 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
   const rawText = String(post.text || post.content || post.body || '').trim();
   const cleanSnippet = rawText.length > 120 ? `${rawText.slice(0, 120)}...` : rawText;
 
-  // 2. Dynamic Base URL (Domain chahe Vercel ho ya custom, auto-detect karega)
+  // 2. Dynamic Base URL
   const origin = typeof window !== 'undefined' && window.location.origin
     ? window.location.origin
     : 'https://open-confess.vercel.app';
@@ -27,10 +27,10 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
   const shareTargetUrl = postId ? `${origin}/api/og?post=${postId}` : origin;
   const imageUrl = String(post.imageUrl || post.image || '').trim();
 
-  // 3. Social Intent Links
+  // 3. Social Intent Links (Fix: Facebook me quote aur link dono pass honge taaki card drop na ho)
   const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${cleanSnippet}\n\n${shareTargetUrl}`)}`;
   const xShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(cleanSnippet)}&url=${encodeURIComponent(shareTargetUrl)}&hashtags=OpenConfess`;
-  const fbShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareTargetUrl)}`;
+  const fbShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareTargetUrl)}&quote=${encodeURIComponent(`"${cleanSnippet}"\n\nRead more: ${shareTargetUrl}`)}`;
   const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(shareTargetUrl)}&text=${encodeURIComponent(cleanSnippet)}`;
 
   // 4. Copy to clipboard
@@ -53,7 +53,7 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
     }
   };
 
-  // 5. Native Share API (Direct photo + text system dialog)
+  // 5. Native Mobile Share API
   const handleNativeShare = async () => {
     setSharingNative(true);
     try {
@@ -73,7 +73,7 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
               shareData.files = [file];
             }
           } catch {
-            // Blob fetch fail hone par normal URL share chalega
+            // Blob fetch fail fallback
           }
         }
 
@@ -83,7 +83,7 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
         handleCopy();
       }
     } catch {
-      // User cancelled
+      // User closed share tray
     } finally {
       setSharingNative(false);
     }
