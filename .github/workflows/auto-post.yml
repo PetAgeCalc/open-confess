@@ -10,4 +10,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Hit OpenConfess API
-        run: curl -sL "https://www.openconfess.com/api/cron"
+        run: |
+          curl -i -L "https://www.openconfess.com/api/cron"
