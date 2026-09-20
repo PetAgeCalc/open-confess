@@ -230,7 +230,7 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     lang: 'Bengali',
     city: 'Siliguri',
     country: 'India',
-    tags: '#বাস্তবজীবন #মধ্যবিত্তেরলড়াই #জীবনসংগ্রাম',
+    tags: '#বাস্তবজীবন #মধ্যবিত্তেরলড়াই #জীবনসংগ্রাম',
     topicPrompt: 'মধ্যবিত্ত পরিবারের দিনরাত অমানুষিক পরিশ্রম, পরিবারের মুখে হাসি ফোটানোর নীরব ত্যাগ এবং সততার সাথে বেঁচে থাকা নিয়ে একটি গভীর সম্পূর্ণ পোস্ট লিখুন।',
     photoList: ['photo-1449824913935-59a10b8d2000', 'photo-1477959858617-67f30bc75b82', 'photo-1480714378408-67cf0d13bc1b']
   },
@@ -290,8 +290,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     lang: 'Bengali',
     city: 'Darjeeling',
     country: 'India',
-    tags: '#ভ্রমণকাহিনী #পাহাড়েরটান #পথেরনেশা #দার্জিলিং',
-    topicPrompt: 'পাহাড়ের কুয়াশাঘেরা বাঁক, কাঞ্চনজঙ্ঘার দৃশ্য, চা বাগানের নীরবতা এবং ভ্রমণের রোমাঞ্চকর অনুভূতি নিয়ে একটি মনোমুগ্ধকর বিস্তারিত পোস্ট লিখুন।',
+    tags: '#ভ্রমণকাহিনী #পাহাড়েরটান #পথেরনেশা #দার্জিলিং',
+    topicPrompt: 'পাহাড়ের কুয়াশাঘেরা বাঁক, কাঞ্চনজঙ্ঘার দৃশ্য, চা বাগানের নীরবতা এবং ভ্রমণের রোমাঞ্চকর অনুভূতি নিয়ে একটি মনোমুগ্ধকর বিস্তারিত পোস্ট লিখুন।',
     photoList: ['photo-1503220317375-aaad61436b1b', 'photo-1476514525535-07fb3b4ae5f1', 'photo-1488646953014-85cb44e25828']
   },
 
@@ -321,27 +321,27 @@ const COMMENTS_STORE: Record<string, { English: string[]; Hindi: string[]; Benga
   'Cricket Mania': {
     English: ['What an incredible game of cricket!', 'That over was pure cinema.', 'Games like this remind us why we love cricket.'],
     Hindi: ['क्या जबरदस्त खेल दिखाया! रोंगटे खड़े हो गए मैच देखकर।', 'ये खिलाड़ी सच में मैच विनर है।', 'आखिरी लम्हों तक सांसें थमी हुई थीं!'],
-    Bengali: ['অবিশ্বাস্য এক ম্যাচ! শেষ মুহূর্ত পর্যন্ত কী টানটান উত্তেজনা ছিল।', 'এই ইনিংসটা অনেকদিন মনে থাকবে।', 'দারুণ লড়াই করেছে দল!']
+    Bengali: ['অবিশ্বাস্য এক ম্যাচ! শেষ মুহূর্ত পর্যন্ত কী টানটান উত্তেজনা ছিল।', 'এই ইনিংসটা অনেকদিন মনে থাকবে।', 'দারুণ লড়াই করেছে দল!']
   },
   'Football & World Sports': {
     English: ['Pure class and determination on the pitch tonight.', 'The stadium atmosphere was electric, what a goal!', 'Football at its highest level.'],
     Hindi: ['क्या गजब का मुकाबला था, खिलाड़ियों का जोश देखने लायक था।', 'स्टेडियम का वो शोर और वो आखिरी गोल, कमाल!', 'फुटबॉल का असली जुनून!'],
-    Bengali: ['মাঠে পুরো ৯০ মিনিট ধরে অসাধারণ লড়াই দেখলাম!', 'ইনজুরি টাইমের গোলটা পুরো খেলার রূপ বদলে দিল।', 'চমৎকার ফুটবল!']
+    Bengali: ['মাঠে পুরো ৯০ মিনিট ধরে অসাধারণ লড়াই দেখলাম!', 'ইনজুরি টাইমের গোলটা পুরো খেলার রূপ বদলে দিল।', 'চমৎকার ফুটবল!']
   },
   'News & Breaking Headlines': {
     English: ['Following this situation very closely.', 'Immediate accountability from local authorities is required.', 'Thanks for this timely ground update.'],
     Hindi: ['सुबह से इस खबर पर सबकी नजर है, ठोस कदम उठाने जरूरी हैं।', 'प्रशासन को जमीनी हकीकत देखकर तुरंत फैसला लेना चाहिए।', 'बहुत ही जरूरी अपडेट साझा किया।'],
-    Bengali: ['সকাল থেকেই এই ঘটনাটি নিয়ে সব জায়গায় জোর আলোচনা চলছে।', 'প্রশাসনের উচিত দ্রুত ব্যবস্থা নেওয়া।', 'বাস্তব চিত্র তুলে ধরার জন্য ধন্যবাদ।']
+    Bengali: ['সকাল থেকেই এই ঘটনাটি নিয়ে সব জায়গায় জোর আলোচনা চলছে।', 'প্রশাসনের উচিত দ্রুত ব্যবস্থা নেওয়া।', 'বাস্তব চিত্র তুলে ধরার জন্য ধন্যবাদ।']
   },
   'Politics & Public Debate': {
     English: ['A very rational, well-balanced critique of ground policies.', 'Public promises look great on paper, but ground reality is different.', 'Insightful perspective.'],
     Hindi: ['वादे बड़े-बड़े होते हैं पर आम आदमी की जिंदगी जस की तस रहती है।', 'बिल्कुल निष्पक्ष और जमीनी राय रखी है आपने।', 'इस मुद्दे पर बात होना बहुत जरूरी था।'],
-    Bengali: ['রাজনীতির মঞ্চে বড় কথার ভিড়ে সাধারণ মানুষের আসল সমস্যা হারিয়ে যায়।', 'খুবই প্রাসঙ্গিক এবং স্পষ্ট আলোচনা।', 'একদম সহমত।']
+    Bengali: ['রাজনীতির মঞ্চে বড় কথার ভিড়ে সাধারণ মানুষের আসল সমস্যা হারিয়ে যায়।', 'খুবই প্রাসঙ্গিক এবং স্পষ্ট আলোচনা।', 'একদম সহমত।']
   },
   'Entertainment & Cinema': {
     English: ['Loved the cinematic vision and emotional depth!', 'Booking tickets right away after reading this.', 'Truly worth all the praise.'],
     Hindi: ['अभिनय और कहानी दोनों में गहराई थी, पूरा पैसा वसूल!', 'बैकग्राउंड स्कोर सीधे दिल में उतरता है।', 'इस हफ्ते की सबसे बेहतरीन पेशकश।'],
-    Bengali: ['অনবদ্য পরিচালনা আর প্রতিটি চরিত্রের নিখুঁত অভিনয় মুগ্ধ করল!', 'ব্যাকগ্রাউন্ড মিউজিকটা পুরো দৃশ্যপট বদলে দিয়েছে।', 'অসাধারণ সিনেমা!']
+    Bengali: ['অনবদ্য পরিচালনা আর প্রতিটি চরিত্রের নিখুঁত অভিনয় মুগ্ধ করল!', 'ব্যাকগ্রাউন্ড মিউজিকটা পুরো দৃশ্যপট বদলে দিয়েছে।', 'অসাধারণ সিনেমা!']
   },
   'Funny, Memes & Sarcasm': {
     English: ['I cannot stop laughing at this, painfully relatable!', 'Sent this straight to the family and friends group chat.', 'Your sense of humour always hits the bullseye.'],
@@ -351,42 +351,42 @@ const COMMENTS_STORE: Record<string, { English: string[]; Hindi: string[]; Benga
   'True Love & Soul Connections': {
     English: ['Beautifully written and deeply moving piece.', 'Pure, quiet love like this is the biggest blessing.', 'Every line carried genuine warmth.'],
     Hindi: ['सच्ची मोहब्बत की सादगी दिल को छू गई, बहुत खूबसूरत लिखा है।', 'रिश्ते दिखावे से नहीं, रूहानी एहसास से जीते हैं।', 'काश हर किसी को ऐसा प्यार मिले।'],
-    Bengali: ['পড়ে মনটা শান্তিতে ভরে গেল, অসাধারণ আবেগ দিয়ে লিখেছো।', 'ভালোবাসা কোনো দামী উপহার নয়, নীরব পাশে থাকার নাম।', 'খুব মিষ্টি একটা লেখা।']
+    Bengali: ['পড়ে মনটা শান্তিতে ভরে গেল, অসাধারণ আবেগ দিয়ে লিখেছো।', 'ভালোবাসা কোনো দামী উপহার নয়, নীরব পাশে থাকার নাম।', 'খুব মিষ্টি একটা লেখা।']
   },
   'Heartbreak & Pain': {
     English: ['Healing is not linear, be gentle with yourself.', 'Felt every single word of this deeply. Stay strong.', 'Better days are ahead.'],
     Hindi: ['वक्त हर गहरे जख्म को भर देता है भाई, खुद को संभालो।', 'अधूरी मोहब्बत का दर्द सबसे खामोश और भारी होता है।', 'महसूस हुआ तुम्हारा दर्द।'],
-    Bengali: ['খুব শক্ত হও বন্ধু, সময়ের চেয়ে বড় কোনো শুশ্রূষা নেই।', 'আমরা সবাই কোনো না কোনো রাতে এভাবে ভেঙেছি।', 'লেখাটা মনের গভীরে লেগেছে।']
+    Bengali: ['খুব শক্ত হও বন্ধু, সময়ের চেয়ে বড় কোনো শুশ্রূষা নেই।', 'আমরা সবাই কোনো না কোনো রাতে এভাবে ভেঙেছি।', 'লেখাটা মনের গভীরে লেগেছে।']
   },
   'Motivational Quotes & Resilience': {
     English: ['Exactly the powerful push needed to conquer today goals.', 'Consistency in silent battles will always bring victory.', 'Respect for this mindset.'],
     Hindi: ['हार मान लेना कोई रास्ता नहीं है, गिरकर उठना ही जिंदगी है।', 'इस पोस्ट ने फिर से नई ऊर्जा और हौसला भर दिया है।', 'कड़ी मेहनत का फल जरूर मिलता है।'],
-    Bengali: ['ঠিক এই আত্মবিশ্বাস আর সাহসটাই আজ মনের ভেতর দরকার ছিল!', 'জীবনের লড়াই যত কঠিন হবে, জয়ের আনন্দ ততটাই বড় হবে।', 'হাল ছেড়ো না বন্ধু!']
+    Bengali: ['ঠিক এই আত্মবিশ্বাস আর সাহসটাই আজ মনের ভেতর দরকার ছিল!', 'জীবনের লড়াই যত কঠিন হবে, জয়ের আনন্দ ততটাই বড় হবে।', 'হাল ছেড়ো না বন্ধু!']
   },
   'Real Life Struggles & Stories': {
     English: ['The raw, unfiltered honesty here is deeply inspiring.', 'Respect for every ordinary person fighting unseen daily battles.', 'A truthful reminder.'],
     Hindi: ['यही तो असल जिंदगी की जमीनी सच्चाई है, दिल छू लिया।', 'मध्यम वर्ग की खामोश कुर्बानियों को कोई नहीं देखता।', 'ईमानदारी और स्वाभिमान की मिसाल।'],
-    Bengali: ['একদম সাধারণ মানুষের জীবনের কঠিন আর খাঁটি বাস্তব রূপ।', 'পরিবারের মুখে হাসি ফোটাতে গিয়ে বাবাদের যে ত্যাগ, তা ফুটে উঠেছে।', 'শ্রদ্ধা জানাই।']
+    Bengali: ['একদম সাধারণ মানুষের জীবনের কঠিন আর খাঁটি বাস্তব রূপ।', 'পরিবারের মুখে হাসি ফোটাতে গিয়ে বাবাদের যে ত্যাগ, তা ফুটে উঠেছে।', 'শ্রদ্ধা জানাই।']
   },
   'Work & Corporate Hustle': {
     English: ['Every single working professional felt this in their bones.', 'Work-life balance cannot remain just a hollow buzzword.', 'Counting down hours to Friday night.'],
     Hindi: ['ऑफिस की इस दौड़धूप में अपनी ही जिंदगी पीछे छूट जाती है।', 'सैलरी आते ही बिल भरने में खत्म, और तनाव वही का वही।', 'सच्ची बात लिखी है आपने।'],
-    Bengali: ['কিউবিকলে বসে এই লেখাটা পড়তে পড়তে মনের ক্লান্তিটাই যেন দেখলাম।', 'মাসের পর মাস ডেডলাইনের চাপে হারিয়ে যাচ্ছে সহজ জীবনের আনন্দ।', 'খুব বাস্তব কথা।']
+    Bengali: ['কিউবিকলে বসে এই লেখাটা পড়তে পড়তে মনের ক্লান্তিটাই যেন দেখলাম।', 'মাসের পর মাস ডেডলাইনের চাপে হারিয়ে যাচ্ছে সহজ জীবনের আনন্দ।', 'খুব বাস্তব কথা।']
   },
   'Family & Home Bonds': {
     English: ['Nothing in this entire world replaces the warmth of family.', 'Calling my parents right after reading this touching post.', 'Treasuring these memories.'],
     Hindi: ['मां-बाप के प्यार और उनकी छत्रछाया से बड़ी कोई दौलत नहीं।', 'परिवार का साथ हर मुश्किल वक्त में सबसे बड़ा संबल होता है।', 'पढ़कर मन बहुत भावुक हो गया।'],
-    Bengali: ['মাটির টান আর মা-বাবার স্নেহের চেয়ে বড় আশ্রয় পৃথিবীতে নেই।', 'পোস্টটা পড়ার পর মায়ের হাতের রান্না খুব মনে পড়ল।', 'পরিবারই সব।']
+    Bengali: ['মাটির টান আর মা-বাবার স্নেহের চেয়ে বড় আশ্রয় পৃথিবীতে নেই।', 'পোস্টটা পড়ার পর মায়ের হাতের রান্না খুব মনে পড়ল।', 'পরিবারই সব।']
   },
   'Travel & Global Adventures': {
     English: ['Adding this magnificent route to my bucket list immediately!', 'Breathtaking storytelling and vivid travel notes. Pure wanderlust.', 'Traveling heals the spirit.'],
     Hindi: ['तस्वीर और शब्दों ने मन में फिर से पहाड़ों का सफर जगा दिया।', 'अनजान रास्तों पर भटकने का असली सुकून शब्दों में बयां नहीं होता।', 'शानदार अनुभव!'],
-    Bengali: ['পাহাড়ের বাঁকে কুয়াশার খেলা দেখার ইচ্ছেটা আবার জাগিয়ে তুললে!', 'কী অসাধারণ বর্ণনা, যেন চোখের সামনে পাহাড়ি পথটা দেখতে পাচ্ছি।', 'মন ভরে গেল।']
+    Bengali: ['পাহাড়ের বাঁকে কুয়াশার খেলা দেখার ইচ্ছেটা আবার জাগিয়ে তুললে!', 'কী অসাধারণ বর্ণনা, যেন চোখের সামনে পাহাড়ি পথটা দেখতে পাচ্ছি।', 'মন ভরে গেল।']
   },
   'Tech, AI & Future World': {
     English: ['The velocity of AI disruption is truly astounding.', 'Fascinating breakdown of modern technology and human future.', 'Continuous learning is essential.'],
     Hindi: ['एआई जिस रफ्तार से दुनिया बदल रहा है, सतर्क और तैयार रहना जरूरी है।', 'तकनीक ने काम आसान किया है पर नई चुनौतियां भी हैं।', 'बेहतरीन और उपयोगी पोस्ट।'],
-    Bengali: ['প্রযুক্তি যে গতিতে রোজ বদলে যাচ্ছে, তাতে নিজেকে আপডেট রাখাই একমাত্র পথ।', 'এআই বিপ্লব নিয়ে খুব সুন্দর বিশ্লেষণ।', 'দারুণ তথ্যবহুল।']
+    Bengali: ['প্রযুক্তি যে গতিতে রোজ বদলে যাচ্ছে, তাতে নিজেকে আপডেট রাখাই একমাত্র পথ।', 'এআই বিপ্লব নিয়ে খুব সুন্দর বিশ্লেষণ।', 'দারুণ তথ্যবহুল।']
   }
 };
 
@@ -452,7 +452,7 @@ MANDATORY RULES:
     // Fallbacks agar AI late ho
     if (!postText) {
       if (target.lang === 'Bengali') {
-        postText = `জীবনের বাস্তব লড়াইয়ের মাঝে কিছু মুহূর্ত এমনভাবে আসে যা আমাদের হৃদয়কে গভীরভাবে নাড়া দিয়ে যায়। ${target.city} শহরের চেনা ভিড়ের মাঝে দাঁড়িয়ে নিজের ফেলে আসা স্মৃতি আর অনুভূতির কথাগুলো নতুন করে ভাবায়। সততার সাথে পথ চলা আর নিজের মানুষের পাশে নিঃশব্দে থাকাটাই হয়তো মানুষের আসল সার্থকতা। সময়ের সাথে সাথে পরিস্থিতি বদলালেও অন্তরের এই টান কোনোদিন মলিন হয় না। ${target.tags} #${target.city.replace(/\s+/g, '')}`;
+        postText = `জীবনের বাস্তব লড়াইয়ের মাঝে কিছু মুহূর্ত এমনভাবে আসে যা আমাদের হৃদয়কে গভীরভাবে নাড়া দিয়ে যায়। ${target.city} শহরের চেনা ভিড়ের মাঝে দাঁড়িয়ে নিজের ফেলে আসা স্মৃতি আর অনুভূতির কথাগুলো নতুন করে ভাবায়। সততার সাথে পথ চলা আর নিজের মানুষের পাশে নিঃশব্দে থাকাটাই হয়তো মানুষের আসল সার্থকতা। সময়ের সাথে সাথে পরিস্থিতি বদলালেও অন্তরের এই টান কোনোদিন মলিন হয় না। ${target.tags} #${target.city.replace(/\s+/g, '')}`;
       } else if (target.lang === 'Hindi') {
         postText = `जिंदगी की इस आपाधापी में कुछ लम्हे ऐसे आते हैं जो सीधे दिल को छू जाते हैं। ${target.city} की इस भागदौड़ भरी जिंदगी में जब ठहरकर अपनों और अपने संघर्ष को देखो, तो समझ आता है कि सुकून किसी बड़ी मंजिल में नहीं बल्कि इन सादे पलों में है। जब तक उम्मीद और मेहनत का साथ है, तब तक हर मुश्किल आसान लगने लगती है। यही वो जज्बा है जो हमें हर दिन एक नई सुबह के साथ आगे बढ़ाता है। ${target.tags} #${target.city.replace(/\s+/g, '')}`;
       } else {
@@ -460,8 +460,10 @@ MANDATORY RULES:
       }
     }
 
-    // 4. Save Main Post to 'open-confees' DB
+    // 4. Save Main Post to 'open-confees' DB with ready-made share payload
     const author = getUsername(target.lang);
+    const readyShareText = `"${postText}"\n\n📸 Photo: ${imageUrl}\n\n👉 Open Confess: https://www.openconfess.com`;
+
     const postRes = await fetch(
       `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions?key=${POSTS_API_KEY}`,
       {
@@ -479,6 +481,7 @@ MANDATORY RULES:
             city: { stringValue: target.city },
             country: { stringValue: target.country },
             category: { stringValue: target.category },
+            sharePayload: { stringValue: readyShareText },
             likesCount: { integerValue: '0' },
             likes: { integerValue: '0' },
             commentsCount: { integerValue: '0' },
