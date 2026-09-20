@@ -12,28 +12,30 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
   const [sharingNative, setSharingNative] = useState(false);
 
   const post = confession as Record<string, any>;
-  const postId = String(post.id || post._id || '');
+  const postId = String(post.id || post._id || '').trim();
 
-  // Post ka text snippet
+  // 1. Text snippet cleanup
   const rawText = String(post.text || post.content || post.body || '').trim();
-  const cleanSnippet = rawText.length > 120 ? rawText.slice(0, 120) + '...' : rawText;
+  const cleanSnippet = rawText.length > 120 ? `${rawText.slice(0, 120)}...` : rawText;
 
-  // ASLI TRICK: Share URL me hamesha '/api/og?post=...' jayega taaki WhatsApp/FB photo preview banaye
-  const baseUrl = 'https://www.openconfess.com';
-  const shareTargetUrl = postId ? `${baseUrl}/api/og?post=${encodeURIComponent(postId)}` : baseUrl;
+  // 2. Dynamic Base URL (Domain chahe Vercel ho ya custom, auto-detect karega)
+  const origin = typeof window !== 'undefined' && window.location.origin
+    ? window.location.origin
+    : 'https://open-confess.vercel.app';
 
-  // Post image
+  // Social crawlers ke liye /api/og endpoint
+  const shareTargetUrl = postId ? `${origin}/api/og?post=${postId}` : origin;
   const imageUrl = String(post.imageUrl || post.image || '').trim();
 
-  // Social Links: Ab har jagah wahi preview link jayega jo photo card banata hai
-  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`"${cleanSnippet}"\n\nRead more:\n${shareTargetUrl}`)}`;
-  const xShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(`"${cleanSnippet}"`)}&url=${encodeURIComponent(shareTargetUrl)}&hashtags=OpenConfess`;
+  // 3. Social Intent Links
+  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${cleanSnippet}\n\n${shareTargetUrl}`)}`;
+  const xShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(cleanSnippet)}&url=${encodeURIComponent(shareTargetUrl)}&hashtags=OpenConfess`;
   const fbShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareTargetUrl)}`;
-  const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(shareTargetUrl)}&text=${encodeURIComponent(`"${cleanSnippet}"`)}`;
+  const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(shareTargetUrl)}&text=${encodeURIComponent(cleanSnippet)}`;
 
-  // Copy Link
+  // 4. Copy to clipboard
   const handleCopy = () => {
-    const textToCopy = `"${cleanSnippet}"\n\n${shareTargetUrl}`;
+    const textToCopy = `${cleanSnippet}\n\n${shareTargetUrl}`;
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(textToCopy).then(() => {
         setCopied(true);
@@ -51,26 +53,28 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
     }
   };
 
-  // Native Mobile Share
+  // 5. Native Share API (Direct photo + text system dialog)
   const handleNativeShare = async () => {
     setSharingNative(true);
     try {
       if (navigator.share) {
         const shareData: ShareData = {
           title: 'Open Confess',
-          text: `"${cleanSnippet}"`,
+          text: `${cleanSnippet}\n\nRead more:`,
           url: shareTargetUrl,
         };
 
         if (imageUrl && navigator.canShare) {
           try {
-            const res = await fetch(imageUrl);
+            const res = await fetch(imageUrl, { mode: 'cors' });
             const blob = await res.blob();
-            const file = new File([blob], 'post.jpg', { type: blob.type || 'image/jpeg' });
+            const file = new File([blob], 'confession.jpg', { type: blob.type || 'image/jpeg' });
             if (navigator.canShare({ files: [file] })) {
               shareData.files = [file];
             }
-          } catch {}
+          } catch {
+            // Blob fetch fail hone par normal URL share chalega
+          }
         }
 
         await navigator.share(shareData);
@@ -79,6 +83,7 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
         handleCopy();
       }
     } catch {
+      // User cancelled
     } finally {
       setSharingNative(false);
     }
@@ -104,7 +109,7 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
           </button>
         </div>
 
-        {/* Preview Card */}
+        {/* Card Preview */}
         <div className="p-3 bg-stone-50 rounded-2xl border border-stone-100 text-left space-y-2">
           {Boolean(imageUrl) && (
             <div className="w-full h-28 rounded-xl overflow-hidden bg-stone-200">
@@ -116,9 +121,8 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
           </p>
         </div>
 
-        {/* 4 Main Apps */}
+        {/* Social Platforms */}
         <div className="grid grid-cols-4 gap-3 pt-1">
-          {/* WhatsApp */}
           <a
             href={whatsappUrl}
             target="_blank"
@@ -131,7 +135,6 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
             <span>WhatsApp</span>
           </a>
 
-          {/* X */}
           <a
             href={xShareUrl}
             target="_blank"
@@ -144,7 +147,6 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
             <span>X</span>
           </a>
 
-          {/* Facebook */}
           <a
             href={fbShareUrl}
             target="_blank"
@@ -157,7 +159,6 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
             <span>Facebook</span>
           </a>
 
-          {/* Telegram */}
           <a
             href={telegramUrl}
             target="_blank"
@@ -171,7 +172,7 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
           </a>
         </div>
 
-        {/* Red Button: Share Image Card (All Apps) */}
+        {/* Native Mobile Sheet (Photo + Caption) */}
         {typeof navigator !== 'undefined' && 'share' in navigator && (
           <button
             type="button"
@@ -184,7 +185,7 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
           </button>
         )}
 
-        {/* Copy Direct Link */}
+        {/* Direct Link Copy */}
         <button
           type="button"
           onClick={handleCopy}
