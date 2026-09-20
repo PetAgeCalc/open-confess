@@ -20,40 +20,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (data && data.fields) {
         title = data.fields.category?.stringValue ? `${data.fields.category.stringValue} | Open Confess` : 'Open Confess';
         const rawText = data.fields.text?.stringValue || data.fields.content?.stringValue || data.fields.body?.stringValue || '';
-        description = rawText ? rawText.slice(0, 160).replace(/"/g, "'") : description;
+        description = rawText ? rawText.slice(0, 150).replace(/"/g, "'") : description;
         imageUrl = data.fields.imageUrl?.stringValue || data.fields.image?.stringValue || imageUrl;
       }
     } catch (e) {}
   }
 
-  // Check if request is from WhatsApp, Facebook, Twitter, Telegram, etc.
-  const ua = (req.headers['user-agent'] || '').toLowerCase();
-  const isBot = /facebookexternalhit|whatsapp|twitterbot|telegrambot|linkedinbot|slackbot|discordbot|applebot/i.test(ua);
+  const userAgent = (req.headers['user-agent'] || '').toLowerCase();
+  const isBot = /facebookexternalhit|whatsapp|twitterbot|telegrambot|linkedinbot|slackbot|discordbot/i.test(userAgent);
 
-  const targetUrl = `https://www.openconfess.com/?post=${postId || ''}`;
+  const destinationUrl = `https://www.openconfess.com/?post=${postId || ''}`;
 
-  // Agar WhatsApp/Facebook bot hai, toh SIRF meta tags bhejo (NO REDIRECT)
+  // Bot ke liye direct Meta Tags
   if (isBot) {
     const botHtml = `<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
   <title>${title}</title>
   <meta name="description" content="${description}">
-
-  <!-- Open Graph / WhatsApp / Facebook -->
   <meta property="og:type" content="article">
   <meta property="og:site_name" content="Open Confess">
   <meta property="og:title" content="${title}">
   <meta property="og:description" content="${description}">
   <meta property="og:image" content="${imageUrl}">
   <meta property="og:image:secure_url" content="${imageUrl}">
-  <meta property="og:image:type" content="image/jpeg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:url" content="${targetUrl}">
-
-  <!-- Twitter Card -->
+  <meta property="og:url" content="${destinationUrl}">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${title}">
   <meta name="twitter:description" content="${description}">
@@ -61,11 +55,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 </head>
 <body></body>
 </html>`;
-
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.status(200).send(botHtml);
   }
 
-  // Agar koi ASLI INSAAN click kare, toh 302 Temporary Redirect karke seedha site par bhej do
-  return res.redirect(302, targetUrl);
+  // Real user click kare toh direct redirect
+  return res.redirect(302, destinationUrl);
 }
