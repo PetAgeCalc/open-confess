@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Heart, MessageCircle, MapPin, Tag, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, MapPin, Tag, Trash2, Share2 } from 'lucide-react';
 import { Confession } from '../types';
 import { setReaction, deleteConfession } from '../lib/confessionService';
+import ShareModal from './ShareModal';
 
 interface ConfessionCardProps {
   confession: Confession;
@@ -22,6 +23,21 @@ const EMOJI_OPTIONS = [
   { label: '100', emoji: '💯' },
 ];
 
+function formatTimeAgo(timeVal: any): string {
+  if (!timeVal) return 'Recent';
+  const postDate = new Date(timeVal).getTime();
+  if (isNaN(postDate)) return 'Recent';
+
+  const diffMs = Date.now() - postDate;
+  const mins = Math.floor(diffMs / (1000 * 60));
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 export default function ConfessionCard({ confession, onOpen, onReactionChange }: ConfessionCardProps) {
   const post = confession as Record<string, any>;
   const postId = String(post.id || post._id || '');
@@ -32,6 +48,7 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
   const location = [post.city, post.country].filter(Boolean).join(', ') || (post.location ? String(post.location) : '');
   const imageUrl = post.imageUrl || post.image || '';
   const textContent = post.body || post.text || post.content || '';
+  const timeAgo = formatTimeAgo(post.createdAt || post.timestamp);
 
   const initialLikes = Number(post.likesCount ?? post.likes ?? 0) || 0;
   const initialComments = Number(post.commentsCount ?? post.comments ?? (post.commentsList?.length || 0)) || 0;
@@ -41,10 +58,11 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [shareOpen, setShareOpen] = useState<boolean>(false);
   const pickerRef = useRef<HTMLDivElement>(null);
 
   // Secret Admin check via URL parameter
-  const searchParams = new URLSearchParams(window.location.search);
+  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
   const isAdmin = searchParams.get('admin') === 'ashim97';
 
   // Sync initial state and user's saved reaction
@@ -88,13 +106,19 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
     setPickerOpen((prev) => !prev);
   }
 
+  function handleShareClick(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setShareOpen(true);
+  }
+
   async function handleDeletePost(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
 
     if (!postId) return;
 
-    const confirmed = window.confirm("Kya aap sach me is confession ko delete karna chahte hain?");
+    const confirmed = window.confirm('Kya aap sach me is confession ko delete karna chahte hain?');
     if (!confirmed) return;
 
     try {
@@ -103,12 +127,12 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
       if (success) {
         window.location.reload();
       } else {
-        alert("Delete nahi ho paya!");
+        alert('Delete nahi ho paya!');
         setIsDeleting(false);
       }
     } catch (err) {
-      console.error("Delete error:", err);
-      alert("Delete karne me koi error aayi.");
+      console.error('Delete error:', err);
+      alert('Delete karne me koi error aayi.');
       setIsDeleting(false);
     }
   }
@@ -163,132 +187,153 @@ export default function ConfessionCard({ confession, onOpen, onReactionChange }:
   }
 
   return (
-    <article
-      onClick={onOpen}
-      className="w-full bg-white rounded-3xl border border-stone-200/70 p-4 sm:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-visible select-none"
-    >
-      {/* Header Info */}
-      <div className="flex items-center gap-2 text-xs sm:text-sm text-stone-500 mb-3 flex-wrap">
-        <span className="font-semibold text-stone-800">{author}</span>
-        {Boolean(category) && (
-          <>
-            <span>•</span>
-            <span className="inline-flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full text-xs font-medium">
-              <Tag className="w-3 h-3 shrink-0" />
-              {category}
-            </span>
-          </>
-        )}
-        {Boolean(location) && (
-          <>
-            <span>•</span>
-            <span className="inline-flex items-center gap-1 text-rose-600 font-medium">
-              <MapPin className="w-3.5 h-3.5 shrink-0" />
-              {location}
-            </span>
-          </>
-        )}
-        <span>•</span>
-        <span>Recent</span>
-      </div>
-
-      {/* Post Image: Facebook/X style adaptive fit (No Cropping) */}
-      {Boolean(imageUrl) && (
-        <div className="w-full rounded-2xl overflow-hidden bg-stone-100/60 border border-stone-100 mb-4 flex items-center justify-center">
-          <img
-            src={imageUrl}
-            alt="Confession"
-            loading="lazy"
-            className="w-full h-auto max-h-[500px] object-contain block mx-auto rounded-2xl transition-transform duration-300"
-            onError={(e) => {
-              (e.target as HTMLElement).parentElement?.classList.add('hidden');
-            }}
-          />
+    <>
+      <article
+        onClick={onOpen}
+        className="w-full bg-white rounded-3xl border border-stone-200/70 p-4 sm:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-visible select-none"
+      >
+        {/* Header Info */}
+        <div className="flex items-center gap-2 text-xs sm:text-sm text-stone-500 mb-3 flex-wrap">
+          <span className="font-semibold text-stone-800">{author}</span>
+          {Boolean(category) && (
+            <>
+              <span>•</span>
+              <span className="inline-flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full text-xs font-medium">
+                <Tag className="w-3 h-3 shrink-0" />
+                {category}
+              </span>
+            </>
+          )}
+          {Boolean(location) && (
+            <>
+              <span>•</span>
+              <span className="inline-flex items-center gap-1 text-rose-600 font-medium">
+                <MapPin className="w-3.5 h-3.5 shrink-0" />
+                {location}
+              </span>
+            </>
+          )}
+          <span>•</span>
+          <span>{timeAgo}</span>
         </div>
-      )}
 
-      {/* Post Content */}
-      <p className="text-stone-800 text-sm sm:text-base leading-relaxed line-clamp-4 mb-4 whitespace-pre-wrap">
-        {textContent}
-      </p>
+        {/* Post Image */}
+        {Boolean(imageUrl) && (
+          <div className="w-full rounded-2xl overflow-hidden bg-stone-100/60 border border-stone-100 mb-4 flex items-center justify-center">
+            <img
+              src={imageUrl}
+              alt="Confession"
+              loading="lazy"
+              className="w-full h-auto max-h-[500px] object-contain block mx-auto rounded-2xl transition-transform duration-300"
+              onError={(e) => {
+                (e.target as HTMLElement).parentElement?.classList.add('hidden');
+              }}
+            />
+          </div>
+        )}
 
-      {/* Footer Actions */}
-      <div className="flex items-center justify-between pt-3 border-t border-stone-100 text-xs sm:text-sm text-stone-600 relative">
-        <div className="flex items-center gap-4">
-          {/* Emoji Button & Floating Tray */}
-          <div
-            ref={pickerRef}
-            className="relative z-30"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-          >
+        {/* Post Content */}
+        <p className="text-stone-800 text-sm sm:text-base leading-relaxed line-clamp-4 mb-4 whitespace-pre-wrap">
+          {textContent}
+        </p>
+
+        {/* Footer Actions */}
+        <div className="flex items-center justify-between pt-3 border-t border-stone-100 text-xs sm:text-sm text-stone-600 relative">
+          <div className="flex items-center gap-3 sm:gap-4">
+            {/* Emoji Button & Floating Tray */}
+            <div
+              ref={pickerRef}
+              className="relative z-30"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
+              <button
+                type="button"
+                onClick={handleMainButtonClick}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all active:scale-95 cursor-pointer ${
+                  selectedEmoji
+                    ? 'border-rose-300 bg-rose-50 text-rose-600 font-medium shadow-sm'
+                    : 'border-stone-200 hover:bg-stone-50 text-stone-600'
+                }`}
+              >
+                {selectedEmoji ? (
+                  <span className="text-base leading-none">{selectedEmoji}</span>
+                ) : (
+                  <Heart className="w-4 h-4 text-stone-400 hover:text-rose-500" />
+                )}
+                <span className="font-semibold">{likes}</span>
+              </button>
+
+              {/* Emoji Tray */}
+              {pickerOpen && (
+                <div
+                  className="absolute bottom-full left-0 mb-2 flex items-center gap-1 p-2 bg-white rounded-2xl shadow-2xl border border-stone-200 z-50 overflow-x-auto max-w-[85vw] sm:max-w-none"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                >
+                  {EMOJI_OPTIONS.map((item) => (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onPointerDown={(e) => handleSelectEmoji(e, item.emoji)}
+                      onClick={(e) => handleSelectEmoji(e, item.emoji)}
+                      className={`text-xl p-1.5 rounded-xl hover:scale-125 active:scale-90 transition-all cursor-pointer ${
+                        selectedEmoji === item.emoji ? 'bg-rose-100 scale-110' : 'hover:bg-stone-100'
+                      }`}
+                      title={item.label}
+                    >
+                      {item.emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Comments Count */}
+            <div className="flex items-center gap-1.5 text-stone-500">
+              <MessageCircle className="w-4 h-4 text-stone-400" />
+              <span>{commentsCount} comments</span>
+            </div>
+
+            {/* Share Button */}
             <button
               type="button"
-              onClick={handleMainButtonClick}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all active:scale-95 cursor-pointer ${
-                selectedEmoji
-                  ? 'border-rose-300 bg-rose-50 text-rose-600 font-medium shadow-sm'
-                  : 'border-stone-200 hover:bg-stone-50 text-stone-600'
-              }`}
+              onClick={handleShareClick}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border border-stone-200 hover:bg-stone-50 text-stone-600 transition-colors cursor-pointer"
+              title="Share this post"
             >
-              {selectedEmoji ? (
-                <span className="text-base leading-none">{selectedEmoji}</span>
-              ) : (
-                <Heart className="w-4 h-4 text-stone-400 hover:text-rose-500" />
-              )}
-              <span className="font-semibold">{likes}</span>
+              <Share2 className="w-3.5 h-3.5 text-stone-500" />
+              <span className="hidden sm:inline text-xs font-medium">Share</span>
             </button>
-
-            {/* Emoji Tray */}
-            {pickerOpen && (
-              <div
-                className="absolute bottom-full left-0 mb-2 flex items-center gap-1 p-2 bg-white rounded-2xl shadow-2xl border border-stone-200 z-50 overflow-x-auto max-w-[85vw] sm:max-w-none"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-              >
-                {EMOJI_OPTIONS.map((item) => (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onPointerDown={(e) => handleSelectEmoji(e, item.emoji)}
-                    onClick={(e) => handleSelectEmoji(e, item.emoji)}
-                    className={`text-xl p-1.5 rounded-xl hover:scale-125 active:scale-90 transition-all cursor-pointer ${
-                      selectedEmoji === item.emoji ? 'bg-rose-100 scale-110' : 'hover:bg-stone-100'
-                    }`}
-                    title={item.label}
-                  >
-                    {item.emoji}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
-          {/* Comments Count */}
-          <div className="flex items-center gap-1.5 text-stone-500">
-            <MessageCircle className="w-4 h-4 text-stone-400" />
-            <span>{commentsCount} comments</span>
-          </div>
+          {/* Secret Admin Delete Button */}
+          {isAdmin && (
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={handleDeletePost}
+              className="flex items-center gap-1 px-2.5 py-1 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-medium rounded-lg text-xs transition-colors cursor-pointer disabled:opacity-50"
+              title="Delete this confession"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
+            </button>
+          )}
         </div>
+      </article>
 
-        {/* Secret Admin Delete Button */}
-        {isAdmin && (
-          <button
-            type="button"
-            disabled={isDeleting}
-            onClick={handleDeletePost}
-            className="flex items-center gap-1 px-2.5 py-1 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-medium rounded-lg text-xs transition-colors cursor-pointer disabled:opacity-50"
-            title="Delete this confession"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
-          </button>
-        )}
-      </div>
-    </article>
+      {/* Share Modal Trigger */}
+      {shareOpen && (
+        <ShareModal
+          confession={confession}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
+    </>
   );
 }
