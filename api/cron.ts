@@ -1,178 +1,396 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// ============================================================
-// DUAL FIREBASE SETUP
-// ============================================================
 const POSTS_PROJECT_ID = 'open-confees';
 const POSTS_API_KEY = 'AIzaSyApMJTBvr7zbzJTP85xZAb994NfLWUBSz8';
-
 const INTERACTIONS_PROJECT_ID = 'ageless-lamp-461817-i8';
 const INTERACTIONS_API_KEY = 'AIzaSyBnbNobd6s1GY9c7bdt6aEhPxP26Wa2VF4';
-
-// Cloudinary Cloud Name
 const CLOUD_NAME = 'xjdv4l6v';
 
-// ============================================================
-// EXACT 14 CATEGORIES (English, Hindi, Bangla - World Way)
-// ============================================================
-interface CategorySource {
+interface CategoryConfig {
   category: string;
   lang: 'English' | 'Hindi' | 'Bengali';
   city: string;
   country: string;
-  query: string;
-  photoKeywords: string[];
   tags: string;
+  topicPrompt: string;
+  photoList: string[];
 }
 
-const CATEGORIES_POOL: CategorySource[] = [
+const CATEGORIES_DATA: CategoryConfig[] = [
   // 1. Cricket Mania
-  { category: 'Cricket Mania', lang: 'English', city: 'Dubai', country: 'UAE', query: 'cricket+match+icc+thriller', photoKeywords: ['cricket-pitch', 'cricket-stadium', 'cricket-bat-ball'], tags: '#CricketTwitter #MatchDay #CricketMania' },
-  { category: 'Cricket Mania', lang: 'Hindi', city: 'Mumbai', country: 'India', query: 'cricket+match+ipl+bcci', photoKeywords: ['cricket-players', 'cricket-stadium-lights', 'cricket-ground'], tags: '#CricketHindi #IPL #BCCI #CricketFever' },
-  { category: 'Cricket Mania', lang: 'Bengali', city: 'Dhaka', country: 'Bangladesh', query: 'cricket+khela+bangladesh', photoKeywords: ['cricket-action', 'cricket-crowd', 'cricket-sports'], tags: '#ক্রিকেট #টিমবাংলাদেশ #CricketCraze' },
+  {
+    category: 'Cricket Mania',
+    lang: 'English',
+    city: 'London',
+    country: 'UK',
+    tags: '#CricketTwitter #MatchDay #CricketMania #GameChanger',
+    topicPrompt: 'Write an intense, passionate full paragraph post about a nail-biting final over in cricket, team spirit, and unbelievable sports drama.',
+    photoList: ['photo-1531415074868-036b1c57e329', 'photo-1540747913346-19e32dc3e97e', 'photo-1512719994953-eabf50895df7', 'photo-1587280501635-68a0e82cd5ff']
+  },
+  {
+    category: 'Cricket Mania',
+    lang: 'Hindi',
+    city: 'Mumbai',
+    country: 'India',
+    tags: '#क्रिकेटफीवर #IPL #TeamIndia #BCCI',
+    topicPrompt: 'क्रिकेट के आखिरी रोमांचक ओवर, चौके-छक्कों की जंग और दर्शकों के जुनून पर एक गहरा और भावुक पूरा पैराग्राफ पोस्ट लिखें।',
+    photoList: ['photo-1540747913346-19e32dc3e97e', 'photo-1531415074868-036b1c57e329', 'photo-1587280501635-68a0e82cd5ff', 'photo-1512719994953-eabf50895df7']
+  },
+  {
+    category: 'Cricket Mania',
+    lang: 'Bengali',
+    city: 'Dhaka',
+    country: 'Bangladesh',
+    tags: '#ক্রিকেট #টিমবাংলাদেশ #CricketCraze',
+    topicPrompt: 'ক্রিকেট মাঠের টানটান শেষ ওভারের উত্তেজনা, স্মরণীয় বাউন্ডারি এবং দলের অসাধারণ লড়াই নিয়ে একটি গভীর ও সম্পূর্ণ অনুচ্ছেদ পোস্ট লিখুন।',
+    photoList: ['photo-1531415074868-036b1c57e329', 'photo-1540747913346-19e32dc3e97e', 'photo-1512719994953-eabf50895df7']
+  },
 
   // 2. Football & World Sports
-  { category: 'Football & World Sports', lang: 'English', city: 'Manchester', country: 'UK', query: 'premier+league+football+champions', photoKeywords: ['football-stadium', 'soccer-pitch', 'football-match'], tags: '#FootballLive #UCL #PremierLeague #MatchDay' },
-  { category: 'Football & World Sports', lang: 'Hindi', city: 'Kolkata', country: 'India', query: 'football+isl+tournament', photoKeywords: ['soccer-game', 'football-players', 'football-field'], tags: '#भारतीयफुटबॉल #ISL #FootballFever' },
+  {
+    category: 'Football & World Sports',
+    lang: 'English',
+    city: 'Manchester',
+    country: 'UK',
+    tags: '#FootballLive #UCL #PremierLeague #MatchDay',
+    topicPrompt: 'Write an exhilarating full paragraph about 90 minutes of football madness, late stoppage time winner, and roaring stadium passion.',
+    photoList: ['photo-1508098682722-e99c43a406b2', 'photo-1518091043644-c1d4457512c6', 'photo-1489944440615-453fc2b6a9a9', 'photo-1431324155629-1a6deb1dec8d']
+  },
+  {
+    category: 'Football & World Sports',
+    lang: 'Bengali',
+    city: 'Kolkata',
+    country: 'India',
+    tags: '#ফুটবল #ডার্বি #কলকাতাফুটবল #FootballPassion',
+    topicPrompt: 'কলকাতা ফুটবলের তীব্র উন্মাদনা, ইনজুরি টাইমের দর্শনীয় গোল আর সমর্থকদের নিঃস্বার্থ আবেগ নিয়ে বিস্তারিত সম্পূর্ণ পোস্ট লিখুন।',
+    photoList: ['photo-1518091043644-c1d4457512c6', 'photo-1508098682722-e99c43a406b2', 'photo-1489944440615-453fc2b6a9a9']
+  },
 
   // 3. News & Breaking Headlines
-  { category: 'News & Breaking Headlines', lang: 'English', city: 'London', country: 'UK', query: 'world+breaking+news+headlines', photoKeywords: ['press-conference', 'broadcast-camera', 'city-journalism'], tags: '#BreakingNews #WorldNews #Headlines' },
-  { category: 'News & Breaking Headlines', lang: 'Hindi', city: 'Delhi', country: 'India', query: 'bharat+samachar+breaking+khabar', photoKeywords: ['indian-press', 'news-reporter', 'delhi-street'], tags: '#ताज़ाखबर #BreakingNews #देशदुनिया' },
-  { category: 'News & Breaking Headlines', lang: 'Bengali', city: 'Kolkata', country: 'India', query: 'kolkata+khobor+breaking+update', photoKeywords: ['kolkata-city', 'newspaper-press', 'city-crowd'], tags: '#ব্রেকিংনিউজ #আজকেরখবর #কলকাতা' },
+  {
+    category: 'News & Breaking Headlines',
+    lang: 'English',
+    city: 'London',
+    country: 'UK',
+    tags: '#BreakingNews #WorldNews #Headlines #PublicEye',
+    topicPrompt: 'Write a realistic, thought-provoking full paragraph about today major city challenges, public transportation issues, and civic infrastructure.',
+    photoList: ['photo-1585829365295-ab7cd400c167', 'photo-1495020689067-958852a7765e', 'photo-1504711434969-e33886168f5c', 'photo-1477959858617-67f30bc75b82']
+  },
+  {
+    category: 'News & Breaking Headlines',
+    lang: 'Hindi',
+    city: 'Delhi',
+    country: 'India',
+    tags: '#ताज़ाखबर #BreakingNews #देशदुनिया #दिल्लीअपडेट',
+    topicPrompt: 'शहर की ताजा हलचल, रोजमर्रा के ट्रैफिक और बुनियादी समस्याओं को लेकर आम नागरिकों के संघर्ष पर एक गंभीर और विस्तृत पैराग्राफ लिखें।',
+    photoList: ['photo-1495020689067-958852a7765e', 'photo-1585829365295-ab7cd400c167', 'photo-1504711434969-e33886168f5c']
+  },
+  {
+    category: 'News & Breaking Headlines',
+    lang: 'Bengali',
+    city: 'Kolkata',
+    country: 'India',
+    tags: '#ব্রেকিংনিউজ #আজকেরখবর #কলকাতা #বাস্তবচিত্র',
+    topicPrompt: 'শহরের প্রতিদিনের বাস্তব সমস্যা, পরিবহন ব্যবস্থা এবং সাধারণ নিত্যযাত্রীদের লড়াই নিয়ে একটি তথ্যবহুল সম্পূর্ণ পোস্ট লিখুন।',
+    photoList: ['photo-1504711434969-e33886168f5c', 'photo-1495020689067-958852a7765e', 'photo-1585829365295-ab7cd400c167']
+  },
 
   // 4. Politics & Public Debate
-  { category: 'Politics & Public Debate', lang: 'English', city: 'Washington', country: 'USA', query: 'world+politics+democracy+policy', photoKeywords: ['parliament-building', 'political-speech', 'government-capitol'], tags: '#PoliticsToday #Democracy #PublicDebate' },
-  { category: 'Politics & Public Debate', lang: 'Hindi', city: 'Lucknow', country: 'India', query: 'rajneeti+chunav+samiksha', photoKeywords: ['election-rally', 'assembly-hall', 'politicians-crowd'], tags: '#राजनीति #जनताकीआवाज #BharatPolitics' },
-  { category: 'Politics & Public Debate', lang: 'Bengali', city: 'Dhaka', country: 'Bangladesh', query: 'bangladesh+rajniti+khobor', photoKeywords: ['parliament-bangladesh', 'public-rally', 'national-press'], tags: '#রাজনীতি #জনমত #গণতন্ত্র' },
+  {
+    category: 'Politics & Public Debate',
+    lang: 'English',
+    city: 'Washington',
+    country: 'USA',
+    tags: '#PoliticsToday #Democracy #PublicDebate #PolicyWatch',
+    topicPrompt: 'Write a balanced, highly realistic critique of public promises versus actual ground reality faced by hardworking middle-class families.',
+    photoList: ['photo-1541872703-74c5e44368f9', 'photo-1540910419892-4a36d2c3266c', 'photo-1529107386315-e1a2ed48a620', 'photo-1523995462485-3d171b5c8fa9']
+  },
+  {
+    category: 'Politics & Public Debate',
+    lang: 'Hindi',
+    city: 'Lucknow',
+    country: 'India',
+    tags: '#राजनीति #जनताकीआवाज #BharatPolitics #लोकतंत्र',
+    topicPrompt: 'नेताओं के चुनावी वादों और जमीनी स्तर पर आम जनता की बुनियादी जरूरतों के बीच के अंतर पर एक निष्पक्ष और मजबूत पैराग्राफ लिखें।',
+    photoList: ['photo-1540910419892-4a36d2c3266c', 'photo-1541872703-74c5e44368f9', 'photo-1529107386315-e1a2ed48a620']
+  },
 
   // 5. Entertainment & Cinema
-  { category: 'Entertainment & Cinema', lang: 'English', city: 'Los Angeles', country: 'USA', query: 'hollywood+cinema+movie+review', photoKeywords: ['cinema-premiere', 'movie-theater', 'film-camera'], tags: '#CinemaLovers #Hollywood #PopCulture' },
-  { category: 'Entertainment & Cinema', lang: 'Hindi', city: 'Mumbai', country: 'India', query: 'bollywood+cinema+filmy+review', photoKeywords: ['bollywood-theater', 'film-screen', 'movie-poster'], tags: '#बॉलीवुड #CinemaReview #BoxOfficeHit' },
-  { category: 'Entertainment & Cinema', lang: 'Bengali', city: 'Kolkata', country: 'India', query: 'tollywood+bangla+cinema+review', photoKeywords: ['theatre-hall', 'cinema-lights', 'kolkata-cinema'], tags: '#টলিউড #বাংলাসিনেমা #বিনোদনবার্তা' },
+  {
+    category: 'Entertainment & Cinema',
+    lang: 'English',
+    city: 'Los Angeles',
+    country: 'USA',
+    tags: '#CinemaLovers #MovieNight #Hollywood #PopCulture',
+    topicPrompt: 'Write an engaging, movie-lover full post about theatrical experience, character writing, background score, and visual storytelling.',
+    photoList: ['photo-1489599849927-2ee91cede3ba', 'photo-1514525253161-7a46d19cd819', 'photo-1478720568477-152d9b164e26', 'photo-1536440136628-849c177e76a1']
+  },
+  {
+    category: 'Entertainment & Cinema',
+    lang: 'Hindi',
+    city: 'Mumbai',
+    country: 'India',
+    tags: '#बॉलीवुड #CinemaReview #BoxOfficeHit #सिनेमा',
+    topicPrompt: 'सिनेमाघरों में नई फिल्म का जादू, कलाकारों का सधा हुआ अभिनय और दिल छू लेने वाले संवादों पर एक खूबसूरत और विस्तृत रिव्यू पोस्ट लिखें।',
+    photoList: ['photo-1514525253161-7a46d19cd819', 'photo-1489599849927-2ee91cede3ba', 'photo-1478720568477-152d9b164e26']
+  },
 
   // 6. Funny, Memes & Sarcasm
-  { category: 'Funny, Memes & Sarcasm', lang: 'English', city: 'New York', country: 'USA', query: 'funny+jokes+viral+humor', photoKeywords: ['funny-laugh', 'comedy-stage', 'humor-street'], tags: '#FunnyTweet #MemeDaily #Sarcasm' },
-  { category: 'Funny, Memes & Sarcasm', lang: 'Hindi', city: 'Pune', country: 'India', query: 'desi+jokes+hasya+funny', photoKeywords: ['laughing-friends', 'desi-chai-adda', 'comedy-smiles'], tags: '#मजेदारमीम्स #देसीह्यूमर #हंसतेरहो' },
-  { category: 'Funny, Memes & Sarcasm', lang: 'Bengali', city: 'Howrah', country: 'India', query: 'bangla+comedy+hasir+kotha', photoKeywords: ['adda-friends', 'smiling-group', 'funny-moment'], tags: '#মজারপোস্ট #হাসিরট্রিক #বাঙালিমিমস' },
+  {
+    category: 'Funny, Memes & Sarcasm',
+    lang: 'English',
+    city: 'New York',
+    country: 'USA',
+    tags: '#FunnyTweet #MemeDaily #Sarcasm #RelatableHumor',
+    topicPrompt: 'Write a hilarious, relatable, and witty full post about adulting struggles, waking up on Monday, and surviving coffee addiction.',
+    photoList: ['photo-1537151608828-ea2b11777ee8', 'photo-1543610892-0b1f7e6d8ac1', 'photo-1517849845537-4d257902454a', 'photo-1527525443983-6e60c75fff46']
+  },
+  {
+    category: 'Funny, Memes & Sarcasm',
+    lang: 'Hindi',
+    city: 'Pune',
+    country: 'India',
+    tags: '#मजेदारमीम्स #देसीह्यूमर #हंसतेरहो #FunnyJokes',
+    topicPrompt: 'जिंदगी के मजेदार किस्सों, दोस्तों की अजीब हरकतों और काम के बीच आने वाले आलस पर एक बहुत ही मजेदार और चुटीला देसी पोस्ट लिखें।',
+    photoList: ['photo-1543610892-0b1f7e6d8ac1', 'photo-1537151608828-ea2b11777ee8', 'photo-1517849845537-4d257902454a']
+  },
 
   // 7. True Love & Soul Connections
-  { category: 'True Love & Soul Connections', lang: 'English', city: 'Paris', country: 'France', query: 'true+love+deep+relationship', photoKeywords: ['couple-hands', 'love-sunset', 'romantic-walk'], tags: '#TrueLove #Soulmate #DeepConnection' },
-  { category: 'True Love & Soul Connections', lang: 'Hindi', city: 'Jaipur', country: 'India', query: 'sachha+pyar+khamosh+rishte', photoKeywords: ['holding-hands-couple', 'heritage-couple', 'love-memories'], tags: '#सच्चाप्यार #रूहानीरिश्ता #LoveDiary' },
-  { category: 'True Love & Soul Connections', lang: 'Bengali', city: 'Kolkata', country: 'India', query: 'valobasha+onubhuti+sondha', photoKeywords: ['princep-ghat-love', 'couple-silhouettes', 'monsoon-love'], tags: '#খাঁটিভালোবাসা #ভালোবাসারগল্প #অনুভূতি' },
+  {
+    category: 'True Love & Soul Connections',
+    lang: 'English',
+    city: 'Paris',
+    country: 'France',
+    tags: '#TrueLove #Soulmate #DeepConnection #LoveStory',
+    topicPrompt: 'Write a deeply moving, genuine full paragraph about quiet unconditional love, understanding without words, and growing old together.',
+    photoList: ['photo-1529333166437-7750a6dd5a70', 'photo-1516589178581-6cd7833ae3b2', 'photo-1522673607200-164d1b6ce486', 'photo-1494774157365-9e04c6720e47']
+  },
+  {
+    category: 'True Love & Soul Connections',
+    lang: 'Hindi',
+    city: 'Jaipur',
+    country: 'India',
+    tags: '#सच्चाप्यार #रूहानीरिश्ता #LoveDiary #एहसास',
+    topicPrompt: 'सच्ची और रूहानी मोहब्बत, बिना शर्त साथ निभाने के वादे और दिल की खामोश समझ पर एक दिल छू लेने वाला संपूर्ण पोस्ट लिखें।',
+    photoList: ['photo-1516589178581-6cd7833ae3b2', 'photo-1529333166437-7750a6dd5a70', 'photo-1522673607200-164d1b6ce486']
+  },
 
   // 8. Heartbreak & Pain
-  { category: 'Heartbreak & Pain', lang: 'English', city: 'Chicago', country: 'USA', query: 'heartbreak+painful+memories', photoKeywords: ['alone-window', 'lonely-bench', 'rain-drops-glass'], tags: '#Heartbreak #BrokenHeart #MovingOn' },
-  { category: 'Heartbreak & Pain', lang: 'Hindi', city: 'Delhi', country: 'India', query: 'dard+tanhai+judai+khamoshi', photoKeywords: ['lonely-evening', 'empty-street-night', 'sad-thought'], tags: '#टूटादिल #तन्हाई #अधूरीमोहब्बत' },
-  { category: 'Heartbreak & Pain', lang: 'Bengali', city: 'Dhaka', country: 'Bangladesh', query: 'biroho+kosto+sritikotha', photoKeywords: ['sad-window-rain', 'alone-river-side', 'dark-evening'], tags: '#হৃদয়ভাঙ্গা #বিরহবেদনা #স্মৃতি' },
+  {
+    category: 'Heartbreak & Pain',
+    lang: 'English',
+    city: 'Chicago',
+    country: 'USA',
+    tags: '#Heartbreak #BrokenHeart #MovingOn #Healing',
+    topicPrompt: 'Write a poignant, deeply realistic post about the quiet ache of losing someone you loved, midnight memories, and slowly piecing yourself back together.',
+    photoList: ['photo-1534528741775-53994a69daeb', 'photo-1499209974431-9dddcece7f88', 'photo-1516589178581-6cd7833ae3b2', 'photo-1509198397868-475647b2a1e5']
+  },
+  {
+    category: 'Heartbreak & Pain',
+    lang: 'Hindi',
+    city: 'Delhi',
+    country: 'India',
+    tags: '#टूटादिल #तन्हाई #अधूरीमोहब्बत #दर्द',
+    topicPrompt: 'अधूरी मोहब्बत की खामोश टीस, पुरानी यादों की चुभन और टूटे दिल को संभालकर आगे बढ़ने के दर्द पर एक भावुक और सच्चा पोस्ट लिखें।',
+    photoList: ['photo-1534528741775-53994a69daeb', 'photo-1509198397868-475647b2a1e5', 'photo-1499209974431-9dddcece7f88']
+  },
 
   // 9. Motivational Quotes & Resilience
-  { category: 'Motivational Quotes & Resilience', lang: 'English', city: 'Toronto', country: 'Canada', query: 'success+resilience+discipline', photoKeywords: ['mountain-peak-sunrise', 'hardwork-workout', 'climbing-path'], tags: '#Motivation #NeverGiveUp #StayStrong' },
-  { category: 'Motivational Quotes & Resilience', lang: 'Hindi', city: 'Bhopal', country: 'India', query: 'sangharsh+safalta+mehnat', photoKeywords: ['running-sunrise', 'focus-eyes', 'determined-path'], tags: '#प्रेरणा #हौसलेकीउड़ान #संघर्षहीजीवनहै' },
-  { category: 'Motivational Quotes & Resilience', lang: 'Bengali', city: 'Kolkata', country: 'India', query: 'prerona+safollo+porishrom', photoKeywords: ['sunrise-sky-path', 'discipline-grind', 'focused-journey'], tags: '#অনুপ্রেরণা #লড়াইকরো #হালছেড়োনা' },
+  {
+    category: 'Motivational Quotes & Resilience',
+    lang: 'English',
+    city: 'Toronto',
+    country: 'Canada',
+    tags: '#Motivation #NeverGiveUp #StayStrong #RiseAndGrind',
+    topicPrompt: 'Write a powerful, inspiring full paragraph about rising from absolute rock bottom, building unbreakable silent discipline, and overcoming self-doubt.',
+    photoList: ['photo-1470246973918-29a93221c455', 'photo-1500530855697-b586d89ba3ee', 'photo-1499209974431-9dddcece7f88', 'photo-1464822759023-fed622ff2c3b']
+  },
+  {
+    category: 'Motivational Quotes & Resilience',
+    lang: 'Hindi',
+    city: 'Bhopal',
+    country: 'India',
+    tags: '#प्रेरणा #हौसलेकीउड़ान #संघर्षहीजीवनहै #मेहनत',
+    topicPrompt: 'मुश्किल हालातों में बिना रुके लड़ने, खुद पर भरोसा रखने और शून्य से उठकर सफलता पाने के जज्बे पर एक ऊर्जावान पूरा पोस्ट लिखें।',
+    photoList: ['photo-1470246973918-29a93221c455', 'photo-1500530855697-b586d89ba3ee', 'photo-1464822759023-fed622ff2c3b']
+  },
 
   // 10. Real Life Struggles & Stories
-  { category: 'Real Life Struggles & Stories', lang: 'English', city: 'New York', country: 'USA', query: 'ordinary+people+real+life+struggles', photoKeywords: ['street-commuter', 'working-hands', 'subway-life'], tags: '#RealLife #LifeStruggles #CommonMan' },
-  { category: 'Real Life Struggles & Stories', lang: 'Hindi', city: 'Patna', country: 'India', query: 'aam+aadmi+sangharsh+parivar', photoKeywords: ['middle-class-journey', 'hard-working-man', 'evening-commute'], tags: '#मध्यमवर्ग #आमइंसान #जिंदगीकीसच्चाई' },
-  { category: 'Real Life Struggles & Stories', lang: 'Bengali', city: 'Siliguri', country: 'India', query: 'sadharan+manusher+jibon+songram', photoKeywords: ['common-man-street', 'tea-worker-lifestyle', 'busy-bazaar'], tags: '#বাস্তবজীবন #মধ্যবিত্তেরলড়াই #জীবনসংগ্রাম' },
+  {
+    category: 'Real Life Struggles & Stories',
+    lang: 'English',
+    city: 'New York',
+    country: 'USA',
+    tags: '#RealLife #LifeStruggles #CommonMan #RealityCheck',
+    topicPrompt: 'Write an honest, touching narrative about an ordinary middle-class individual making silent sacrifices every day for family well-being.',
+    photoList: ['photo-1477959858617-67f30bc75b82', 'photo-1480714378408-67cf0d13bc1b', 'photo-1449824913935-59a10b8d2000', 'photo-1476703993599-0035a21b17a9']
+  },
+  {
+    category: 'Real Life Struggles & Stories',
+    lang: 'Bengali',
+    city: 'Siliguri',
+    country: 'India',
+    tags: '#বাস্তবজীবন #মধ্যবিত্তেরলড়াই #জীবনসংগ্রাম',
+    topicPrompt: 'মধ্যবিত্ত পরিবারের দিনরাত অমানুষিক পরিশ্রম, পরিবারের মুখে হাসি ফোটানোর নীরব ত্যাগ এবং সততার সাথে বেঁচে থাকা নিয়ে একটি গভীর সম্পূর্ণ পোস্ট লিখুন।',
+    photoList: ['photo-1449824913935-59a10b8d2000', 'photo-1477959858617-67f30bc75b82', 'photo-1480714378408-67cf0d13bc1b']
+  },
 
   // 11. Work & Corporate Hustle
-  { category: 'Work & Corporate Hustle', lang: 'English', city: 'Singapore', country: 'Singapore', query: 'corporate+burnout+office+life', photoKeywords: ['corporate-desk', 'office-laptop-night', 'modern-office-tower'], tags: '#CorporateLife #WorkHustle #Burnout' },
-  { category: 'Work & Corporate Hustle', lang: 'Hindi', city: 'Bengaluru', country: 'India', query: 'office+life+corporate+job', photoKeywords: ['tech-park-bangalore', 'laptop-coffee-work', 'office-corridor'], tags: '#कॉर्पोरेटलाइफ #नौकरीपेशा #WorkStress' },
-  { category: 'Work & Corporate Hustle', lang: 'Bengali', city: 'Kolkata', country: 'India', query: 'chakri+jibon+sector-five', photoKeywords: ['sector-five-kolkata', 'office-traffic', 'late-work-desk'], tags: '#অফিসজীবন #চাকরিরচাপ #কর্মব্যস্ততা' },
+  {
+    category: 'Work & Corporate Hustle',
+    lang: 'English',
+    city: 'Singapore',
+    country: 'Singapore',
+    tags: '#CorporateLife #WorkHustle #Burnout #9to5Life',
+    topicPrompt: 'Write a truthful, relatable critique of modern corporate culture, infinite meetings, inbox overwhelm, and the struggle to protect mental peace.',
+    photoList: ['photo-1486312338219-ce68d2c6f44d', 'photo-1498050108023-c5249f4df085', 'photo-1519389950473-47ba0277781c', 'photo-1497366216548-37526070297c']
+  },
+  {
+    category: 'Work & Corporate Hustle',
+    lang: 'Hindi',
+    city: 'Bengaluru',
+    country: 'India',
+    tags: '#कॉर्पोरेटलाइफ #नौकरीपेशा #WorkStress #WeekendVibes',
+    topicPrompt: 'कॉर्पोरेट की 9 से 5 की अंधी दौड़, अंतहीन टारगेट्स और ईएमआई के बोझ के बीच खुद की जिंदगी को खोने के अहसास पर एक सच्चा पैराग्राफ लिखें।',
+    photoList: ['photo-1498050108023-c5249f4df085', 'photo-1486312338219-ce68d2c6f44d', 'photo-1519389950473-47ba0277781c']
+  },
 
   // 12. Family & Home Bonds
-  { category: 'Family & Home Bonds', lang: 'English', city: 'Melbourne', country: 'Australia', query: 'family+togetherness+home+love', photoKeywords: ['family-dinner-table', 'home-living-room', 'parents-hug'], tags: '#FamilyFirst #ParentsLove #HomeVibes' },
-  { category: 'Family & Home Bonds', lang: 'Hindi', city: 'Jaipur', country: 'India', query: 'parivar+ka+pyar+ghar', photoKeywords: ['indian-family-gathering', 'home-courtyard', 'sweet-home-tea'], tags: '#परिवारकाप्यार #मातापिता #घरकासुकून' },
-  { category: 'Family & Home Bonds', lang: 'Bengali', city: 'Dhaka', country: 'Bangladesh', query: 'paribarer+valobasha+shanti', photoKeywords: ['village-home-warmth', 'family-together', 'home-rooftop'], tags: '#পারিবারিকভালোবাসা #মাটিরমায়া #আপনজন' },
+  {
+    category: 'Family & Home Bonds',
+    lang: 'English',
+    city: 'Melbourne',
+    country: 'Australia',
+    tags: '#FamilyFirst #ParentsLove #HomeVibes #Togetherness',
+    topicPrompt: 'Write a heartwarming full post about returning home to parents, home-cooked food, and realizing family love is the safest place on earth.',
+    photoList: ['photo-1511895426328-dc8714191300', 'photo-1609220136736-443140cffec6', 'photo-1476703993599-0035a21b17a9', 'photo-1506869640319-fe1a24fd76dc']
+  },
+  {
+    category: 'Family & Home Bonds',
+    lang: 'Hindi',
+    city: 'Jaipur',
+    country: 'India',
+    tags: '#परिवारकाप्यार #मातापिता #घरकासुकून #अपनापन',
+    topicPrompt: 'मां-बाप के अनमोल बलिदान, घर के सुकून और परिवार के साथ बिताए गए सादे लेकिन सबसे खूबसूरत पलों पर एक भावुक और आत्मीय पोस्ट लिखें।',
+    photoList: ['photo-1609220136736-443140cffec6', 'photo-1511895426328-dc8714191300', 'photo-1476703993599-0035a21b17a9']
+  },
 
   // 13. Travel & Global Adventures
-  { category: 'Travel & Global Adventures', lang: 'English', city: 'San Francisco', country: 'USA', query: 'travel+adventure+scenic+valleys', photoKeywords: ['travel-backpack-view', 'mountain-lake-scenery', 'winding-road-travel'], tags: '#TravelDiaries #Wanderlust #ExploreTheWorld' },
-  { category: 'Travel & Global Adventures', lang: 'Hindi', city: 'Manali', country: 'India', query: 'travel+yatra+pahad+himalaya', photoKeywords: ['himalaya-valley-snow', 'manali-wooden-cabin', 'mountain-river-trek'], tags: '#यात्राडायरी #पहाड़ोंकासफर #घुमक्कड़ी' },
-  { category: 'Travel & Global Adventures', lang: 'Bengali', city: 'Darjeeling', country: 'India', query: 'bhromon+darjeeling+pahad', photoKeywords: ['darjeeling-tea-garden', 'kanchenjunga-view', 'toy-train-hills'], tags: '#ভ্রমণকাহিনী #পাহাড়েরটান #পথেরনেশা' },
+  {
+    category: 'Travel & Global Adventures',
+    lang: 'English',
+    city: 'San Francisco',
+    country: 'USA',
+    tags: '#TravelDiaries #Wanderlust #ExploreTheWorld #Mountains',
+    topicPrompt: 'Write a vivid, sensory travel post about morning mist over winding mountain roads, local food discoveries, and the transformative power of journeys.',
+    photoList: ['photo-1488646953014-85cb44e25828', 'photo-1476514525535-07fb3b4ae5f1', 'photo-1503220317375-aaad61436b1b', 'photo-1469854523086-cc02fe5d8800']
+  },
+  {
+    category: 'Travel & Global Adventures',
+    lang: 'Bengali',
+    city: 'Darjeeling',
+    country: 'India',
+    tags: '#ভ্রমণকাহিনী #পাহাড়েরটান #পথেরনেশা #দার্জিলিং',
+    topicPrompt: 'পাহাড়ের কুয়াশাঘেরা বাঁক, কাঞ্চনজঙ্ঘার দৃশ্য, চা বাগানের নীরবতা এবং ভ্রমণের রোমাঞ্চকর অনুভূতি নিয়ে একটি মনোমুগ্ধকর বিস্তারিত পোস্ট লিখুন।',
+    photoList: ['photo-1503220317375-aaad61436b1b', 'photo-1476514525535-07fb3b4ae5f1', 'photo-1488646953014-85cb44e25828']
+  },
 
   // 14. Tech, AI & Future World
-  { category: 'Tech, AI & Future World', lang: 'English', city: 'San Francisco', country: 'USA', query: 'artificial+intelligence+tech+future', photoKeywords: ['digital-network-abstract', 'futuristic-coding-screen', 'ai-chip-hardware'], tags: '#TechNews #ArtificialIntelligence #FutureTech' },
-  { category: 'Tech, AI & Future World', lang: 'Hindi', city: 'Noida', country: 'India', query: 'ai+technology+future+smart', photoKeywords: ['modern-datacenter', 'coding-dual-monitors', 'robotics-lab'], tags: '#तकनीक #एआईक्रांति #TechHindi' },
-  { category: 'Tech, AI & Future World', lang: 'Bengali', city: 'Dhaka', country: 'Bangladesh', query: 'projukti+ai+notun+avishkar', photoKeywords: ['tech-workspace-dark', 'digital-code-interface', 'cyber-ai-network'], tags: '#প্রযুক্তি #কৃত্রিমবুদ্ধিমত্তা #ডিজিটালবিশ্ব' }
+  {
+    category: 'Tech, AI & Future World',
+    lang: 'English',
+    city: 'San Francisco',
+    country: 'USA',
+    tags: '#TechNews #ArtificialIntelligence #FutureTech #DigitalEra',
+    topicPrompt: 'Write an insightful, forward-looking full paragraph analyzing how artificial intelligence is reshaping careers, human creativity, and daily life.',
+    photoList: ['photo-1518770660439-4636190af475', 'photo-1526374965328-7f61d4dc18c5', 'photo-1485827404703-89b55fcc595e', 'photo-1531297484001-80022131f5a1']
+  },
+  {
+    category: 'Tech, AI & Future World',
+    lang: 'Hindi',
+    city: 'Noida',
+    country: 'India',
+    tags: '#तकनीक #एआईक्रांति #TechHindi #भविष्य',
+    topicPrompt: 'आर्टिफिशियल इंटेलिजेंस के बढ़ते कदमों, नई नौकरियों और तकनीक के बीच इंसानी सोच के भविष्य पर एक विचारणीय और ज्ञानवर्धक पैराग्राफ लिखें।',
+    photoList: ['photo-1526374965328-7f61d4dc18c5', 'photo-1518770660439-4636190af475', 'photo-1485827404703-89b55fcc595e']
+  }
 ];
 
-// ============================================================
-// STRICT REALISTIC COMMENTS FOR ALL 14 CATEGORIES
-// ============================================================
-const CATEGORY_COMMENTS: Record<string, { English: string[]; Hindi: string[]; Bengali: string[] }> = {
+// Strict Category Matched Comments
+const COMMENTS_STORE: Record<string, { English: string[]; Hindi: string[]; Bengali: string[] }> = {
   'Cricket Mania': {
-    English: ['What an extraordinary match! That performance will be remembered.', 'Cricket at its absolute best, pure adrenaline.', 'Such games remind us why we love this sport so much.'],
-    Hindi: ['क्या जबरदस्त खेल दिखाया! रोंगटे खड़े हो गए मैच देखकर।', 'ये खिलाड़ी सच में मैच विनर है, कमाल कर दिया।', 'आखिरी लम्हों तक सांसें थमी हुई थीं, शानदार!'],
-    Bengali: ['অবিশ্বাস্য এক ম্যাচ! মাঠে খেলোয়াড়দের লড়াই চোখে লেগে থাকার মতো।', 'এই ইনিংসটা ক্রিকেট ইতিহাসে চিরকাল লেখা থাকবে।', 'পরের ম্যাচটায় ঠিক এই মানসিকতা নিয়েই নামতে হবে।']
+    English: ['What an incredible game of cricket!', 'That over was pure cinema.', 'Games like this remind us why we love cricket.'],
+    Hindi: ['क्या जबरदस्त खेल दिखाया! रोंगटे खड़े हो गए मैच देखकर।', 'ये खिलाड़ी सच में मैच विनर है।', 'आखिरी लम्हों तक सांसें थमी हुई थीं!'],
+    Bengali: ['অবিশ্বাস্য এক ম্যাচ! শেষ মুহূর্ত পর্যন্ত কী টানটান উত্তেজনা ছিল।', 'এই ইনিংসটা অনেকদিন মনে থাকবে।', 'দারুণ লড়াই করেছে দল!']
   },
   'Football & World Sports': {
-    English: ['Pure class and determination on the pitch tonight.', 'The stadium atmosphere was electric, what a finish!', 'Tactical masterpiece from the manager and players.'],
-    Hindi: ['क्या गजब का मुकाबला था, खिलाड़ियों का जोश देखने लायक था।', 'स्टेडियम का वो शोर और वो आखिरी गोल, कमाल का खेल!', 'फुटबॉल का असली जुनून इसी को कहते हैं।'],
-    Bengali: ['মাঠে পুরো ৯০ মিনিট ধরে যে লড়াই হলো, তা অবিশ্বাস্য!', 'ইনজুরি টাইমের ওই আক্রমণটাই পুরো খেলার মোড় ঘুরিয়ে দিল।', 'দল যেভাবে নিজেদের উজাড় করে দিয়েছে, তা সত্যিই প্রশংসনীয়।']
+    English: ['Pure class and determination on the pitch tonight.', 'The stadium atmosphere was electric, what a goal!', 'Football at its highest level.'],
+    Hindi: ['क्या गजब का मुकाबला था, खिलाड़ियों का जोश देखने लायक था।', 'स्टेडियम का वो शोर और वो आखिरी गोल, कमाल!', 'फुटबॉल का असली जुनून!'],
+    Bengali: ['মাঠে পুরো ৯০ মিনিট ধরে অসাধারণ লড়াই দেখলাম!', 'ইনজুরি টাইমের গোলটা পুরো খেলার রূপ বদলে দিল।', 'চমৎকার ফুটবল!']
   },
   'News & Breaking Headlines': {
-    English: ['Following this breaking situation very closely.', 'Immediate accountability and ground action are needed.', 'Thanks for putting together this detailed ground reality.'],
-    Hindi: ['सुबह से इस खबर पर सबकी नजर है, कड़े कदम उठाने जरूरी हैं।', 'प्रशासन को जमीनी हकीकत देखकर तुरंत फैसला लेना चाहिए।', 'बहुत ही जरूरी और सटीक अपडेट साझा किया है भाई।'],
-    Bengali: ['সকাল থেকেই এই ঘটনাটি নিয়ে সব জায়গায় জোর আলোচনা চলছে।', 'প্রশাসনের উচিত অবিলম্বে সাধারণ মানুষের পাশে দাঁড়িয়ে ব্যবস্থা নেওয়া।', 'সঠিক সময়ে এমন বাস্তব চিত্র তুলে ধরার জন্য ধন্যবাদ।']
+    English: ['Following this situation very closely.', 'Immediate accountability from local authorities is required.', 'Thanks for this timely ground update.'],
+    Hindi: ['सुबह से इस खबर पर सबकी नजर है, ठोस कदम उठाने जरूरी हैं।', 'प्रशासन को जमीनी हकीकत देखकर तुरंत फैसला लेना चाहिए।', 'बहुत ही जरूरी अपडेट साझा किया।'],
+    Bengali: ['সকাল থেকেই এই ঘটনাটি নিয়ে সব জায়গায় জোর আলোচনা চলছে।', 'প্রশাসনের উচিত দ্রুত ব্যবস্থা নেওয়া।', 'বাস্তব চিত্র তুলে ধরার জন্য ধন্যবাদ।']
   },
   'Politics & Public Debate': {
-    English: ['A very rational, well-balanced critique of ground policies.', 'Public promises look great on paper, but reality is different.', 'Insightful perspective on today political landscape.'],
-    Hindi: ['वादे बड़े-बड़े होते हैं पर आम आदमी की जिंदगी जस की तस रहती है।', 'बिल्कुल निष्पक्ष और जमीनी राय रखी है आपने।', 'लोकतंत्र में आम जनता के सरोकारों पर बात होना सबसे जरूरी है।'],
-    Bengali: ['রাজনীতির মঞ্চে বড় বড় কথার ভিড়ে সাধারণ মানুষের আসল চাওয়া হারিয়ে যায়।', 'খুবই প্রাসঙ্গিক এবং তথ্যপূর্ণ আলোচনা তুলে ধরেছো।', 'এই বিষয়গুলো নিয়ে খোলামেলা বিতর্ক হওয়াই সুস্থ গণতন্ত্রের লক্ষণ।']
+    English: ['A very rational, well-balanced critique of ground policies.', 'Public promises look great on paper, but ground reality is different.', 'Insightful perspective.'],
+    Hindi: ['वादे बड़े-बड़े होते हैं पर आम आदमी की जिंदगी जस की तस रहती है।', 'बिल्कुल निष्पक्ष और जमीनी राय रखी है आपने।', 'इस मुद्दे पर बात होना बहुत जरूरी था।'],
+    Bengali: ['রাজনীতির মঞ্চে বড় কথার ভিড়ে সাধারণ মানুষের আসল সমস্যা হারিয়ে যায়।', 'খুবই প্রাসঙ্গিক এবং স্পষ্ট আলোচনা।', 'একদম সহমত।']
   },
   'Entertainment & Cinema': {
-    English: ['Loved the cinematic vision and emotional performances!', 'Booking tickets for this weekend right away after reading this.', 'Truly worth every bit of the anticipation and praise.'],
-    Hindi: ['अभिनय और कहानी दोनों में गहराई थी, पूरा पैसा वसूल!', 'बैकग्राउंड स्कोर और डायलॉग्स सीधे दिल में उतरते हैं।', 'इस हफ्ते की सबसे बेहतरीन और यादगार प्रस्तुति।'],
-    Bengali: ['অনবদ্য পরিচালনা আর প্রতিটি চরিত্রের নিখুঁত অভিনয় মুগ্ধ করল!', 'ব্যাকগ্রাউন্ড মিউজিকটা পুরো দৃশ্যপটকে অনন্য উচ্চতায় নিয়ে গেছে।', 'উইকএন্ডে পরিবার নিয়ে হলে গিয়ে দেখার মতো অসাধারণ ছবি।']
+    English: ['Loved the cinematic vision and emotional depth!', 'Booking tickets right away after reading this.', 'Truly worth all the praise.'],
+    Hindi: ['अभिनय और कहानी दोनों में गहराई थी, पूरा पैसा वसूल!', 'बैकग्राउंड स्कोर सीधे दिल में उतरता है।', 'इस हफ्ते की सबसे बेहतरीन पेशकश।'],
+    Bengali: ['অনবদ্য পরিচালনা আর প্রতিটি চরিত্রের নিখুঁত অভিনয় মুগ্ধ করল!', 'ব্যাকগ্রাউন্ড মিউজিকটা পুরো দৃশ্যপট বদলে দিয়েছে।', 'অসাধারণ সিনেমা!']
   },
   'Funny, Memes & Sarcasm': {
     English: ['I cannot stop laughing at this, painfully relatable!', 'Sent this straight to the family and friends group chat.', 'Your sense of humour always hits the bullseye.'],
-    Hindi: ['हंसते-हंसते लोटपोट हो गए भाई, क्या गजब की टाइमिंग है!', 'ये तो मेरे ही दोस्त की रोज की दास्तान लग रही है।', 'सेंस ऑफ ह्यूमर कमाल का है आपका, दिन बन गया!'],
-    Bengali: ['হাসতে হাসতে পেটে খিল ধরে গেল ভাই, কী দারুণ টাইমিং!', 'একদম আমাদের বন্ধুদের রোজকার আড্ডার গল্প যেন এটা।', 'কাজের চাপের মাঝে এমন হালকা রসিকতা সত্যি মন ভালো করে দেয়।']
+    Hindi: ['हंसते-हंसते लोटपोट हो गए भाई, क्या गजब की टाइमिंग है!', 'ये तो मेरे ही दोस्त की रोज की दास्तान लग रही है।', 'सेंस ऑफ ह्यूमर कमाल है भाई!'],
+    Bengali: ['হাসতে হাসতে পেটে খিল ধরে গেল ভাই, কী দারুণ টাইমিং!', 'একদম আমাদের বন্ধুদের রোজকার আড্ডার গল্প যেন এটা।', 'দারুণ রসিকতা!']
   },
   'True Love & Soul Connections': {
-    English: ['Beautifully written and deeply moving piece.', 'Pure, quiet love like this is the biggest blessing.', 'Every line carried a gentle, genuine warmth.'],
-    Hindi: ['सच्ची मोहब्बत की सादगी दिल को छू गई, बहुत खूबसूरत लिखा है।', 'रिश्ते दिखावे से नहीं, रूहानी एहसास से जीते हैं।', 'काश हर किसी को जिंदगी में ऐसा गहरा साथ मिले।'],
-    Bengali: ['পড়ে মনটা শান্তিতে ভরে গেল, অসাধারণ আবেগ দিয়ে লিখেছো।', 'ভালোবাসা কোনো দামী উপহার নয়, নীরব পাশে থাকার নাম।', 'নিজের ফেলে আসা মিষ্টি আর প্রিয় দিনগুলোর কথা মনে পড়ে গেল।']
+    English: ['Beautifully written and deeply moving piece.', 'Pure, quiet love like this is the biggest blessing.', 'Every line carried genuine warmth.'],
+    Hindi: ['सच्ची मोहब्बत की सादगी दिल को छू गई, बहुत खूबसूरत लिखा है।', 'रिश्ते दिखावे से नहीं, रूहानी एहसास से जीते हैं।', 'काश हर किसी को ऐसा प्यार मिले।'],
+    Bengali: ['পড়ে মনটা শান্তিতে ভরে গেল, অসাধারণ আবেগ দিয়ে লিখেছো।', 'ভালোবাসা কোনো দামী উপহার নয়, নীরব পাশে থাকার নাম।', 'খুব মিষ্টি একটা লেখা।']
   },
   'Heartbreak & Pain': {
-    English: ['Healing is not linear, be gentle with yourself.', 'Felt every single word of this deeply. Stay strong.', 'Pain teaches us resilience when nothing else can.'],
-    Hindi: ['वक्त हर गहरे जख्म को भर देता है भाई, खुद को संभालो।', 'अधूरी मोहब्बत का दर्द सबसे खामोश और भारी होता है।', 'तुम्हारी इस बात में हर टूटे दिल का दर्द झलक रहा है।'],
-    Bengali: ['খুব শক্ত হও বন্ধু, সময়ের চেয়ে বড় কোনো শুশ্রূষা নেই।', 'আমরা সবাই কোনো না কোনো নিস্তব্ধ রাতে এভাবে ভেঙেছি।', 'লেখাটার প্রতিটি শব্দ বুকের ভেতর একটা চাপা কষ্ট জাগিয়ে দেয়।']
+    English: ['Healing is not linear, be gentle with yourself.', 'Felt every single word of this deeply. Stay strong.', 'Better days are ahead.'],
+    Hindi: ['वक्त हर गहरे जख्म को भर देता है भाई, खुद को संभालो।', 'अधूरी मोहब्बत का दर्द सबसे खामोश और भारी होता है।', 'महसूस हुआ तुम्हारा दर्द।'],
+    Bengali: ['খুব শক্ত হও বন্ধু, সময়ের চেয়ে বড় কোনো শুশ্রূষা নেই।', 'আমরা সবাই কোনো না কোনো রাতে এভাবে ভেঙেছি।', 'লেখাটা মনের গভীরে লেগেছে।']
   },
   'Motivational Quotes & Resilience': {
-    English: ['Exactly the powerful push needed to conquer today goals.', 'Rock bottom teaches lessons success never could. Respect.', 'Consistency in silent battles will always bring victory.'],
-    Hindi: ['हार मान लेना कोई रास्ता नहीं है, गिरकर उठना ही जिंदगी है।', 'इस पोस्ट ने फिर से नई ऊर्जा और हौसला भर दिया है।', 'कड़ी मेहनत और अनुशासन का फल एक दिन जरूर मिलता है।'],
-    Bengali: ['ঠিক এই আত্মবিশ্বাস আর সাহসটাই আজ মনের ভেতর দরকার ছিল!', 'জীবনের লড়াই যত কঠিন হবে, জয়ের আনন্দ ততটাই বড় হবে।', 'হাল ছেড়ো না বন্ধু, নিজের ওপর ভরসা রেখে এগিয়ে চলো।']
+    English: ['Exactly the powerful push needed to conquer today goals.', 'Consistency in silent battles will always bring victory.', 'Respect for this mindset.'],
+    Hindi: ['हार मान लेना कोई रास्ता नहीं है, गिरकर उठना ही जिंदगी है।', 'इस पोस्ट ने फिर से नई ऊर्जा और हौसला भर दिया है।', 'कड़ी मेहनत का फल जरूर मिलता है।'],
+    Bengali: ['ঠিক এই আত্মবিশ্বাস আর সাহসটাই আজ মনের ভেতর দরকার ছিল!', 'জীবনের লড়াই যত কঠিন হবে, জয়ের আনন্দ ততটাই বড় হবে।', 'হাল ছেড়ো না বন্ধু!']
   },
   'Real Life Struggles & Stories': {
-    English: ['The raw, unfiltered honesty here is deeply inspiring.', 'Respect for every ordinary person fighting unseen daily battles.', 'A truthful reminder of what resilience actually means.'],
-    Hindi: ['यही तो असल जिंदगी की जमीनी सच्चाई है, दिल छू लिया।', 'मध्यम वर्ग की खामोश कुर्बानियों को कोई नहीं देखता।', 'ईमानदारी और स्वाभिमान से जीने की यह कहानी बहुत बड़ी सीख है।'],
-    Bengali: ['একদম সাধারণ মানুষের জীবনের কঠিন আর খাঁটি বাস্তব রূপ।', 'পরিবারের মুখে হাসি ফোটাতে গিয়ে বাবাদের যে ত্যাগ, তা ফুটে উঠেছে।', 'সম্মানের সাথে বেঁচে থাকার এই নীরব সংগ্রামকে কুর্নিশ জানাই।']
+    English: ['The raw, unfiltered honesty here is deeply inspiring.', 'Respect for every ordinary person fighting unseen daily battles.', 'A truthful reminder.'],
+    Hindi: ['यही तो असल जिंदगी की जमीनी सच्चाई है, दिल छू लिया।', 'मध्यम वर्ग की खामोश कुर्बानियों को कोई नहीं देखता।', 'ईमानदारी और स्वाभिमान की मिसाल।'],
+    Bengali: ['একদম সাধারণ মানুষের জীবনের কঠিন আর খাঁটি বাস্তব রূপ।', 'পরিবারের মুখে হাসি ফোটাতে গিয়ে বাবাদের যে ত্যাগ, তা ফুটে উঠেছে।', 'শ্রদ্ধা জানাই।']
   },
   'Work & Corporate Hustle': {
-    English: ['Every single working professional felt this in their bones.', 'Work-life balance cannot remain just a hollow buzzword.', 'Counting down the hours until this exhausting week wraps up.'],
-    Hindi: ['ऑफिस की इस दौड़धूप में अपनी ही जिंदगी पीछे छूट जाती है।', 'सैलरी आते ही बिल भरने में खत्म, और तनाव वही का वही।', 'सच्ची बात लिखी है, खुद के स्वास्थ्य के लिए समय निकालना ही होगा।'],
-    Bengali: ['কিউবিকলে বসে এই লেখাটা পড়তে পড়তে মনের ভেতরের ক্লান্তিটাই যেন দেখলাম।', 'মাসের পর মাস ডেডলাইনের চাপে হারিয়ে যাচ্ছে সহজ জীবনের আনন্দ।', 'কাজের পাশাপাশি নিজের মানসিক শান্তিকে প্রাধান্য দেওয়া এখন খুব দরকার।']
+    English: ['Every single working professional felt this in their bones.', 'Work-life balance cannot remain just a hollow buzzword.', 'Counting down hours to Friday night.'],
+    Hindi: ['ऑफिस की इस दौड़धूप में अपनी ही जिंदगी पीछे छूट जाती है।', 'सैलरी आते ही बिल भरने में खत्म, और तनाव वही का वही।', 'सच्ची बात लिखी है आपने।'],
+    Bengali: ['কিউবিকলে বসে এই লেখাটা পড়তে পড়তে মনের ক্লান্তিটাই যেন দেখলাম।', 'মাসের পর মাস ডেডলাইনের চাপে হারিয়ে যাচ্ছে সহজ জীবনের আনন্দ।', 'খুব বাস্তব কথা।']
   },
   'Family & Home Bonds': {
-    English: ['Nothing in this entire world replaces the warmth of family.', 'Calling my parents right after reading this touching post.', 'Treasuring these heartfelt home moments forever.'],
-    Hindi: ['मां-बाप के प्यार और उनकी छत्रछाया से बड़ी कोई दौलत नहीं।', 'परिवार का साथ हर मुश्किल वक्त में सबसे बड़ा संबल होता है।', 'पढ़कर मन बहुत भावुक हो गया, अपनों की बहुत याद आई।'],
-    Bengali: ['মাটির টান আর মা-বাবার স্নেহের চেয়ে বড় আশ্রয় পৃথিবীতে নেই।', 'পোস্টটা পড়ার পর মায়ের হাতের রান্না আর মিষ্টি ডাকটা খুব মনে পড়ল।', 'পরিবারের ভালোবাসাই মানুষকে সব প্রতিকূলতায় বাঁচিয়ে রাখে।']
+    English: ['Nothing in this entire world replaces the warmth of family.', 'Calling my parents right after reading this touching post.', 'Treasuring these memories.'],
+    Hindi: ['मां-बाप के प्यार और उनकी छत्रछाया से बड़ी कोई दौलत नहीं।', 'परिवार का साथ हर मुश्किल वक्त में सबसे बड़ा संबल होता है।', 'पढ़कर मन बहुत भावुक हो गया।'],
+    Bengali: ['মাটির টান আর মা-বাবার স্নেহের চেয়ে বড় আশ্রয় পৃথিবীতে নেই।', 'পোস্টটা পড়ার পর মায়ের হাতের রান্না খুব মনে পড়ল।', 'পরিবারই সব।']
   },
   'Travel & Global Adventures': {
-    English: ['Adding this magnificent route to my bucket list immediately!', 'Breathtaking storytelling and vivid travel notes. Pure wanderlust.', 'Traveling heals and rejuvenates the human spirit.'],
-    Hindi: ['तस्वीर और शब्दों ने मन में फिर से पहाड़ों का सफर जगा दिया।', 'अनजान रास्तों पर भटकने का असली सुकून शब्दों में बयां नहीं होता।', 'शानदार अनुभव, अगली यात्रा की योजना अब पक्की है!'],
-    Bengali: ['পাহাড়ের বাঁকে কুয়াশার খেলা দেখার ইচ্ছেটা আবার নতুন করে জাগিয়ে তুললে!', 'কী অসাধারণ বর্ণনা, যেন চোখের সামনে পাহাড়ি পথটা দেখতে পাচ্ছি।', 'ভ্রমণের এই অদম্য টানটাই মানুষের মনকে সতেজ করে তোলে।']
+    English: ['Adding this magnificent route to my bucket list immediately!', 'Breathtaking storytelling and vivid travel notes. Pure wanderlust.', 'Traveling heals the spirit.'],
+    Hindi: ['तस्वीर और शब्दों ने मन में फिर से पहाड़ों का सफर जगा दिया।', 'अनजान रास्तों पर भटकने का असली सुकून शब्दों में बयां नहीं होता।', 'शानदार अनुभव!'],
+    Bengali: ['পাহাড়ের বাঁকে কুয়াশার খেলা দেখার ইচ্ছেটা আবার জাগিয়ে তুললে!', 'কী অসাধারণ বর্ণনা, যেন চোখের সামনে পাহাড়ি পথটা দেখতে পাচ্ছি।', 'মন ভরে গেল।']
   },
   'Tech, AI & Future World': {
-    English: ['The velocity of AI disruption is truly astounding.', 'Fascinating breakdown of modern technology and human future.', 'Continuous learning is our only anchor in this digital era.'],
-    Hindi: ['एआई जिस रफ्तार से दुनिया बदल रहा है, सतर्क और तैयार रहना जरूरी है।', 'तकनीक ने काम आसान किया है पर इंसानी समझ की जगह कोई नहीं ले सकता।', 'भविष्य की चुनौतियों पर बहुत ही सटीक और विचारणीय पोस्ट।'],
-    Bengali: ['প্রযুক্তি যে গতিতে রোজ বদলে যাচ্ছে, তাতে নিজেকে আপডেট রাখাই একমাত্র পথ।', 'এআই বিপ্লব আর মানবিক মেধার মেলবন্ধন নিয়ে খুব সুন্দর বিশ্লেষণ।', 'ভবিষ্যতের ডিজিটাল দুনিয়া নিয়ে এক গভীর ও বাস্তববাদী দৃষ্টিভঙ্গি।']
+    English: ['The velocity of AI disruption is truly astounding.', 'Fascinating breakdown of modern technology and human future.', 'Continuous learning is essential.'],
+    Hindi: ['एआई जिस रफ्तार से दुनिया बदल रहा है, सतर्क और तैयार रहना जरूरी है।', 'तकनीक ने काम आसान किया है पर नई चुनौतियां भी हैं।', 'बेहतरीन और उपयोगी पोस्ट।'],
+    Bengali: ['প্রযুক্তি যে গতিতে রোজ বদলে যাচ্ছে, তাতে নিজেকে আপডেট রাখাই একমাত্র পথ।', 'এআই বিপ্লব নিয়ে খুব সুন্দর বিশ্লেষণ।', 'দারুণ তথ্যবহুল।']
   }
 };
 
-const BENGALI_USERNAMES = ['KolkataGhumonto', 'MeghBalika', 'ChaKhorKolkata', 'Anamika_99', 'ShohorerChithi', 'EkaPothik', 'PadmaPar', 'AddaMaster'];
+const BENGALI_USERNAMES = ['ChaKhorKolkata', 'Anamika_99', 'ShohorerChithi', 'KolkataMemes', 'EkaPothik', 'PadmaPar', 'AddaMaster', 'MeghBalika'];
 const HINDI_USERNAMES = ['KhamoshMusafir', 'DilliWalaShayar', 'MemeBoiIndia', 'ZindagiDiary', 'ChaiLoverAmit', 'SapnoKaShehar', 'BefikraRooh'];
 const GLOBAL_USERNAMES = ['SilentVoyager', 'MidnightEcho', 'CityLightsSoul', 'PixelNomad', 'DailyByte', 'CafeHopperJoe', 'UrbanWanderer'];
 
@@ -195,93 +413,54 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    // 1. Pick 1 category strictly from the 14 categories pool
-    const target = CATEGORIES_POOL[Math.floor(Math.random() * CATEGORIES_POOL.length)];
+    // 1. Pick 1 category from the 14 categories pool
+    const target = CATEGORIES_DATA[Math.floor(Math.random() * CATEGORIES_DATA.length)];
     const nowTime = Date.now();
     const nowIso = new Date().toISOString();
 
-    // 2. Fetch Live Headline from Verified Google News RSS
-    const hlCode = target.lang === 'Bengali' ? 'bn' : target.lang === 'Hindi' ? 'hi' : 'en-IN';
-    const glCode = target.lang === 'English' ? 'US' : 'IN';
-    const rssUrl = `https://news.google.com/rss/search?q=${target.query}+when:48h&hl=${hlCode}&gl=${glCode}&ceid=${glCode}:${hlCode}`;
-    const rssJsonUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+    // 2. ZERO DUPLICATE PHOTO SELECTION (Category Verified Photo)
+    const selectedPhotoId = target.photoList[Math.floor(Math.random() * target.photoList.length)];
+    const rawUnsplashUrl = `https://images.unsplash.com/${selectedPhotoId}?auto=format&fit=crop&w=720&h=480&q=80`;
+    const imageUrl = `https://res.cloudinary.com/${CLOUD_NAME}/image/fetch/f_auto,q_auto:eco,w_720,h_480,c_fill/${encodeURIComponent(rawUnsplashUrl)}`;
 
-    let realHeadline = '';
-    let liveArticlePhoto = '';
-
-    try {
-      const feedRes = await fetch(rssJsonUrl, { signal: AbortSignal.timeout(4500) });
-      if (feedRes.ok) {
-        const feedData = await feedRes.json();
-        const items = feedData.items || [];
-        for (const item of items) {
-          if (item.title && item.title.length > 15) {
-            realHeadline = item.title.split(' - ')[0].trim();
-            if (item.enclosure && item.enclosure.link && !item.enclosure.link.endsWith('.mp4')) {
-              liveArticlePhoto = item.enclosure.link;
-            } else if (item.description) {
-              const m = item.description.match(/src="([^"]+)"/i);
-              if (m && m[1]) liveArticlePhoto = m[1];
-            }
-            if (realHeadline) break;
-          }
-        }
-      }
-    } catch (e) {}
-
-    // 3. ZERO DUPLICATE IMAGE ENGINE (Unsplash Dynamic Direct Source with Random Hash)
-    // Agar RSS image na mile, toh keyword specific dynamic photo (Never repeats the same photo)
-    let finalRawPhoto = liveArticlePhoto;
-    if (!finalRawPhoto) {
-      const randomKeyword = target.photoKeywords[Math.floor(Math.random() * target.photoKeywords.length)];
-      const uniqueSeed = `${nowTime}_${Math.floor(Math.random() * 99999)}`;
-      finalRawPhoto = `https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=720&h=480&q=80`; // safe fallback
-      // Dynamic Unsplash source by verified keyword and unique signature
-      finalRawPhoto = `https://source.unsplash.com/720x480/?${encodeURIComponent(randomKeyword)}&sig=${uniqueSeed}`;
-    }
-
-    // Cloudinary dynamic compression to ~50KB WebP/JPG
-    const imageUrl = `https://res.cloudinary.com/${CLOUD_NAME}/image/fetch/f_auto,q_auto:eco,w_720,h_480,c_fill/${encodeURIComponent(finalRawPhoto)}`;
-
-    // 4. FACEBOOK / X STYLE ENGAGING FULL PARAGRAPH POST (NO SHORT WORD LIMIT)
-    const topic = realHeadline || `${target.category} ground reality and public reactions in ${target.city}`;
+    // 3. AI Full Paragraph Generation (Direct Authentic Topic)
     const langRule = target.lang === 'Bengali' ? 'Bengali (বাংলা হরফ)' : target.lang === 'Hindi' ? 'Hindi (देवनागरी)' : 'English';
-
-    const prompt = `Write a viral, compelling, and complete social media post (like an engaging Facebook/X post) about: "${topic}".
-Context & Location: ${target.city}, ${target.country} (written from real citizen/eyewitness perspective).
-Category: ${target.category}.
+    const prompt = `You are a real, passionate person sharing a complete, meaningful story/thought on social media.
+Topic: ${target.topicPrompt}
+Location Context: ${target.city}, ${target.country}.
 Language: Strictly ${langRule}.
-MANDATORY WRITING RULES:
-1. Write a complete, comprehensive full-length post (around 100 to 140 words, rich in narrative and details).
-2. TONE: Passionate, deeply relatable, real human thoughts with vivid personal context. Absolutely no AI cliches like "In today's fast-paced world" or robotic setups.
-3. HASHTAGS: At the very bottom, include 3 to 5 trending hashtags: ${target.tags} #${target.city.replace(/\s+/g, '')}.
-4. Return raw clean post text only.`;
+MANDATORY RULES:
+1. Write a complete, expressive, and detailed single-paragraph post (about 80 to 130 words).
+2. It must be emotionally deep, meaningful, and feel 100% natural human writing.
+3. Do NOT include phrases like "ground reality and public reactions", "in today's world", or any robotic titles.
+4. HASHTAGS: At the very end, append: ${target.tags} #${target.city.replace(/\s+/g, '')}.
+5. Output raw post text only.`;
 
     let postText = '';
     try {
       const aiRes = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}?seed=${nowTime}&model=openai`, {
-        signal: AbortSignal.timeout(6500)
+        signal: AbortSignal.timeout(6000)
       });
       if (aiRes.ok) {
         const raw = (await aiRes.text()).trim().replace(/^["']|["']$/g, '');
-        if (raw && !raw.includes('error') && raw.length > 90) {
+        if (raw && !raw.includes('error') && raw.length > 70) {
           postText = raw;
         }
       }
     } catch (e) {}
 
-    // Complete Full-Paragraph Fallbacks if AI takes time
+    // Fallbacks agar AI late ho
     if (!postText) {
       if (target.lang === 'Bengali') {
-        postText = `আজকের দিনে দাঁড়িয়ে ${target.city} শহরের বুকে "${topic}" নিয়ে সাধারণ মানুষের মধ্যে যে গভীর আবেগ আর বাস্তব অনুভূতি দেখা যাচ্ছে, তা সত্যি চোখে পড়ার মতো। চায়ের টেবিলের আড্ডা থেকে শুরু করে সোশ্যাল মিডিয়ার প্রতিটি পাতায় এই ঘটনার নানা দিক নিয়ে আলোচনা চলছে। জীবনের জটিল বাস্তবতার মাঝে দাঁড়িয়ে এমন ঘটনা আমাদের নতুন করে ভাবতে বাধ্য করে। প্রশাসন এবং সমাজ যদি এই সাধারণ চাওয়াগুলোকে গুরুত্ব দেয়, তবেই প্রতিটি মানুষের দৈনন্দিন লড়াই সার্থক হবে। সময়ের সাথে এই অভিজ্ঞতা সকলের স্মৃতিতে এক অনন্য ছাপ রেখে যাবে। ${target.tags} #${target.city.replace(/\s+/g, '')}`;
+        postText = `জীবনের বাস্তব লড়াইয়ের মাঝে কিছু মুহূর্ত এমনভাবে আসে যা আমাদের হৃদয়কে গভীরভাবে নাড়া দিয়ে যায়। ${target.city} শহরের চেনা ভিড়ের মাঝে দাঁড়িয়ে নিজের ফেলে আসা স্মৃতি আর অনুভূতির কথাগুলো নতুন করে ভাবায়। সততার সাথে পথ চলা আর নিজের মানুষের পাশে নিঃশব্দে থাকাটাই হয়তো মানুষের আসল সার্থকতা। সময়ের সাথে সাথে পরিস্থিতি বদলালেও অন্তরের এই টান কোনোদিন মলিন হয় না। ${target.tags} #${target.city.replace(/\s+/g, '')}`;
       } else if (target.lang === 'Hindi') {
-        postText = `आज ${target.city} की सड़कों और गलियों में "${topic}" को लेकर एक बहुत ही संजीदा और गहरी चर्चा देखने को मिल रही है। आम नागरिकों की आंखों में उम्मीद और रोजमर्रा की परेशानियों का जो मेल नजर आ रहा है, वह किसी भी संवेदनशील इंसान के दिल को छू लेगा। सोशल मीडिया पर बड़े-बड़े बयानों से इतर, असल जिंदगी में आम जनता जिन परिस्थितियों से गुजरती है, वही सबसे बड़ी सच्चाई है। जब तक बुनियादी मुद्दों को दिल से नहीं समझा जाएगा, तब तक बदलाव अधूरा रहेगा। यह सिर्फ एक खबर नहीं, बल्कि हम सबकी साझा जिंदगी का एक अहम हिस्सा है। ${target.tags} #${target.city.replace(/\s+/g, '')}`;
+        postText = `जिंदगी की इस आपाधापी में कुछ लम्हे ऐसे आते हैं जो सीधे दिल को छू जाते हैं। ${target.city} की इस भागदौड़ भरी जिंदगी में जब ठहरकर अपनों और अपने संघर्ष को देखो, तो समझ आता है कि सुकून किसी बड़ी मंजिल में नहीं बल्कि इन सादे पलों में है। जब तक उम्मीद और मेहनत का साथ है, तब तक हर मुश्किल आसान लगने लगती है। यही वो जज्बा है जो हमें हर दिन एक नई सुबह के साथ आगे बढ़ाता है। ${target.tags} #${target.city.replace(/\s+/g, '')}`;
       } else {
-        postText = `Substantial public engagement is unfolding across ${target.city} today regarding "${topic}", drawing thoughtful reactions from local communities and observers alike. Beyond fleeting digital headlines, the lived experiences shared by everyday individuals highlight a multi-faceted reality that demands genuine contemplation. As conversations progress, people are actively addressing the core substance of this moment rather than accepting superficial narratives. A powerful reminder that authentic real-world connections remain the true foundation of our shared societal journey. ${target.tags} #${target.city.replace(/\s+/g, '')}`;
+        postText = `Life often reveals its most profound lessons in the quiet, unscripted moments we rarely stop to appreciate. Moving through the vibrant rhythm of ${target.city}, one realizes that genuine contentment is found not in monumental achievements, but in everyday resilience and the warmth of honest human bonds. As days continue to unfold, holding onto what truly matters remains our greatest strength. ${target.tags} #${target.city.replace(/\s+/g, '')}`;
       }
     }
 
-    // 5. Save Main Post to 'open-confees' DB
+    // 4. Save Main Post to 'open-confees' DB
     const author = getUsername(target.lang);
     const postRes = await fetch(
       `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions?key=${POSTS_API_KEY}`,
@@ -315,7 +494,7 @@ MANDATORY WRITING RULES:
     const postDoc = await postRes.json();
     const newPostId = postDoc.name?.split('/').pop();
 
-    // 6. Realistic Slow Organic Comments on Previous Confessions
+    // 5. Realistic Gradual Comments (22% chance per cycle, category-matched)
     try {
       const listRes = await fetch(
         `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions?pageSize=15&key=${POSTS_API_KEY}`
@@ -334,9 +513,8 @@ MANDATORY WRITING RULES:
         const currentLikes = parseInt(fields.likesCount?.integerValue || fields.likes?.integerValue || '0', 10);
         const pLang = detectLang(pText);
 
-        // Slow organic growth: 22% chance per cycle
-        if (Math.random() < 0.22 && currentComments < 18) {
-          const catPool = CATEGORY_COMMENTS[pCategory] || CATEGORY_COMMENTS['Cricket Mania'];
+        if (Math.random() < 0.22 && currentComments < 15) {
+          const catPool = COMMENTS_STORE[pCategory] || COMMENTS_STORE['Cricket Mania'];
           const commentPool = catPool[pLang] || catPool['English'];
           const commentContent = commentPool[Math.floor(Math.random() * commentPool.length)];
           const commenterName = getUsername(pLang);
@@ -388,8 +566,8 @@ MANDATORY WRITING RULES:
       success: true,
       id: newPostId,
       category: target.category,
-      headline: realHeadline,
-      fullPostLength: postText.length
+      imageUrl,
+      postLength: postText.length
     });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
