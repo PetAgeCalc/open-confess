@@ -1,10 +1,8 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
 const POSTS_PROJECT_ID = 'open-confees';
 const POSTS_API_KEY = 'AIzaSyApMJTBvr7zbzJTP85xZAb994NfLWUBSz8';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const postId = req.query.post as string;
+export default async function handler(req, res) {
+  const postId = req.query.post;
 
   let title = 'Open Confess';
   let description = 'Read real confessions, thoughts and stories.';
@@ -17,16 +15,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const data = await firestoreRes.json();
       
       if (data && data.fields) {
-        if (data.fields.category?.stringValue) {
+        if (data.fields.category && data.fields.category.stringValue) {
           title = `${data.fields.category.stringValue} | Open Confess`;
         }
-        const rawText = data.fields.text?.stringValue || data.fields.content?.stringValue || '';
+        const rawText = (data.fields.text && data.fields.text.stringValue) || 
+                        (data.fields.content && data.fields.content.stringValue) || '';
         if (rawText) {
           description = rawText.slice(0, 150).replace(/"/g, "'");
         }
-        if (data.fields.imageUrl?.stringValue) {
+        if (data.fields.imageUrl && data.fields.imageUrl.stringValue) {
           imageUrl = data.fields.imageUrl.stringValue;
-        } else if (data.fields.image?.stringValue) {
+        } else if (data.fields.image && data.fields.image.stringValue) {
           imageUrl = data.fields.image.stringValue;
         }
       }
