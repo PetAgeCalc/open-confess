@@ -1,72 +1,84 @@
-const POSTS_PROJECT_ID = 'open-confees';
-const POSTS_API_KEY = 'AIzaSyApMJTBvr7zbzJTP85xZAb994NfLWUBSz8';
-
 export default async function handler(req, res) {
-  const postId = req.query.post;
+  const { post: postId } = req.query;
 
-  let title = 'Open Confess';
-  let description = 'Read real confessions, thoughts and stories.';
-  let imageUrl = 'https://openconfess.vercel.app/favicon.png';
+  let title = "Open Confess";
+  let description = "Read confessions, thoughts and stories anonymously.";
+  let imageUrl = "https://open-confess.vercel.app/favicon.png";
+
+  const POSTS_PROJECT_ID = "open-confees";
+  const POSTS_API_KEY = "AIzaSyApMJTBvr7zbzJTP85xZAb994NfLWUBSz8";
 
   if (postId) {
     try {
-      const url = `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions/${postId}?key=${POSTS_API_KEY}`;
-      const firestoreRes = await fetch(url);
+      // Direct Firebase REST API se post fetch karna
+      const firestoreRes = await fetch(
+        `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions/${postId}?key=${POSTS_API_KEY}`
+      );
       const data = await firestoreRes.json();
 
       if (data && data.fields) {
-        if (data.fields.category && data.fields.category.stringValue) {
-          title = `${data.fields.category.stringValue} | Open Confess`;
-        }
-        const rawText = (data.fields.text && data.fields.text.stringValue) ||
-                        (data.fields.content && data.fields.content.stringValue) ||
-                        (data.fields.body && data.fields.body.stringValue) || '';
+        const rawText =
+          data.fields.text?.stringValue ||
+          data.fields.content?.stringValue ||
+          data.fields.body?.stringValue ||
+          "";
+
         if (rawText) {
-          description = rawText.slice(0, 160).replace(/"/g, "'").replace(/\n/g, ' ');
+          description = rawText.slice(0, 150).replace(/"/g, "'");
         }
-        if (data.fields.imageUrl && data.fields.imageUrl.stringValue) {
-          imageUrl = data.fields.imageUrl.stringValue;
-        } else if (data.fields.image && data.fields.image.stringValue) {
-          imageUrl = data.fields.image.stringValue;
+
+        imageUrl =
+          data.fields.imageUrl?.stringValue ||
+          data.fields.image?.stringValue ||
+          imageUrl;
+
+        const category = data.fields.category?.stringValue;
+        if (category) {
+          title = `${category.toUpperCase()} | Open Confess`;
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error("Error fetching post data:", e);
+    }
   }
 
-  const destinationUrl = `https://www.openconfess.com/?post=${postId || ''}`;
+  const destinationUrl = `https://open-confess.vercel.app/?post=${postId || ""}`;
 
-  // Facebook/WhatsApp Bot + Normal User sabhi ke liye static HTML with OG tags
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>${title}</title>
-  <meta name="description" content="${description}">
+  // User-Agent check: Robot/Crawler hai ya aam insaan
+  const userAgent = (req.headers["user-agent"] || "").toLowerCase();
+  const isBot =
+    /facebookexternalhit|whatsapp|twitterbot|telegrambot|linkedinbot|slackbot|discordbot/i.test(
+      userAgent
+    );
 
-  <!-- Open Graph / Facebook -->
-  <meta property="og:type" content="article">
-  <meta property="og:site_name" content="Open Confess">
-  <meta property="og:title" content="${title}">
-  <meta property="og:description" content="${description}">
-  <meta property="og:image" content="${imageUrl}">
-  <meta property="og:image:secure_url" content="${imageUrl}">
-  <meta property="og:url" content="${destinationUrl}">
-
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="${title}">
-  <meta name="twitter:description" content="${description}">
-  <meta name="twitter:image" content="${imageUrl}">
-
-  <!-- Instant Browser Redirect for Real Visitors -->
-  <meta http-equiv="refresh" content="0;url=${destinationUrl}">
-  <script>window.location.replace("${destinationUrl}");</script>
-</head>
-<body>
-  <p>Redirecting to confession... <a href="${destinationUrl}">Click here</a></p>
-</body>
+  // 1. Agar WhatsApp / Facebook / X ka robot hai: HTML Meta Tags do
+  if (isBot) {
+    const html = `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>${title}</title>
+    <meta name="description" content="${description}">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="Open Confess">
+    <meta property="og:title" content="${title}">
+    <meta property="og:description" content="${description}">
+    <meta property="og:image" content="${imageUrl}">
+    <meta property="og:image:secure_url" content="${imageUrl}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:url" content="${destinationUrl}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${title}">
+    <meta name="twitter:description" content="${description}">
+    <meta name="twitter:image" content="${imageUrl}">
+  </head>
+  <body></body>
 </html>`;
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.status(200).send(html);
+  }
 
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  return res.status(200).send(html);
+  // 2. Agar koi real user link par click kare: Seedha website par redirect kar do
+  return res.redirect(302, destinationUrl);
 }
