@@ -12,18 +12,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (postId) {
     try {
-      const firestoreRes = await fetch(
-        `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions/${postId}?key=${POSTS_API_KEY}`
-      );
+      const url = `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions/${postId}?key=${POSTS_API_KEY}`;
+      const firestoreRes = await fetch(url);
       const data = await firestoreRes.json();
       
       if (data && data.fields) {
-        title = data.fields.category?.stringValue ? `${data.fields.category.stringValue} | Open Confess` : 'Open Confess';
-        const rawText = data.fields.text?.stringValue || data.fields.content?.stringValue || data.fields.body?.stringValue || '';
-        description = rawText ? rawText.slice(0, 150).replace(/"/g, "'") : description;
-        imageUrl = data.fields.imageUrl?.stringValue || data.fields.image?.stringValue || imageUrl;
+        if (data.fields.category?.stringValue) {
+          title = `${data.fields.category.stringValue} | Open Confess`;
+        }
+        const rawText = data.fields.text?.stringValue || data.fields.content?.stringValue || '';
+        if (rawText) {
+          description = rawText.slice(0, 150).replace(/"/g, "'");
+        }
+        if (data.fields.imageUrl?.stringValue) {
+          imageUrl = data.fields.imageUrl.stringValue;
+        } else if (data.fields.image?.stringValue) {
+          imageUrl = data.fields.image.stringValue;
+        }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   const userAgent = (req.headers['user-agent'] || '').toLowerCase();
@@ -31,7 +40,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const destinationUrl = `https://www.openconfess.com/?post=${postId || ''}`;
 
-  // Bot ke liye direct Meta Tags
   if (isBot) {
     const botHtml = `<!DOCTYPE html>
 <html>
@@ -59,6 +67,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).send(botHtml);
   }
 
-  // Real user click kare toh direct redirect
   return res.redirect(302, destinationUrl);
 }
