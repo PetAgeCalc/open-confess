@@ -7,9 +7,10 @@ interface ShareModalProps {
   onClose: () => void;
 }
 
+// Social crawlers aur share previews ke liye dynamic OG URL
 function getShareUrl(id: string): string {
-  const base = window.location.origin + window.location.pathname;
-  return `${base}#/confession/${id}`;
+  const origin = window.location.origin;
+  return `${origin}/api/og?post=${id}`;
 }
 
 function getShareText(confession: Confession): string {
@@ -71,7 +72,7 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
     return () => document.removeEventListener('keydown', handleEscape);
   }, [onClose]);
 
-  // WhatsApp click handler jo mobile par image file attach karega
+  // WhatsApp click handler jo mobile par image file attach karega aur web par OG link bhejega
   async function handleWhatsAppShare(e: React.MouseEvent) {
     e.preventDefault();
     const imageUrl = (confession as any).imageUrl || (confession as any).image;
@@ -98,8 +99,8 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
       }
     }
 
-    // Fallback for Desktop ya browser bina file share support ke
-    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${text} ${url}`)}`;
+    // Fallback for Desktop ya browser bina file share support ke (WhatsApp link preview banayega)
+    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${text}\n\n${url}`)}`;
     window.open(waUrl, '_blank', 'noopener,noreferrer');
     onClose();
   }
