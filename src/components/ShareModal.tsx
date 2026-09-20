@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Copy, Check, Share2 } from 'lucide-react';
+import { X, Copy, Check } from 'lucide-react';
 import { Confession } from '../types';
 
 interface ShareModalProps {
@@ -64,6 +64,10 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
   const url = getShareUrl(confession.id);
   const text = getShareText(confession);
   const imageUrl = (confession as any).imageUrl || (confession as any).image;
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://www.openconfess.com';
+
+  // Backend se bana banaya ready-to-share payload ya fallback text with photo link
+  const readyPayload = (confession as any).sharePayload || `"${confession.text}"\n\n📸 Photo: ${imageUrl || url}\n\n👉 Open Confess: ${origin}`;
 
   useEffect(() => {
     function handleEscape(e: KeyboardEvent) {
@@ -76,8 +80,6 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
   // WhatsApp Share Handler
   async function handleWhatsAppShare(e: React.MouseEvent) {
     e.preventDefault();
-    const fullText = `${text}\n\nRead more: ${url}`;
-
     if (imageUrl && typeof navigator !== 'undefined' && 'canShare' in navigator) {
       try {
         const res = await fetch(imageUrl);
@@ -88,18 +90,15 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({
             title: 'Open Confess',
-            text: fullText,
+            text: readyPayload,
             files: [file],
           });
           onClose();
           return;
         }
-      } catch (err) {
-        // Fallback to web link
-      }
+      } catch (err) {}
     }
-
-    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(fullText)}`;
+    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(readyPayload)}`;
     window.open(waUrl, '_blank', 'noopener,noreferrer');
     onClose();
   }
@@ -107,8 +106,6 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
   // Telegram Share Handler
   async function handleTelegramShare(e: React.MouseEvent) {
     e.preventDefault();
-    const fullText = `${text}\n\nRead more: ${url}`;
-
     if (imageUrl && typeof navigator !== 'undefined' && 'canShare' in navigator) {
       try {
         const res = await fetch(imageUrl);
@@ -119,32 +116,20 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({
             title: 'Open Confess',
-            text: fullText,
+            text: readyPayload,
             files: [file],
           });
           onClose();
           return;
         }
-      } catch (err) {
-        // Fallback to link
-      }
+      } catch (err) {}
     }
-
-    const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+    const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(imageUrl || url)}&text=${encodeURIComponent(`"${confession.text}"\n\n👉 Open Confess: ${origin}`)}`;
     window.open(tgUrl, '_blank', 'noopener,noreferrer');
     onClose();
   }
 
-  // All Apps Native Share Button Click
-  async function handleAllAppsShare() {
-    const used = await tryNativeShare(confession);
-    if (!used) {
-      handleCopy();
-    } else {
-      onClose();
-    }
-  }
-
+  // 7 Popular Social Platforms
   const socialPlatforms = [
     {
       label: 'WhatsApp',
@@ -156,13 +141,13 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
       label: 'X (Twitter)',
       color: 'bg-black',
       iconText: 'X',
-      href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
+      href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(readyPayload)}`,
     },
     {
       label: 'Facebook',
       color: 'bg-[#1877F2]',
       iconText: 'FB',
-      href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+      href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(imageUrl || url)}&quote=${encodeURIComponent(`"${confession.text}"`)}`,
     },
     {
       label: 'Telegram',
@@ -174,19 +159,25 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
       label: 'LinkedIn',
       color: 'bg-[#0A66C2]',
       iconText: 'IN',
-      href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
+      href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(imageUrl || url)}`,
     },
     {
       label: 'Reddit',
       color: 'bg-[#FF4500]',
       iconText: 'RD',
-      href: `https://reddit.com/submit?url=${encodeURIComponent(url)}&title=${encodeURIComponent(text)}`,
+      href: `https://reddit.com/submit?url=${encodeURIComponent(imageUrl || url)}&title=${encodeURIComponent(confession.text.slice(0, 80))}`,
+    },
+    {
+      label: 'Pinterest',
+      color: 'bg-[#E60023]',
+      iconText: 'Pin',
+      href: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(origin)}&media=${encodeURIComponent(imageUrl || '')}&description=${encodeURIComponent(confession.text)}`,
     },
   ];
 
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(readyPayload);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -209,7 +200,7 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
           <button
             onClick={onClose}
             aria-label="Close"
-            className="p-1 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 transition-colors"
+            className="p-1 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -238,8 +229,8 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
           </div>
         </div>
 
-        {/* 6 Social Icons */}
-        <div className="grid grid-cols-3 gap-y-3.5 gap-x-2 mb-5">
+        {/* 7 Popular Social Platforms Grid */}
+        <div className="grid grid-cols-4 gap-y-4 gap-x-2 mb-6 justify-items-center">
           {socialPlatforms.map((p) => {
             if (p.onClick) {
               return (
@@ -254,7 +245,7 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
                   >
                     {p.iconText}
                   </span>
-                  <span className="text-[11px] text-stone-600 font-medium">{p.label}</span>
+                  <span className="text-[11px] text-stone-600 font-medium text-center">{p.label}</span>
                 </button>
               );
             }
@@ -273,37 +264,28 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
                 >
                   {p.iconText}
                 </span>
-                <span className="text-[11px] text-stone-600 font-medium">{p.label}</span>
+                <span className="text-[11px] text-stone-600 font-medium text-center">{p.label}</span>
               </a>
             );
           })}
         </div>
 
-        {/* Direct Action Buttons */}
+        {/* Copy Direct Link Button */}
         <div className="flex flex-col gap-2.5">
           <button
             type="button"
-            onClick={handleAllAppsShare}
-            className="w-full flex items-center justify-center gap-2 bg-[#dc2626] hover:bg-[#b91c1c] text-white font-semibold text-sm rounded-xl py-3 shadow-md transition-colors cursor-pointer"
-          >
-            <Share2 className="w-4 h-4" />
-            Share Image Card (All Apps)
-          </button>
-
-          <button
-            type="button"
             onClick={handleCopy}
-            className="w-full flex items-center justify-center gap-2 bg-stone-200/80 hover:bg-stone-300/80 text-stone-800 text-sm font-medium rounded-xl py-2.5 transition-colors cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 bg-stone-200/90 hover:bg-stone-300 text-stone-800 text-sm font-semibold rounded-xl py-3 transition-colors cursor-pointer shadow-sm"
           >
             {copied ? (
               <>
                 <Check className="w-4 h-4 text-emerald-600" />
-                Link copied!
+                Copied to clipboard!
               </>
             ) : (
               <>
                 <Copy className="w-4 h-4 text-stone-600" />
-                Copy Direct Link
+                Copy Direct Link & Text
               </>
             )}
           </button>
