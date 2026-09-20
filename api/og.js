@@ -10,7 +10,6 @@ export default async function handler(req, res) {
 
   if (postId) {
     try {
-      // Direct Firebase REST API se post fetch karna
       const firestoreRes = await fetch(
         `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions/${postId}?key=${POSTS_API_KEY}`
       );
@@ -24,7 +23,11 @@ export default async function handler(req, res) {
           "";
 
         if (rawText) {
-          description = rawText.slice(0, 150).replace(/"/g, "'");
+          // Double quotes aur new lines clean karna taaki meta tag break na ho
+          description = rawText
+            .replace(/[\r\n]+/g, " ")
+            .replace(/"/g, "'")
+            .slice(0, 160);
         }
 
         imageUrl =
@@ -42,43 +45,60 @@ export default async function handler(req, res) {
     }
   }
 
-  const destinationUrl = `https://open-confess.vercel.app/?post=${postId || ""}`;
+  // Current request ka domain dynamically lena
+  const host = req.headers["x-forwarded-host"] || req.headers.host || "open-confess.vercel.app";
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  const currentUrl = `${proto}://${host}/api/og?post=${postId || ""}`;
+  const destinationUrl = `${proto}://${host}/?post=${postId || ""}`;
 
-  // User-Agent check: Robot/Crawler hai ya aam insaan
   const userAgent = (req.headers["user-agent"] || "").toLowerCase();
+  
+  // Facebook ke saare web crawlers aur scrapers
   const isBot =
-    /facebookexternalhit|whatsapp|twitterbot|telegrambot|linkedinbot|slackbot|discordbot/i.test(
+    /facebookexternalhit|facebot|facebookcatalog|whatsapp|twitterbot|telegrambot|linkedinbot|slackbot|discordbot/i.test(
       userAgent
     );
 
-  // 1. Agar WhatsApp / Facebook / X ka robot hai: HTML Meta Tags do
+  // Agar Bot/Crawler hai YA link direct open kiya gaya hai (Facebook in-app scraper safe handling)
   if (isBot) {
     const html = `<!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="UTF-8">
     <title>${title}</title>
     <meta name="description" content="${description}">
-    <meta property="og:type" content="article">
+
+    <!-- Open Graph / Facebook Tags -->
+    <meta property="og:type" content="website">
     <meta property="og:site_name" content="Open Confess">
+    <meta property="og:url" content="${currentUrl}">
     <meta property="og:title" content="${title}">
     <meta property="og:description" content="${description}">
     <meta property="og:image" content="${imageUrl}">
     <meta property="og:image:secure_url" content="${imageUrl}">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta property="og:url" content="${destinationUrl}">
+    <meta property="og:image:alt" content="Post image">
+
+    <!-- Twitter Tags -->
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="${currentUrl}">
     <meta name="twitter:title" content="${title}">
     <meta name="twitter:description" content="${description}">
     <meta name="twitter:image" content="${imageUrl}">
   </head>
-  <body></body>
+  <body>
+    <script>
+      // Real browser mein open hote hi website par bhej dega
+      window.location.replace("${destinationUrl}");
+    </script>
+  </body>
 </html>`;
+
+    // Cache control taaki Facebook har naye post ka fresh data le
+    res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate");
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     return res.status(200).send(html);
   }
 
-  // 2. Agar koi real user link par click kare: Seedha website par redirect kar do
+  // Real user click: Direct frontend par redirect
   return res.redirect(302, destinationUrl);
 }
