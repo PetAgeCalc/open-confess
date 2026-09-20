@@ -418,28 +418,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const nowTime = Date.now();
     const nowIso = new Date().toISOString();
 
-    // 2. ZERO DUPLICATE PHOTO SELECTION (Category Verified Photo)
+    // 2. Cloudinary Auto-Compression URL (~50KB WebP)
     const selectedPhotoId = target.photoList[Math.floor(Math.random() * target.photoList.length)];
     const rawUnsplashUrl = `https://images.unsplash.com/${selectedPhotoId}?auto=format&fit=crop&w=720&h=480&q=80`;
     const imageUrl = `https://res.cloudinary.com/${CLOUD_NAME}/image/fetch/f_auto,q_auto:eco,w_720,h_480,c_fill/${encodeURIComponent(rawUnsplashUrl)}`;
 
-    // 3. AI Full Paragraph Generation (Direct Authentic Topic)
+    // 3. AI Full Paragraph Generation
     const langRule = target.lang === 'Bengali' ? 'Bengali (বাংলা হরফ)' : target.lang === 'Hindi' ? 'Hindi (देवनागरी)' : 'English';
-    const prompt = `You are a real, passionate person sharing a complete, meaningful story/thought on social media.
+    const prompt = `You are a real person sharing a thoughtful, genuine post on social media.
 Topic: ${target.topicPrompt}
 Location Context: ${target.city}, ${target.country}.
 Language: Strictly ${langRule}.
 MANDATORY RULES:
-1. Write a complete, expressive, and detailed single-paragraph post (about 80 to 130 words).
-2. It must be emotionally deep, meaningful, and feel 100% natural human writing.
-3. Do NOT include phrases like "ground reality and public reactions", "in today's world", or any robotic titles.
-4. HASHTAGS: At the very end, append: ${target.tags} #${target.city.replace(/\s+/g, '')}.
-5. Output raw post text only.`;
+1. Write a single expressive, meaningful paragraph (STRICTLY between 85 and 110 words).
+2. Human, authentic tone. Avoid buzzwords and robotic titles.
+3. HASHTAGS: At the very end, append: ${target.tags} #${target.city.replace(/\s+/g, '')}.
+4. Return raw text only.`;
 
     let postText = '';
     try {
       const aiRes = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}?seed=${nowTime}&model=openai`, {
-        signal: AbortSignal.timeout(6000)
+        signal: AbortSignal.timeout(3500)
       });
       if (aiRes.ok) {
         const raw = (await aiRes.text()).trim().replace(/^["']|["']$/g, '');
@@ -460,9 +459,8 @@ MANDATORY RULES:
       }
     }
 
-    // 4. Save Main Post to 'open-confees' DB with ready-made share payload
+    // 4. Save Main Post to 'open-confees' DB
     const author = getUsername(target.lang);
-    const readyShareText = `"${postText}"\n\n📸 Photo: ${imageUrl}\n\n👉 Open Confess: https://www.openconfess.com`;
 
     const postRes = await fetch(
       `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions?key=${POSTS_API_KEY}`,
@@ -481,7 +479,6 @@ MANDATORY RULES:
             city: { stringValue: target.city },
             country: { stringValue: target.country },
             category: { stringValue: target.category },
-            sharePayload: { stringValue: readyShareText },
             likesCount: { integerValue: '0' },
             likes: { integerValue: '0' },
             commentsCount: { integerValue: '0' },
@@ -495,7 +492,28 @@ MANDATORY RULES:
     );
 
     const postDoc = await postRes.json();
-    const newPostId = postDoc.name?.split('/').pop();
+    const newPostId = postDoc.name?.split('/').pop() || '';
+
+    // Clean Share Payload (Without broken Cloudinary URL characters)
+    const cleanSnippet = postText.length > 120 ? postText.slice(0, 120) + '...' : postText;
+    const postUrl = newPostId ? `https://www.openconfess.com/?post=${newPostId}` : 'https://www.openconfess.com';
+    const readyShareText = `"${cleanSnippet}"\n\n👉 Read more on Open Confess:\n${postUrl}`;
+
+    // Update document with clean sharePayload
+    if (newPostId) {
+      await fetch(
+        `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions/${newPostId}?updateMask.fieldPaths=sharePayload&key=${POSTS_API_KEY}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fields: {
+              sharePayload: { stringValue: readyShareText }
+            }
+          })
+        }
+      ).catch(() => {});
+    }
 
     // 5. Realistic Gradual Comments (22% chance per cycle, category-matched)
     try {
