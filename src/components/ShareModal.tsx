@@ -63,6 +63,7 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
   const url = getShareUrl(confession.id);
   const text = getShareText(confession);
+  const imageUrl = (confession as any).imageUrl || (confession as any).image;
 
   useEffect(() => {
     function handleEscape(e: KeyboardEvent) {
@@ -72,10 +73,9 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
     return () => document.removeEventListener('keydown', handleEscape);
   }, [onClose]);
 
-  // WhatsApp click handler jo mobile par image file attach karega aur web par OG link bhejega
+  // Mobile par image file attach karega, fallback me preview link
   async function handleWhatsAppShare(e: React.MouseEvent) {
     e.preventDefault();
-    const imageUrl = (confession as any).imageUrl || (confession as any).image;
     const fullText = `${text}\n\nRead more at: ${url}`;
 
     if (imageUrl && typeof navigator !== 'undefined' && 'canShare' in navigator) {
@@ -99,22 +99,79 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
       }
     }
 
-    // Fallback for Desktop ya browser bina file share support ke (WhatsApp link preview banayega)
-    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${text}\n\n${url}`)}`;
+    const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(fullText)}`;
     window.open(waUrl, '_blank', 'noopener,noreferrer');
     onClose();
   }
 
-  const otherLinks = [
+  // Telegram direct share
+  async function handleTelegramShare(e: React.MouseEvent) {
+    e.preventDefault();
+    const fullText = `${text}\n\nRead more at: ${url}`;
+
+    if (imageUrl && typeof navigator !== 'undefined' && 'canShare' in navigator) {
+      try {
+        const res = await fetch(imageUrl);
+        const blob = await res.blob();
+        const ext = blob.type.split('/')[1] || 'jpg';
+        const file = new File([blob], `confession.${ext}`, { type: blob.type });
+
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: 'Open Confess',
+            text: fullText,
+            files: [file],
+          });
+          onClose();
+          return;
+        }
+      } catch (err) {
+        console.log('Telegram share fallback:', err);
+      }
+    }
+
+    const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+    window.open(tgUrl, '_blank', 'noopener,noreferrer');
+    onClose();
+  }
+
+  // Popular social media links list
+  const socialPlatforms = [
+    {
+      label: 'WhatsApp',
+      color: 'bg-[#25D366]',
+      iconText: 'WA',
+      onClick: handleWhatsAppShare,
+    },
     {
       label: 'X (Twitter)',
       color: 'bg-black',
+      iconText: 'X',
       href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
     },
     {
       label: 'Facebook',
       color: 'bg-[#1877F2]',
+      iconText: 'FB',
       href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+    },
+    {
+      label: 'Telegram',
+      color: 'bg-[#229ED9]',
+      iconText: 'TG',
+      onClick: handleTelegramShare,
+    },
+    {
+      label: 'LinkedIn',
+      color: 'bg-[#0A66C2]',
+      iconText: 'IN',
+      href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
+    },
+    {
+      label: 'Reddit',
+      color: 'bg-[#FF4500]',
+      iconText: 'RD',
+      href: `https://reddit.com/submit?url=${encodeURIComponent(url)}&title=${encodeURIComponent(text)}`,
     },
   ];
 
@@ -144,39 +201,45 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          {/* WhatsApp Button with Image Handling */}
-          <button
-            type="button"
-            onClick={handleWhatsAppShare}
-            className="flex flex-col items-center gap-2 group cursor-pointer"
-          >
-            <span
-              className="w-12 h-12 rounded-full bg-[#25D366] flex items-center justify-center text-white text-xs font-semibold group-hover:opacity-90 transition-opacity shadow-sm"
-            >
-              Wh
-            </span>
-            <span className="text-xs text-gray-600">WhatsApp</span>
-          </button>
+        {/* 6 Popular Social Media Icons Grid */}
+        <div className="grid grid-cols-3 gap-y-4 gap-x-2 mb-5">
+          {socialPlatforms.map((p) => {
+            if (p.onClick) {
+              return (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={p.onClick}
+                  className="flex flex-col items-center gap-1.5 group cursor-pointer"
+                >
+                  <span
+                    className={`w-12 h-12 rounded-full ${p.color} flex items-center justify-center text-white text-sm font-bold group-hover:opacity-90 transition-opacity shadow-sm`}
+                  >
+                    {p.iconText}
+                  </span>
+                  <span className="text-xs text-gray-600 font-medium">{p.label}</span>
+                </button>
+              );
+            }
 
-          {/* Other Social Links */}
-          {otherLinks.map((l) => (
-            <a
-              key={l.label}
-              href={l.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={onClose}
-              className="flex flex-col items-center gap-2 group cursor-pointer"
-            >
-              <span
-                className={`w-12 h-12 rounded-full ${l.color} flex items-center justify-center text-white text-xs font-semibold group-hover:opacity-90 transition-opacity shadow-sm`}
+            return (
+              <a
+                key={p.label}
+                href={p.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={onClose}
+                className="flex flex-col items-center gap-1.5 group cursor-pointer"
               >
-                {l.label.slice(0, 2)}
-              </span>
-              <span className="text-xs text-gray-600">{l.label}</span>
-            </a>
-          ))}
+                <span
+                  className={`w-12 h-12 rounded-full ${p.color} flex items-center justify-center text-white text-sm font-bold group-hover:opacity-90 transition-opacity shadow-sm`}
+                >
+                  {p.iconText}
+                </span>
+                <span className="text-xs text-gray-600 font-medium">{p.label}</span>
+              </a>
+            );
+          })}
         </div>
 
         <button
