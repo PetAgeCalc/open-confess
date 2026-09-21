@@ -1,3 +1,12 @@
+function escapeHtml(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export default async function handler(req, res) {
   const { post: postId, id: altId } = req.query;
   const targetId = postId || altId;
@@ -26,7 +35,6 @@ export default async function handler(req, res) {
         if (rawText) {
           description = rawText
             .replace(/[\r\n]+/g, " ")
-            .replace(/"/g, "'")
             .slice(0, 160);
         }
 
@@ -57,6 +65,11 @@ export default async function handler(req, res) {
   const currentUrl = `${proto}://${host}/api/og?post=${targetId || ""}`;
   const destinationUrl = `${proto}://${host}/?post=${targetId || ""}`;
 
+  const safeTitle = escapeHtml(title);
+  const safeDescription = escapeHtml(description);
+  const safeImageUrl = escapeHtml(imageUrl);
+  const safeCurrentUrl = escapeHtml(currentUrl);
+
   const userAgent = (req.headers["user-agent"] || "").toLowerCase();
   const isBot =
     /facebookexternalhit|facebot|facebookcatalog|whatsapp|twitterbot|telegrambot|linkedinbot|slackbot|discordbot/i.test(
@@ -68,27 +81,27 @@ export default async function handler(req, res) {
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>${title}</title>
-    <meta name="description" content="${description}">
+    <title>${safeTitle}</title>
+    <meta name="description" content="${safeDescription}">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="article">
     <meta property="og:site_name" content="Open Confess">
-    <meta property="og:url" content="${currentUrl}">
-    <meta property="og:title" content="${title}">
-    <meta property="og:description" content="${description}">
-    <meta property="og:image" content="${imageUrl}">
-    <meta property="og:image:secure_url" content="${imageUrl}">
+    <meta property="og:url" content="${safeCurrentUrl}">
+    <meta property="og:title" content="${safeTitle}">
+    <meta property="og:description" content="${safeDescription}">
+    <meta property="og:image" content="${safeImageUrl}">
+    <meta property="og:image:secure_url" content="${safeImageUrl}">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="Post image">
 
     <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:url" content="${currentUrl}">
-    <meta name="twitter:title" content="${title}">
-    <meta name="twitter:description" content="${description}">
-    <meta name="twitter:image" content="${imageUrl}">
+    <meta name="twitter:url" content="${safeCurrentUrl}">
+    <meta name="twitter:title" content="${safeTitle}">
+    <meta name="twitter:description" content="${safeDescription}">
+    <meta name="twitter:image" content="${safeImageUrl}">
   </head>
   <body>
     <script>
