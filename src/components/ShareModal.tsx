@@ -24,19 +24,14 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
     ? window.location.origin
     : 'https://open-confess.vercel.app';
 
-  // Social preview link point to /api/og
+  // Social preview link points directly to /api/og
   const shareTargetUrl = postId ? `${origin}/api/og?post=${postId}` : origin;
   const imageUrl = String(post.imageUrl || post.image || '').trim();
 
   // 3. Social Intent Links
   const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${cleanSnippet}\n\n${shareTargetUrl}`)}`;
   const xShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(cleanSnippet)}&url=${encodeURIComponent(shareTargetUrl)}&hashtags=OpenConfess`;
-  
-  // Facebook modern web sharer (Uses proper display parameter)
-  const fbShareUrl = `https://www.facebook.com/dialog/share?app_id=966242223397117&display=popup&href=${encodeURIComponent(shareTargetUrl)}&redirect_uri=${encodeURIComponent(shareTargetUrl)}`;
-  // Fallback classic sharer
   const fbClassicUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareTargetUrl)}`;
-
   const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(shareTargetUrl)}&text=${encodeURIComponent(cleanSnippet)}`;
 
   // 4. Copy to clipboard
@@ -59,8 +54,7 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
     }
   };
 
-  // Facebook Click Handler (Auto-copies link so user can paste if app clears input)
-  const handleFacebookClick = (e: React.MouseEvent) => {
+  const handleFacebookClick = () => {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(shareTargetUrl);
@@ -194,7 +188,7 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
           </a>
         </div>
 
-        {/* Native Mobile Sheet (Photo + Caption) */}
+        {/* Native Mobile Sheet */}
         {typeof navigator !== 'undefined' && 'share' in navigator && (
           <button
             type="button"
