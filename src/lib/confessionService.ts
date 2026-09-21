@@ -15,7 +15,6 @@ import {
   deleteDoc,
 } from 'firebase/firestore';
 import { postsDb, interactionsDb, isFirebaseConfigured } from './firebase';
-import { seedConfessions } from './seedData';
 import { Confession, Comment, ReactionEmoji, ReactionMap } from '../types';
 import { toEpochMs } from './timeUtils';
 
@@ -82,7 +81,7 @@ function getMergedLocalFeed(): Confession[] {
   const localPosts = readLocalPosts();
   const stats = readLocalStats();
 
-  const all = [...localPosts, ...seedConfessions].map((post) => {
+  const all = localPosts.map((post) => {
     const override = stats[post.id];
     if (!override) return post;
     return {
@@ -136,13 +135,11 @@ async function fetchFirestorePage(
   
   let snap;
   try {
-    // 1. Try fetching ordered by createdAt
     const q = cursor
       ? query(colRef, orderBy('createdAt', 'desc'), startAfter(cursor), limit(40))
       : query(colRef, orderBy('createdAt', 'desc'), limit(40));
     snap = await getDocs(q);
   } catch (err) {
-    // 2. Fallback if composite index is missing in Firestore
     console.warn("Falling back to unordered fetch due to Firestore index:", err);
     const q = cursor
       ? query(colRef, startAfter(cursor), limit(40))
@@ -188,7 +185,6 @@ async function fetchFirestorePage(
   const resolvedPosts = await Promise.all(postsPromises);
   const serverPosts = resolvedPosts.filter((post): post is Confession => post !== null);
 
-  // Local saved posts merge karein taaki user ka naya post turant top par dikhe
   const localPosts = readLocalPosts();
   const allPostsMap = new Map<string, Confession>();
 
@@ -200,7 +196,6 @@ async function fetchFirestorePage(
 
   const validPosts = Array.from(allPostsMap.values());
 
-  // Strictly sort latest epoch timestamp on top
   validPosts.sort((a, b) => safeEpochMs(b.createdAt) - safeEpochMs(a.createdAt));
   const posts = validPosts.slice(0, PAGE_SIZE);
 
@@ -222,7 +217,7 @@ function fetchLocalPage(pageIndex: number, regionFilter?: string): FeedPage {
 }
 
 export function getAllRegionsWithCounts(): { region: string; count: number }[] {
-  const all = isFirebaseConfigured ? seedConfessions : getMergedLocalFeed();
+  const all = getMergedLocalFeed();
   const counts = new Map<string, number>();
   all.forEach((p) => {
     if (p.region) {
@@ -235,7 +230,7 @@ export function getAllRegionsWithCounts(): { region: string; count: number }[] {
 }
 
 export function getTotalPostCount(): number {
-  return isFirebaseConfigured ? seedConfessions.length : getMergedLocalFeed().length;
+  return getMergedLocalFeed().length;
 }
 
 export interface CreateConfessionInput {
@@ -307,7 +302,6 @@ export async function createConfession(input: CreateConfessionInput): Promise<Co
     comments: [],
   };
 
-  // Local storage me unshift karein taaki refresh karne par bhi gayab na ho
   const posts = readLocalPosts();
   const updatedLocal = [newPost, ...posts.filter((p) => String(p.id) !== String(createdPostId))];
   writeLocalPosts(updatedLocal);
