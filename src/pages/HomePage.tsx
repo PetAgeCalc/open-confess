@@ -3,7 +3,7 @@ import { Loader2, X, Heart, MessageCircle, MapPin, Send, User, Share2, Hash, Tra
 import { Confession } from '../types';
 import { fetchInitialFeed, fetchNextPage, FeedPage, setReaction, addComment, fetchComments, deleteConfession } from '../lib/confessionService';
 import CreateConfessionModal from '../components/CreateConfessionModal';
-import ShareModal from '../components/ShareModal';
+import ShareModal from '../components/ShareModal.tsx';
 import { getRealisticEngagement } from '../lib/realisticEngagement';
 
 interface HomePageProps {
@@ -261,9 +261,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
     loadInitial();
   }, [loadInitial, regionFilter]);
 
-  // NEW: Shared link (?post=ID) khulte hi us specific confession ko auto-open kare.
-  // Ye vahi post jo Facebook/WhatsApp/X share link se click hoke aaya hai, use
-  // seedha modal me khol deta hai, taaki share karne ka experience complete ho.
+  // Shared link (?post=ID) auto-open handler
   useEffect(() => {
     if (posts.length === 0) return;
 
@@ -274,7 +272,6 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
     const found = posts.find((p) => String(p.id) === sharedPostId);
     if (found) {
       handleOpenPost(found);
-      // URL clean kar dein taaki refresh/back par baar baar auto-open na ho
       window.history.replaceState({}, '', window.location.pathname);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -831,7 +828,7 @@ export default function HomePage({ regionFilter, activeTab = 'fresh' }: HomePage
         )}
       </section>
 
-      {/* Share Modal Trigger: Standalone ShareModal Component connects here */}
+      {/* Share Modal Trigger */}
       {sharePopupPost && (
         <ShareModal
           confession={sharePopupPost}
