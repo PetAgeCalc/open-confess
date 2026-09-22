@@ -407,19 +407,67 @@ function detectLang(text: string): 'English' | 'Hindi' | 'Bengali' {
   return 'English';
 }
 
+// NAYA: Har language ke liye 1 ki jagah 3 alag fallback templates, taaki jab bhi
+// AI call fail/timeout ho, tab bhi wording har baar same na lage — random pick hoga.
+const FALLBACK_TEMPLATES: Record<'English' | 'Hindi' | 'Bengali', ((t: CategoryConfig) => string)[]> = {
+  English: [
+    (t) => `Life often reveals its most profound lessons in the quiet, unscripted moments we rarely stop to appreciate. Moving through the vibrant rhythm of ${t.city}, one realizes that genuine contentment is found not in monumental achievements, but in everyday resilience and the warmth of honest human bonds. As days continue to unfold, holding onto what truly matters remains our greatest strength. ${t.tags} #${t.city.replace(/\s+/g, '')}`,
+    (t) => `There's something quietly powerful about ${t.category.toLowerCase()} moments that unfold right here in ${t.city}. They remind us that the smallest details of everyday life often carry the deepest meaning, far more than we usually give them credit for. Staying present and choosing to notice these moments is what keeps us grounded. ${t.tags} #${t.city.replace(/\s+/g, '')}`,
+    (t) => `Some stories don't need a grand setting to feel unforgettable — an ordinary day in ${t.city} can hold more truth than we expect. It's in these honest, everyday moments that we often find real clarity about what matters most in life. ${t.tags} #${t.city.replace(/\s+/g, '')}`,
+  ],
+  Hindi: [
+    (t) => `जिंदगी की इस आपाधापी में कुछ लम्हे ऐसे आते हैं जो सीधे दिल को छू जाते हैं। ${t.city} की इस भागदौड़ भरी जिंदगी में जब ठहरकर अपनों और अपने संघर्ष को देखो, तो समझ आता है कि सुकून किसी बड़ी मंजिल में नहीं बल्कि इन सादे पलों में है। जब तक उम्मीद और मेहनत का साथ है, तब तक हर मुश्किल आसान लगने लगती है। यही वो जज्बा है जो हमें हर दिन एक नई सुबह के साथ आगे बढ़ाता है। ${t.tags} #${t.city.replace(/\s+/g, '')}`,
+    (t) => `${t.city} की सड़कों पर चलते हुए कई बार ऐसा एहसास होता है कि असली जिंदगी इन्हीं छोटे-छोटे पलों में बसती है। हर दिन की जद्दोजहद में भी अगर थोड़ा ठहरकर देखा जाए, तो अपनों का साथ और खुद पर भरोसा ही सबसे बड़ी ताकत बनकर उभरता है। यही सच्चाई हमें आगे बढ़ने का हौसला देती है। ${t.tags} #${t.city.replace(/\s+/g, '')}`,
+    (t) => `कभी-कभी सबसे साधारण दिन भी सबसे गहरी सीख दे जाते हैं। ${t.city} में बिताया हर पल यही याद दिलाता है कि जिंदगी की खूबसूरती बड़े-बड़े सपनों में नहीं, बल्कि छोटी-छोटी ईमानदार कोशिशों में छिपी होती है। ${t.tags} #${t.city.replace(/\s+/g, '')}`,
+  ],
+  Bengali: [
+    (t) => `জীবনের বাস্তব লড়াইয়ের মাঝে কিছু মুহূর্ত এমনভাবে আসে যা আমাদের হৃদয়কে গভীরভাবে নাড়া দিয়ে যায়। ${t.city} শহরের চেনা ভিড়ের মাঝে দাঁড়িয়ে নিজের ফেলে আসা স্মৃতি আর অনুভূতির কথাগুলো নতুন করে ভাবায়। সততার সাথে পথ চলা আর নিজের মানুষের পাশে নিঃশব্দে থাকাটাই হয়তো মানুষের আসল সার্থকতা। সময়ের সাথে সাথে পরিস্থিতি বদলালেও অন্তরের এই টান কোনোদিন মলিন হয় না। ${t.tags} #${t.city.replace(/\s+/g, '')}`,
+    (t) => `${t.city} শহরের রোজকার ব্যস্ততার মাঝেও কিছু মুহূর্ত থেকে যায়, যা মনে করিয়ে দেয় জীবনের আসল সৌন্দর্য কোথায় লুকিয়ে আছে। ছোট ছোট মুহূর্তগুলোতেই আসলে জীবনের গভীরতম অনুভূতিগুলো লুকিয়ে থাকে, যেগুলো আমরা প্রায়ই খেয়াল করি না। ${t.tags} #${t.city.replace(/\s+/g, '')}`,
+    (t) => `কিছু সাধারণ দিনও হঠাৎ করে অসাধারণ শিক্ষা দিয়ে যায়। ${t.city} শহরে কাটানো প্রতিটি মুহূর্ত মনে করিয়ে দেয় যে জীবনের সৌন্দর্য বড় স্বপ্নে নয়, বরং ছোট ছোট সৎ চেষ্টাতেই লুকিয়ে থাকে। ${t.tags} #${t.city.replace(/\s+/g, '')}`,
+  ],
+};
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    // 1. Pick 1 category from the 14 categories pool
-    const target = CATEGORIES_DATA[Math.floor(Math.random() * CATEGORIES_DATA.length)];
+    // 0. NAYA: Pichle kuch generated posts fetch karke unki category aur image dekh lein,
+    // taaki isi run mein wahi category/photo turant repeat na ho (freshness ke liye).
+    // Note: Firestore ki is simple list API mein guaranteed "sabse recent" order nahi milta,
+    // isliye ye ek best-effort heuristic hai, 100% guarantee nahi — lekin repeat kaafi kam kar deta hai.
+    let recentCategories: string[] = [];
+    let recentImageUrls: string[] = [];
+    try {
+      const recentRes = await fetch(
+        `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions?pageSize=8&key=${POSTS_API_KEY}`
+      );
+      const recentData = await recentRes.json();
+      const recentDocs = recentData.documents || [];
+      recentCategories = recentDocs.map((d: any) => d.fields?.category?.stringValue).filter(Boolean);
+      recentImageUrls = recentDocs.map((d: any) => d.fields?.imageUrl?.stringValue).filter(Boolean);
+    } catch (e) {}
+
+    // 1. Category pick karein — pichli 2 baar wali category avoid karke (agar options bache hoon)
+    const availableCategories = CATEGORIES_DATA.filter(
+      (c) => !recentCategories.slice(0, 2).includes(c.category)
+    );
+    const categoryPool = availableCategories.length > 0 ? availableCategories : CATEGORIES_DATA;
+    const target = categoryPool[Math.floor(Math.random() * categoryPool.length)];
+
     const nowTime = Date.now();
     const nowIso = new Date().toISOString();
 
-    // 2. Cloudinary Auto-Compression URL (~50KB WebP)
-    const selectedPhotoId = target.photoList[Math.floor(Math.random() * target.photoList.length)];
+    // 2. Photo pick karein — isi category ki list mein se koi bhi photo jo abhi
+    // recently use nahi hui (agar sab recently use ho chuki hoon, to poore pool se pick karein)
+    const freshPhotoOptions = target.photoList.filter(
+      (id) => !recentImageUrls.some((url) => url.includes(id))
+    );
+    const photoPool = freshPhotoOptions.length > 0 ? freshPhotoOptions : target.photoList;
+    const selectedPhotoId = photoPool[Math.floor(Math.random() * photoPool.length)];
+
+    // Cloudinary Auto-Compression URL (~50KB WebP)
     const rawUnsplashUrl = `https://images.unsplash.com/${selectedPhotoId}?auto=format&fit=crop&w=720&h=480&q=80`;
     const imageUrl = `https://res.cloudinary.com/${CLOUD_NAME}/image/fetch/f_auto,q_auto:eco,w_720,h_480,c_fill/${encodeURIComponent(rawUnsplashUrl)}`;
 
@@ -437,8 +485,11 @@ MANDATORY RULES:
 
     let postText = '';
     try {
+      // NAYA: timeout 3500ms se badhakar 6500ms kiya, taaki Vercel serverless ke
+      // network overhead ke bawajood AI se real/unique text milne ke chances zyada hon
+      // (fallback par bhaar kam ho, jo repeat lagne ki asli wajah thi).
       const aiRes = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}?seed=${nowTime}&model=openai`, {
-        signal: AbortSignal.timeout(3500)
+        signal: AbortSignal.timeout(6500)
       });
       if (aiRes.ok) {
         const raw = (await aiRes.text()).trim().replace(/^["']|["']$/g, '');
@@ -448,15 +499,12 @@ MANDATORY RULES:
       }
     } catch (e) {}
 
-    // Fallbacks agar AI late ho
+    // Fallback agar AI fail/timeout ho jaaye — ab 3 variants me se random pick,
+    // taaki repeated AI-fail hone par bhi wording same na lage
     if (!postText) {
-      if (target.lang === 'Bengali') {
-        postText = `জীবনের বাস্তব লড়াইয়ের মাঝে কিছু মুহূর্ত এমনভাবে আসে যা আমাদের হৃদয়কে গভীরভাবে নাড়া দিয়ে যায়। ${target.city} শহরের চেনা ভিড়ের মাঝে দাঁড়িয়ে নিজের ফেলে আসা স্মৃতি আর অনুভূতির কথাগুলো নতুন করে ভাবায়। সততার সাথে পথ চলা আর নিজের মানুষের পাশে নিঃশব্দে থাকাটাই হয়তো মানুষের আসল সার্থকতা। সময়ের সাথে সাথে পরিস্থিতি বদলালেও অন্তরের এই টান কোনোদিন মলিন হয় না। ${target.tags} #${target.city.replace(/\s+/g, '')}`;
-      } else if (target.lang === 'Hindi') {
-        postText = `जिंदगी की इस आपाधापी में कुछ लम्हे ऐसे आते हैं जो सीधे दिल को छू जाते हैं। ${target.city} की इस भागदौड़ भरी जिंदगी में जब ठहरकर अपनों और अपने संघर्ष को देखो, तो समझ आता है कि सुकून किसी बड़ी मंजिल में नहीं बल्कि इन सादे पलों में है। जब तक उम्मीद और मेहनत का साथ है, तब तक हर मुश्किल आसान लगने लगती है। यही वो जज्बा है जो हमें हर दिन एक नई सुबह के साथ आगे बढ़ाता है। ${target.tags} #${target.city.replace(/\s+/g, '')}`;
-      } else {
-        postText = `Life often reveals its most profound lessons in the quiet, unscripted moments we rarely stop to appreciate. Moving through the vibrant rhythm of ${target.city}, one realizes that genuine contentment is found not in monumental achievements, but in everyday resilience and the warmth of honest human bonds. As days continue to unfold, holding onto what truly matters remains our greatest strength. ${target.tags} #${target.city.replace(/\s+/g, '')}`;
-      }
+      const variants = FALLBACK_TEMPLATES[target.lang];
+      const pickTemplate = variants[Math.floor(Math.random() * variants.length)];
+      postText = pickTemplate(target);
     }
 
     // 4. Save Main Post to 'open-confees' DB
