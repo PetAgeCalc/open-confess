@@ -5,6 +5,7 @@ const POSTS_API_KEY = 'AIzaSyApMJTBvr7zbzJTP85xZAb994NfLWUBSz8';
 const INTERACTIONS_PROJECT_ID = 'ageless-lamp-461817-i8';
 const INTERACTIONS_API_KEY = 'AIzaSyBnbNobd6s1GY9c7bdt6aEhPxP26Wa2VF4';
 const CLOUD_NAME = 'xjdv4l6v';
+const UPLOAD_PRESET = 'confess_preset';
 
 interface CategoryConfig {
   category: string;
@@ -407,8 +408,6 @@ function detectLang(text: string): 'English' | 'Hindi' | 'Bengali' {
   return 'English';
 }
 
-// NAYA: Har language ke liye 1 ki jagah 3 alag fallback templates, taaki jab bhi
-// AI call fail/timeout ho, tab bhi wording har baar same na lage — random pick hoga.
 const FALLBACK_TEMPLATES: Record<'English' | 'Hindi' | 'Bengali', ((t: CategoryConfig) => string)[]> = {
   English: [
     (t) => `Life often reveals its most profound lessons in the quiet, unscripted moments we rarely stop to appreciate. Moving through the vibrant rhythm of ${t.city}, one realizes that genuine contentment is found not in monumental achievements, but in everyday resilience and the warmth of honest human bonds. As days continue to unfold, holding onto what truly matters remains our greatest strength. ${t.tags} #${t.city.replace(/\s+/g, '')}`,
@@ -433,15 +432,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    // 0. NAYA: Pichle kuch generated posts fetch karke unki category aur image dekh lein,
-    // taaki isi run mein wahi category/photo turant repeat na ho (freshness ke liye).
-    // Note: Firestore ki is simple list API mein guaranteed "sabse recent" order nahi milta,
-    // isliye ye ek best-effort heuristic hai, 100% guarantee nahi — lekin repeat kaafi kam kar deta hai.
     let recentCategories: string[] = [];
     let recentImageUrls: string[] = [];
     try {
       const recentRes = await fetch(
-        `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions?pageSize=8&key=${POSTS_API_KEY}`
+        `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions?pageSize=4&key=${POSTS_API_KEY}`,
+        { signal: AbortSignal.timeout(2500) }
       );
       const recentData = await recentRes.json();
       const recentDocs = recentData.documents || [];
@@ -449,7 +445,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       recentImageUrls = recentDocs.map((d: any) => d.fields?.imageUrl?.stringValue).filter(Boolean);
     } catch (e) {}
 
-    // 1. Category pick karein — pichli 2 baar wali category avoid karke (agar options bache hoon)
     const availableCategories = CATEGORIES_DATA.filter(
       (c) => !recentCategories.slice(0, 2).includes(c.category)
     );
@@ -459,17 +454,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const nowTime = Date.now();
     const nowIso = new Date().toISOString();
 
-    // 2. Photo pick karein — isi category ki list mein se koi bhi photo jo abhi
-    // recently use nahi hui (agar sab recently use ho chuki hoon, to poore pool se pick karein)
     const freshPhotoOptions = target.photoList.filter(
       (id) => !recentImageUrls.some((url) => url.includes(id))
     );
     const photoPool = freshPhotoOptions.length > 0 ? freshPhotoOptions : target.photoList;
     const selectedPhotoId = photoPool[Math.floor(Math.random() * photoPool.length)];
 
-    // Cloudinary Auto-Compression URL (~50KB WebP)
+    // 2. Cloudinary Upload & ~50KB JPG Compression in Storage
     const rawUnsplashUrl = `https://images.unsplash.com/${selectedPhotoId}?auto=format&fit=crop&w=720&h=480&q=80`;
-    const imageUrl = `https://res.cloudinary.com/${CLOUD_NAME}/image/fetch/f_auto,q_auto:eco,w_720,h_480,c_fill/${encodeURIComponent(rawUnsplashUrl)}`;
+    let imageUrl = '';
+
+    try {
+      const form = new URLSearchParams();
+      form.append('file', rawUnsplashUrl);
+      form.append('upload_preset', UPLOAD_PRESET);
+      form.append('transformation', 'f_jpg,q_auto:eco,w_720,h_480,c_fill');
+
+      const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: form.toString(),
+        signal: AbortSignal.timeout(5000)
+      });
+
+      if (uploadRes.ok) {
+        const uploadData = await uploadRes.json();
+        imageUrl = uploadData.secure_url || '';
+      }
+    } catch (err) {}
+
+    // Safe fallback if upload times out
+    if (!imageUrl) {
+      imageUrl = `https://res.cloudinary.com/${CLOUD_NAME}/image/fetch/f_jpg,q_auto:eco,w_720,h_480,c_fill/${encodeURIComponent(rawUnsplashUrl)}`;
+    }
 
     // 3. AI Full Paragraph Generation
     const langRule = target.lang === 'Bengali' ? 'Bengali (বাংলা হরফ)' : target.lang === 'Hindi' ? 'Hindi (देवनागरी)' : 'English';
@@ -485,11 +502,8 @@ MANDATORY RULES:
 
     let postText = '';
     try {
-      // NAYA: timeout 3500ms se badhakar 6500ms kiya, taaki Vercel serverless ke
-      // network overhead ke bawajood AI se real/unique text milne ke chances zyada hon
-      // (fallback par bhaar kam ho, jo repeat lagne ki asli wajah thi).
       const aiRes = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}?seed=${nowTime}&model=openai`, {
-        signal: AbortSignal.timeout(6500)
+        signal: AbortSignal.timeout(4500)
       });
       if (aiRes.ok) {
         const raw = (await aiRes.text()).trim().replace(/^["']|["']$/g, '');
@@ -499,8 +513,6 @@ MANDATORY RULES:
       }
     } catch (e) {}
 
-    // Fallback agar AI fail/timeout ho jaaye — ab 3 variants me se random pick,
-    // taaki repeated AI-fail hone par bhi wording same na lage
     if (!postText) {
       const variants = FALLBACK_TEMPLATES[target.lang];
       const pickTemplate = variants[Math.floor(Math.random() * variants.length)];
@@ -542,12 +554,10 @@ MANDATORY RULES:
     const postDoc = await postRes.json();
     const newPostId = postDoc.name?.split('/').pop() || '';
 
-    // Clean Share Payload (Without broken Cloudinary URL characters)
     const cleanSnippet = postText.length > 120 ? postText.slice(0, 120) + '...' : postText;
     const postUrl = newPostId ? `https://www.openconfess.com/?post=${newPostId}` : 'https://www.openconfess.com';
     const readyShareText = `"${cleanSnippet}"\n\n👉 Read more on Open Confess:\n${postUrl}`;
 
-    // Update document with clean sharePayload
     if (newPostId) {
       await fetch(
         `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions/${newPostId}?updateMask.fieldPaths=sharePayload&key=${POSTS_API_KEY}`,
