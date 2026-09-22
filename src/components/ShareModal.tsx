@@ -25,43 +25,54 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
   // Social preview link points directly to /api/og
   const shareTargetUrl = postId ? `${origin}/api/og?post=${postId}` : origin;
   const imageUrl = String(post.imageUrl || post.image || '').trim();
+  const fullShareText = `${cleanSnippet}\n\n${shareTargetUrl}`;
 
   // 3. Social Intent Links (sab 100% working URL-intent links, koi login/API key nahi chahiye)
-  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(`${cleanSnippet}\n\n${shareTargetUrl}`)}`;
+  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(fullShareText)}`;
   const xShareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(cleanSnippet)}&url=${encodeURIComponent(shareTargetUrl)}&hashtags=OpenConfess`;
-  // quote param add kiya taaki Facebook composer pehle se text ke saath khule aur
-  // "Please add something and try again" error na aaye, jo pehle link card ko drop kar deta tha
   const fbClassicUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareTargetUrl)}&quote=${encodeURIComponent(cleanSnippet)}`;
   const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(shareTargetUrl)}&text=${encodeURIComponent(cleanSnippet)}`;
   const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareTargetUrl)}`;
   const redditUrl = `https://www.reddit.com/submit?url=${encodeURIComponent(shareTargetUrl)}&title=${encodeURIComponent(cleanSnippet)}`;
   const pinterestUrl = `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(shareTargetUrl)}&description=${encodeURIComponent(cleanSnippet)}${imageUrl ? `&media=${encodeURIComponent(imageUrl)}` : ''}`;
-  const emailUrl = `mailto:?subject=${encodeURIComponent('A confession on Open Confess')}&body=${encodeURIComponent(`${cleanSnippet}\n\n${shareTargetUrl}`)}`;
+  const emailUrl = `mailto:?subject=${encodeURIComponent('A confession on Open Confess')}&body=${encodeURIComponent(fullShareText)}`;
+
+  // Helper: silently text ko clipboard me copy karta hai (koi popup/notice nahi dikhata)
+  const silentCopyToClipboard = (text: string) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text);
+      } else {
+        const input = document.createElement('textarea');
+        input.value = text;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+      }
+    } catch {}
+  };
+
+  // Facebook icon dabate hi link background me clipboard me copy ho jaata hai.
+  // Facebook ka mobile app apne composer box me text force-fill nahi karne deta,
+  // lekin clipboard me content hote hi Android/Gboard khud "Paste" suggestion
+  // dikha deta hai jaise hi visitor box par tap karta hai — isse paste karna
+  // almost automatic feel hota hai, bina visitor ko kuch alag se batana pade.
+  const handleFacebookClick = () => {
+    silentCopyToClipboard(fullShareText);
+  };
 
   // 4. Copy to clipboard (untouched — pehle se hi perfect kaam kar raha hai)
   const handleCopy = () => {
-    const textToCopy = `${cleanSnippet}\n\n${shareTargetUrl}`;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(textToCopy).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      });
-    } else {
-      const input = document.createElement('textarea');
-      input.value = textToCopy;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand('copy');
-      document.body.removeChild(input);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    silentCopyToClipboard(fullShareText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const SOCIAL_PLATFORMS = [
     { label: 'WhatsApp', href: whatsappUrl, bg: 'bg-emerald-500', icon: '💬' },
     { label: 'X', href: xShareUrl, bg: 'bg-black', icon: '𝕏' },
-    { label: 'Facebook', href: fbClassicUrl, bg: 'bg-blue-600', icon: 'f' },
+    { label: 'Facebook', href: fbClassicUrl, bg: 'bg-blue-600', icon: 'f', onClick: handleFacebookClick },
     { label: 'Telegram', href: telegramUrl, bg: 'bg-sky-500', icon: '✈️' },
     { label: 'LinkedIn', href: linkedinUrl, bg: 'bg-[#0A66C2]', icon: 'in' },
     { label: 'Reddit', href: redditUrl, bg: 'bg-[#FF4500]', icon: '👽' },
@@ -101,7 +112,8 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
           </p>
         </div>
 
-        {/* Social Platforms — 8 icons, 2 rows */}
+        {/* Social Platforms — 8 icons, 2 rows. Facebook icon dikhta bilkul waisa hi hai,
+            bas click hote hi silently link clipboard me copy ho jaata hai. */}
         <div className="grid grid-cols-4 gap-3 pt-1">
           {SOCIAL_PLATFORMS.map((platform) => (
             <a
@@ -109,6 +121,7 @@ export default function ShareModal({ confession, onClose }: ShareModalProps) {
               href={platform.href}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={platform.onClick}
               className="flex flex-col items-center gap-1 text-xs text-stone-700 hover:opacity-80 transition-opacity"
             >
               <div className={`w-12 h-12 rounded-full ${platform.bg} text-white flex items-center justify-center text-lg font-bold shadow-sm`}>
