@@ -2,8 +2,7 @@ name: Auto Post Cron
 
 on:
   schedule:
-    # Heavy rush se bachne ke liye 3-minute offset (Har 15 minute: 3, 18, 33, 48)
-    - cron: '3,18,33,48 * * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -12,16 +11,4 @@ jobs:
     steps:
       - name: Hit OpenConfess API
         run: |
-          echo "Calling /api/cron endpoint..."
-          RESPONSE=$(curl -s -S -A "Mozilla/5.0 (GitHub-Action-Runner)" -w "\nHTTP_STATUS:%{http_code}" -L "https://www.openconfess.com/api/cron")
-          
-          echo "=== API Response ==="
-          echo "$RESPONSE"
-          echo "===================="
-          
-          STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS" | cut -d':' -f2)
-          if [ "$STATUS" -ne 200 ]; then
-            echo "API Call Failed with HTTP Status: $STATUS"
-            exit 1
-          fi
-          echo "Post and comments processed successfully!"
+          curl -s -S -A "Mozilla/5.0" -L "https://www.openconfess.com/api/cron"
