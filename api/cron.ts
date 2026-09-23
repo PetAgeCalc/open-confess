@@ -7,6 +7,11 @@ const INTERACTIONS_API_KEY = 'AIzaSyBnbNobd6s1GY9c7bdt6aEhPxP26Wa2VF4';
 const CLOUD_NAME = 'xjdv4l6v';
 const UPLOAD_PRESET = 'confess_preset';
 
+// Free key from https://unsplash.com/developers -> create an app -> "Access Key"
+// Used ONLY as a fallback when every photo in a category's static list has been
+// used recently, so we never repeat an old image.
+const UNSPLASH_ACCESS_KEY = 'OOkgREH8-Bhypi7HQ-RukA6F4ab9T1cb6bvLLlXJU6Y';
+
 interface CategoryConfig {
   category: string;
   lang: 'English' | 'Hindi' | 'Bengali';
@@ -15,6 +20,7 @@ interface CategoryConfig {
   tags: string;
   topicPrompt: string;
   photoList: string[];
+  photoKeywords: string; // used for the live fallback search, kept on-topic per category
 }
 
 const CATEGORIES_DATA: CategoryConfig[] = [
@@ -26,7 +32,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'UK',
     tags: '#CricketTwitter #MatchDay #CricketMania #GameChanger',
     topicPrompt: 'Write an intense, passionate full paragraph post about a nail-biting final over in cricket, team spirit, and unbelievable sports drama.',
-    photoList: ['photo-1531415074868-036b1c57e329', 'photo-1540747913346-19e32dc3e97e', 'photo-1512719994953-eabf50895df7', 'photo-1587280501635-68a0e82cd5ff']
+    photoList: ['photo-1531415074868-036b1c57e329', 'photo-1540747913346-19e32dc3e97e', 'photo-1512719994953-eabf50895df7', 'photo-1587280501635-68a0e82cd5ff'],
+    photoKeywords: 'cricket,cricket stadium,cricket match'
   },
   {
     category: 'Cricket Mania',
@@ -35,7 +42,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'India',
     tags: '#क्रिकेटफीवर #IPL #TeamIndia #BCCI',
     topicPrompt: 'क्रिकेट के आखिरी रोमांचक ओवर, चौके-छक्कों की जंग और दर्शकों के जुनून पर एक गहरा और भावुक पूरा पैराग्राफ पोस्ट लिखें।',
-    photoList: ['photo-1540747913346-19e32dc3e97e', 'photo-1531415074868-036b1c57e329', 'photo-1587280501635-68a0e82cd5ff', 'photo-1512719994953-eabf50895df7']
+    photoList: ['photo-1540747913346-19e32dc3e97e', 'photo-1531415074868-036b1c57e329', 'photo-1587280501635-68a0e82cd5ff', 'photo-1512719994953-eabf50895df7'],
+    photoKeywords: 'cricket,cricket stadium,cricket match'
   },
   {
     category: 'Cricket Mania',
@@ -44,7 +52,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'Bangladesh',
     tags: '#ক্রিকেট #টিমবাংলাদেশ #CricketCraze',
     topicPrompt: 'ক্রিকেট মাঠের টানটান শেষ ওভারের উত্তেজনা, স্মরণীয় বাউন্ডারি এবং দলের অসাধারণ লড়াই নিয়ে একটি গভীর ও সম্পূর্ণ অনুচ্ছেদ পোস্ট লিখুন।',
-    photoList: ['photo-1531415074868-036b1c57e329', 'photo-1540747913346-19e32dc3e97e', 'photo-1512719994953-eabf50895df7']
+    photoList: ['photo-1531415074868-036b1c57e329', 'photo-1540747913346-19e32dc3e97e', 'photo-1512719994953-eabf50895df7'],
+    photoKeywords: 'cricket,cricket stadium,cricket match'
   },
 
   // 2. Football & World Sports
@@ -55,7 +64,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'UK',
     tags: '#FootballLive #UCL #PremierLeague #MatchDay',
     topicPrompt: 'Write an exhilarating full paragraph about 90 minutes of football madness, late stoppage time winner, and roaring stadium passion.',
-    photoList: ['photo-1508098682722-e99c43a406b2', 'photo-1518091043644-c1d4457512c6', 'photo-1489944440615-453fc2b6a9a9', 'photo-1431324155629-1a6deb1dec8d']
+    photoList: ['photo-1508098682722-e99c43a406b2', 'photo-1518091043644-c1d4457512c6', 'photo-1489944440615-453fc2b6a9a9', 'photo-1431324155629-1a6deb1dec8d'],
+    photoKeywords: 'football,soccer stadium,football match'
   },
   {
     category: 'Football & World Sports',
@@ -64,7 +74,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'India',
     tags: '#ফুটবল #ডার্বি #কলকাতাফুটবল #FootballPassion',
     topicPrompt: 'কলকাতা ফুটবলের তীব্র উন্মাদনা, ইনজুরি টাইমের দর্শনীয় গোল আর সমর্থকদের নিঃস্বার্থ আবেগ নিয়ে বিস্তারিত সম্পূর্ণ পোস্ট লিখুন।',
-    photoList: ['photo-1518091043644-c1d4457512c6', 'photo-1508098682722-e99c43a406b2', 'photo-1489944440615-453fc2b6a9a9']
+    photoList: ['photo-1518091043644-c1d4457512c6', 'photo-1508098682722-e99c43a406b2', 'photo-1489944440615-453fc2b6a9a9'],
+    photoKeywords: 'football,soccer stadium,football match'
   },
 
   // 3. News & Breaking Headlines
@@ -75,7 +86,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'UK',
     tags: '#BreakingNews #WorldNews #Headlines #PublicEye',
     topicPrompt: 'Write a realistic, thought-provoking full paragraph about today major city challenges, public transportation issues, and civic infrastructure.',
-    photoList: ['photo-1585829365295-ab7cd400c167', 'photo-1495020689067-958852a7765e', 'photo-1504711434969-e33886168f5c', 'photo-1477959858617-67f30bc75b82']
+    photoList: ['photo-1585829365295-ab7cd400c167', 'photo-1495020689067-958852a7765e', 'photo-1504711434969-e33886168f5c', 'photo-1477959858617-67f30bc75b82'],
+    photoKeywords: 'city street,city traffic,urban life'
   },
   {
     category: 'News & Breaking Headlines',
@@ -84,7 +96,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'India',
     tags: '#ताज़ाखबर #BreakingNews #देशदुनिया #दिल्लीअपडेट',
     topicPrompt: 'शहर की ताजा हलचल, रोजमर्रा के ट्रैफिक और बुनियादी समस्याओं को लेकर आम नागरिकों के संघर्ष पर एक गंभीर और विस्तृत पैराग्राफ लिखें।',
-    photoList: ['photo-1495020689067-958852a7765e', 'photo-1585829365295-ab7cd400c167', 'photo-1504711434969-e33886168f5c']
+    photoList: ['photo-1495020689067-958852a7765e', 'photo-1585829365295-ab7cd400c167', 'photo-1504711434969-e33886168f5c'],
+    photoKeywords: 'city street,city traffic,urban life'
   },
   {
     category: 'News & Breaking Headlines',
@@ -93,7 +106,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'India',
     tags: '#ব্রেকিংনিউজ #আজকেরখবর #কলকাতা #বাস্তবচিত্র',
     topicPrompt: 'শহরের প্রতিদিনের বাস্তব সমস্যা, পরিবহন ব্যবস্থা এবং সাধারণ নিত্যযাত্রীদের লড়াই নিয়ে একটি তথ্যবহুল সম্পূর্ণ পোস্ট লিখুন।',
-    photoList: ['photo-1504711434969-e33886168f5c', 'photo-1495020689067-958852a7765e', 'photo-1585829365295-ab7cd400c167']
+    photoList: ['photo-1504711434969-e33886168f5c', 'photo-1495020689067-958852a7765e', 'photo-1585829365295-ab7cd400c167'],
+    photoKeywords: 'city street,city traffic,urban life'
   },
 
   // 4. Politics & Public Debate
@@ -104,7 +118,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'USA',
     tags: '#PoliticsToday #Democracy #PublicDebate #PolicyWatch',
     topicPrompt: 'Write a balanced, highly realistic critique of public promises versus actual ground reality faced by hardworking middle-class families.',
-    photoList: ['photo-1541872703-74c5e44368f9', 'photo-1540910419892-4a36d2c3266c', 'photo-1529107386315-e1a2ed48a620', 'photo-1523995462485-3d171b5c8fa9']
+    photoList: ['photo-1541872703-74c5e44368f9', 'photo-1540910419892-4a36d2c3266c', 'photo-1529107386315-e1a2ed48a620', 'photo-1523995462485-3d171b5c8fa9'],
+    photoKeywords: 'politics,government building,public debate'
   },
   {
     category: 'Politics & Public Debate',
@@ -113,7 +128,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'India',
     tags: '#राजनीति #जनताकीआवाज #BharatPolitics #लोकतंत्र',
     topicPrompt: 'नेताओं के चुनावी वादों और जमीनी स्तर पर आम जनता की बुनियादी जरूरतों के बीच के अंतर पर एक निष्पक्ष और मजबूत पैराग्राफ लिखें।',
-    photoList: ['photo-1540910419892-4a36d2c3266c', 'photo-1541872703-74c5e44368f9', 'photo-1529107386315-e1a2ed48a620']
+    photoList: ['photo-1540910419892-4a36d2c3266c', 'photo-1541872703-74c5e44368f9', 'photo-1529107386315-e1a2ed48a620'],
+    photoKeywords: 'politics,government building,public debate'
   },
 
   // 5. Entertainment & Cinema
@@ -124,7 +140,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'USA',
     tags: '#CinemaLovers #MovieNight #Hollywood #PopCulture',
     topicPrompt: 'Write an engaging, movie-lover full post about theatrical experience, character writing, background score, and visual storytelling.',
-    photoList: ['photo-1489599849927-2ee91cede3ba', 'photo-1514525253161-7a46d19cd819', 'photo-1478720568477-152d9b164e26', 'photo-1536440136628-849c177e76a1']
+    photoList: ['photo-1489599849927-2ee91cede3ba', 'photo-1514525253161-7a46d19cd819', 'photo-1478720568477-152d9b164e26', 'photo-1536440136628-849c177e76a1'],
+    photoKeywords: 'cinema,movie theatre,film'
   },
   {
     category: 'Entertainment & Cinema',
@@ -133,7 +150,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'India',
     tags: '#बॉलीवुड #CinemaReview #BoxOfficeHit #सिनेमा',
     topicPrompt: 'सिनेमाघरों में नई फिल्म का जादू, कलाकारों का सधा हुआ अभिनय और दिल छू लेने वाले संवादों पर एक खूबसूरत और विस्तृत रिव्यू पोस्ट लिखें।',
-    photoList: ['photo-1514525253161-7a46d19cd819', 'photo-1489599849927-2ee91cede3ba', 'photo-1478720568477-152d9b164e26']
+    photoList: ['photo-1514525253161-7a46d19cd819', 'photo-1489599849927-2ee91cede3ba', 'photo-1478720568477-152d9b164e26'],
+    photoKeywords: 'cinema,movie theatre,film'
   },
 
   // 6. Funny, Memes & Sarcasm
@@ -144,7 +162,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'USA',
     tags: '#FunnyTweet #MemeDaily #Sarcasm #RelatableHumor',
     topicPrompt: 'Write a hilarious, relatable, and witty full post about adulting struggles, waking up on Monday, and surviving coffee addiction.',
-    photoList: ['photo-1537151608828-ea2b11777ee8', 'photo-1543610892-0b1f7e6d8ac1', 'photo-1517849845537-4d257902454a', 'photo-1527525443983-6e60c75fff46']
+    photoList: ['photo-1537151608828-ea2b11777ee8', 'photo-1543610892-0b1f7e6d8ac1', 'photo-1517849845537-4d257902454a', 'photo-1527525443983-6e60c75fff46'],
+    photoKeywords: 'laughing friends,funny moment,coffee morning'
   },
   {
     category: 'Funny, Memes & Sarcasm',
@@ -153,7 +172,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'India',
     tags: '#मजेदारमीम्स #देसीह्यूमर #हंसतेरहो #FunnyJokes',
     topicPrompt: 'जिंदगी के मजेदार किस्सों, दोस्तों की अजीब हरकतों और काम के बीच आने वाले आलस पर एक बहुत ही मजेदार और चुटीला देसी पोस्ट लिखें।',
-    photoList: ['photo-1543610892-0b1f7e6d8ac1', 'photo-1537151608828-ea2b11777ee8', 'photo-1517849845537-4d257902454a']
+    photoList: ['photo-1543610892-0b1f7e6d8ac1', 'photo-1537151608828-ea2b11777ee8', 'photo-1517849845537-4d257902454a'],
+    photoKeywords: 'laughing friends,funny moment,coffee morning'
   },
 
   // 7. True Love & Soul Connections
@@ -164,7 +184,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'France',
     tags: '#TrueLove #Soulmate #DeepConnection #LoveStory',
     topicPrompt: 'Write a deeply moving, genuine full paragraph about quiet unconditional love, understanding without words, and growing old together.',
-    photoList: ['photo-1529333166437-7750a6dd5a70', 'photo-1516589178581-6cd7833ae3b2', 'photo-1522673607200-164d1b6ce486', 'photo-1494774157365-9e04c6720e47']
+    photoList: ['photo-1529333166437-7750a6dd5a70', 'photo-1516589178581-6cd7833ae3b2', 'photo-1522673607200-164d1b6ce486', 'photo-1494774157365-9e04c6720e47'],
+    photoKeywords: 'couple love,romantic couple,holding hands'
   },
   {
     category: 'True Love & Soul Connections',
@@ -173,7 +194,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'India',
     tags: '#सच्चाप्यार #रूहानीरिश्ता #LoveDiary #एहसास',
     topicPrompt: 'सच्ची और रूहानी मोहब्बत, बिना शर्त साथ निभाने के वादे और दिल की खामोश समझ पर एक दिल छू लेने वाला संपूर्ण पोस्ट लिखें।',
-    photoList: ['photo-1516589178581-6cd7833ae3b2', 'photo-1529333166437-7750a6dd5a70', 'photo-1522673607200-164d1b6ce486']
+    photoList: ['photo-1516589178581-6cd7833ae3b2', 'photo-1529333166437-7750a6dd5a70', 'photo-1522673607200-164d1b6ce486'],
+    photoKeywords: 'couple love,romantic couple,holding hands'
   },
 
   // 8. Heartbreak & Pain
@@ -184,7 +206,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'USA',
     tags: '#Heartbreak #BrokenHeart #MovingOn #Healing',
     topicPrompt: 'Write a poignant, deeply realistic post about the quiet ache of losing someone you loved, midnight memories, and slowly piecing yourself back together.',
-    photoList: ['photo-1534528741775-53994a69daeb', 'photo-1499209974431-9dddcece7f88', 'photo-1516589178581-6cd7833ae3b2', 'photo-1509198397868-475647b2a1e5']
+    photoList: ['photo-1534528741775-53994a69daeb', 'photo-1499209974431-9dddcece7f88', 'photo-1516589178581-6cd7833ae3b2', 'photo-1509198397868-475647b2a1e5'],
+    photoKeywords: 'sad alone,lonely person,rainy window'
   },
   {
     category: 'Heartbreak & Pain',
@@ -193,7 +216,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'India',
     tags: '#टूटादिल #तन्हाई #अधूरीमोहब्बत #दर्द',
     topicPrompt: 'अधूरी मोहब्बत की खामोश टीस, पुरानी यादों की चुभन और टूटे दिल को संभालकर आगे बढ़ने के दर्द पर एक भावुक और सच्चा पोस्ट लिखें।',
-    photoList: ['photo-1534528741775-53994a69daeb', 'photo-1509198397868-475647b2a1e5', 'photo-1499209974431-9dddcece7f88']
+    photoList: ['photo-1534528741775-53994a69daeb', 'photo-1509198397868-475647b2a1e5', 'photo-1499209974431-9dddcece7f88'],
+    photoKeywords: 'sad alone,lonely person,rainy window'
   },
 
   // 9. Motivational Quotes & Resilience
@@ -204,7 +228,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'Canada',
     tags: '#Motivation #NeverGiveUp #StayStrong #RiseAndGrind',
     topicPrompt: 'Write a powerful, inspiring full paragraph about rising from absolute rock bottom, building unbreakable silent discipline, and overcoming self-doubt.',
-    photoList: ['photo-1470246973918-29a93221c455', 'photo-1500530855697-b586d89ba3ee', 'photo-1499209974431-9dddcece7f88', 'photo-1464822759023-fed622ff2c3b']
+    photoList: ['photo-1470246973918-29a93221c455', 'photo-1500530855697-b586d89ba3ee', 'photo-1499209974431-9dddcece7f88', 'photo-1464822759023-fed622ff2c3b'],
+    photoKeywords: 'motivation sunrise,success climbing,discipline runner'
   },
   {
     category: 'Motivational Quotes & Resilience',
@@ -213,7 +238,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'India',
     tags: '#प्रेरणा #हौसलेकीउड़ान #संघर्षहीजीवनहै #मेहनत',
     topicPrompt: 'मुश्किल हालातों में बिना रुके लड़ने, खुद पर भरोसा रखने और शून्य से उठकर सफलता पाने के जज्बे पर एक ऊर्जावान पूरा पोस्ट लिखें।',
-    photoList: ['photo-1470246973918-29a93221c455', 'photo-1500530855697-b586d89ba3ee', 'photo-1464822759023-fed622ff2c3b']
+    photoList: ['photo-1470246973918-29a93221c455', 'photo-1500530855697-b586d89ba3ee', 'photo-1464822759023-fed622ff2c3b'],
+    photoKeywords: 'motivation sunrise,success climbing,discipline runner'
   },
 
   // 10. Real Life Struggles & Stories
@@ -224,7 +250,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'USA',
     tags: '#RealLife #LifeStruggles #CommonMan #RealityCheck',
     topicPrompt: 'Write an honest, touching narrative about an ordinary middle-class individual making silent sacrifices every day for family well-being.',
-    photoList: ['photo-1477959858617-67f30bc75b82', 'photo-1480714378408-67cf0d13bc1b', 'photo-1449824913935-59a10b8d2000', 'photo-1476703993599-0035a21b17a9']
+    photoList: ['photo-1477959858617-67f30bc75b82', 'photo-1480714378408-67cf0d13bc1b', 'photo-1449824913935-59a10b8d2000', 'photo-1476703993599-0035a21b17a9'],
+    photoKeywords: 'working man,daily life struggle,street worker'
   },
   {
     category: 'Real Life Struggles & Stories',
@@ -233,7 +260,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'India',
     tags: '#বাস্তবজীবন #মধ্যবিত্তেরলড়াই #জীবনসংগ্রাম',
     topicPrompt: 'মধ্যবিত্ত পরিবারের দিনরাত অমানুষিক পরিশ্রম, পরিবারের মুখে হাসি ফোটানোর নীরব ত্যাগ এবং সততার সাথে বেঁচে থাকা নিয়ে একটি গভীর সম্পূর্ণ পোস্ট লিখুন।',
-    photoList: ['photo-1449824913935-59a10b8d2000', 'photo-1477959858617-67f30bc75b82', 'photo-1480714378408-67cf0d13bc1b']
+    photoList: ['photo-1449824913935-59a10b8d2000', 'photo-1477959858617-67f30bc75b82', 'photo-1480714378408-67cf0d13bc1b'],
+    photoKeywords: 'working man,daily life struggle,street worker'
   },
 
   // 11. Work & Corporate Hustle
@@ -244,7 +272,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'Singapore',
     tags: '#CorporateLife #WorkHustle #Burnout #9to5Life',
     topicPrompt: 'Write a truthful, relatable critique of modern corporate culture, infinite meetings, inbox overwhelm, and the struggle to protect mental peace.',
-    photoList: ['photo-1486312338219-ce68d2c6f44d', 'photo-1498050108023-c5249f4df085', 'photo-1519389950473-47ba0277781c', 'photo-1497366216548-37526070297c']
+    photoList: ['photo-1486312338219-ce68d2c6f44d', 'photo-1498050108023-c5249f4df085', 'photo-1519389950473-47ba0277781c', 'photo-1497366216548-37526070297c'],
+    photoKeywords: 'office work,corporate meeting,tired employee'
   },
   {
     category: 'Work & Corporate Hustle',
@@ -253,7 +282,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'India',
     tags: '#कॉर्पोरेटलाइफ #नौकरीपेशा #WorkStress #WeekendVibes',
     topicPrompt: 'कॉर्पोरेट की 9 से 5 की अंधी दौड़, अंतहीन टारगेट्स और ईएमआई के बोझ के बीच खुद की जिंदगी को खोने के अहसास पर एक सच्चा पैराग्राफ लिखें।',
-    photoList: ['photo-1498050108023-c5249f4df085', 'photo-1486312338219-ce68d2c6f44d', 'photo-1519389950473-47ba0277781c']
+    photoList: ['photo-1498050108023-c5249f4df085', 'photo-1486312338219-ce68d2c6f44d', 'photo-1519389950473-47ba0277781c'],
+    photoKeywords: 'office work,corporate meeting,tired employee'
   },
 
   // 12. Family & Home Bonds
@@ -264,7 +294,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'Australia',
     tags: '#FamilyFirst #ParentsLove #HomeVibes #Togetherness',
     topicPrompt: 'Write a heartwarming full post about returning home to parents, home-cooked food, and realizing family love is the safest place on earth.',
-    photoList: ['photo-1511895426328-dc8714191300', 'photo-1609220136736-443140cffec6', 'photo-1476703993599-0035a21b17a9', 'photo-1506869640319-fe1a24fd76dc']
+    photoList: ['photo-1511895426328-dc8714191300', 'photo-1609220136736-443140cffec6', 'photo-1476703993599-0035a21b17a9', 'photo-1506869640319-fe1a24fd76dc'],
+    photoKeywords: 'family together,parents home,family dinner'
   },
   {
     category: 'Family & Home Bonds',
@@ -273,7 +304,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'India',
     tags: '#परिवारकाप्यार #मातापिता #घरकासुकून #अपनापन',
     topicPrompt: 'मां-बाप के अनमोल बलिदान, घर के सुकून और परिवार के साथ बिताए गए सादे लेकिन सबसे खूबसूरत पलों पर एक भावुक और आत्मीय पोस्ट लिखें।',
-    photoList: ['photo-1609220136736-443140cffec6', 'photo-1511895426328-dc8714191300', 'photo-1476703993599-0035a21b17a9']
+    photoList: ['photo-1609220136736-443140cffec6', 'photo-1511895426328-dc8714191300', 'photo-1476703993599-0035a21b17a9'],
+    photoKeywords: 'family together,parents home,family dinner'
   },
 
   // 13. Travel & Global Adventures
@@ -284,7 +316,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'USA',
     tags: '#TravelDiaries #Wanderlust #ExploreTheWorld #Mountains',
     topicPrompt: 'Write a vivid, sensory travel post about morning mist over winding mountain roads, local food discoveries, and the transformative power of journeys.',
-    photoList: ['photo-1488646953014-85cb44e25828', 'photo-1476514525535-07fb3b4ae5f1', 'photo-1503220317375-aaad61436b1b', 'photo-1469854523086-cc02fe5d8800']
+    photoList: ['photo-1488646953014-85cb44e25828', 'photo-1476514525535-07fb3b4ae5f1', 'photo-1503220317375-aaad61436b1b', 'photo-1469854523086-cc02fe5d8800'],
+    photoKeywords: 'mountain travel,scenic road trip,wanderlust'
   },
   {
     category: 'Travel & Global Adventures',
@@ -293,7 +326,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'India',
     tags: '#ভ্রমণকাহিনী #পাহাড়েরটান #পথেরনেশা #দার্জিলিং',
     topicPrompt: 'পাহাড়ের কুয়াশাঘেরা বাঁক, কাঞ্চনজঙ্ঘার দৃশ্য, চা বাগানের নীরবতা এবং ভ্রমণের রোমাঞ্চকর অনুভূতি নিয়ে একটি মনোমুগ্ধকর বিস্তারিত পোস্ট লিখুন।',
-    photoList: ['photo-1503220317375-aaad61436b1b', 'photo-1476514525535-07fb3b4ae5f1', 'photo-1488646953014-85cb44e25828']
+    photoList: ['photo-1503220317375-aaad61436b1b', 'photo-1476514525535-07fb3b4ae5f1', 'photo-1488646953014-85cb44e25828'],
+    photoKeywords: 'mountain travel,scenic road trip,wanderlust'
   },
 
   // 14. Tech, AI & Future World
@@ -304,7 +338,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'USA',
     tags: '#TechNews #ArtificialIntelligence #FutureTech #DigitalEra',
     topicPrompt: 'Write an insightful, forward-looking full paragraph analyzing how artificial intelligence is reshaping careers, human creativity, and daily life.',
-    photoList: ['photo-1518770660439-4636190af475', 'photo-1526374965328-7f61d4dc18c5', 'photo-1485827404703-89b55fcc595e', 'photo-1531297484001-80022131f5a1']
+    photoList: ['photo-1518770660439-4636190af475', 'photo-1526374965328-7f61d4dc18c5', 'photo-1485827404703-89b55fcc595e', 'photo-1531297484001-80022131f5a1'],
+    photoKeywords: 'artificial intelligence,technology future,robotics'
   },
   {
     category: 'Tech, AI & Future World',
@@ -313,7 +348,8 @@ const CATEGORIES_DATA: CategoryConfig[] = [
     country: 'India',
     tags: '#तकनीक #एआईक्रांति #TechHindi #भविष्य',
     topicPrompt: 'आर्टिफिशियल इंटेलिजेंस के बढ़ते कदमों, नई नौकरियों और तकनीक के बीच इंसानी सोच के भविष्य पर एक विचारणीय और ज्ञानवर्धक पैराग्राफ लिखें।',
-    photoList: ['photo-1526374965328-7f61d4dc18c5', 'photo-1518770660439-4636190af475', 'photo-1485827404703-89b55fcc595e']
+    photoList: ['photo-1526374965328-7f61d4dc18c5', 'photo-1518770660439-4636190af475', 'photo-1485827404703-89b55fcc595e'],
+    photoKeywords: 'artificial intelligence,technology future,robotics'
   }
 ];
 
@@ -410,21 +446,43 @@ function detectLang(text: string): 'English' | 'Hindi' | 'Bengali' {
 
 const FALLBACK_TEMPLATES: Record<'English' | 'Hindi' | 'Bengali', ((t: CategoryConfig) => string)[]> = {
   English: [
-    (t) => `Life often reveals its most profound lessons in the quiet, unscripted moments we rarely stop to appreciate. Moving through the vibrant rhythm of ${t.city}, one realizes that genuine contentment is found not in monumental achievements, but in everyday resilience and the warmth of honest human bonds. As days continue to unfold, holding onto what truly matters remains our greatest strength. ${t.tags} #${t.city.replace(/\s+/g, '')}`,
-    (t) => `There's something quietly powerful about ${t.category.toLowerCase()} moments that unfold right here in ${t.city}. They remind us that the smallest details of everyday life often carry the deepest meaning, far more than we usually give them credit for. Staying present and choosing to notice these moments is what keeps us grounded. ${t.tags} #${t.city.replace(/\s+/g, '')}`,
-    (t) => `Some stories don't need a grand setting to feel unforgettable — an ordinary day in ${t.city} can hold more truth than we expect. It's in these honest, everyday moments that we often find real clarity about what matters most in life. ${t.tags} #${t.city.replace(/\s+/g, '')}`,
+    (t) => `Life often reveals its most profound lessons in the quiet, unscripted moments we rarely stop to appreciate. Moving through the vibrant rhythm of ${t.city}, one realizes that genuine contentment is found not in monumental achievements, but in everyday resilience and the warmth of honest human bonds. As days continue to unfold, we keep discovering that the people who stand quietly beside us during hard times matter far more than any applause or recognition ever could. Holding onto what truly matters, staying grounded, and choosing kindness even on the hardest days remains our greatest strength. ${t.tags} #${t.city.replace(/\s+/g, '')}`,
+    (t) => `There's something quietly powerful about ${t.category.toLowerCase()} moments that unfold right here in ${t.city}. They remind us that the smallest details of everyday life often carry the deepest meaning, far more than we usually give them credit for. In a world constantly chasing the next big milestone, it takes real courage to slow down and notice these fleeting moments before they pass us by. Staying present, choosing gratitude over comparison, and letting these small experiences shape us is what keeps us genuinely grounded through every season of life. ${t.tags} #${t.city.replace(/\s+/g, '')}`,
+    (t) => `Some stories don't need a grand setting to feel unforgettable — an ordinary day in ${t.city} can hold more truth than we expect. It's in these honest, everyday moments that we often find real clarity about what matters most in life. The rush of daily routines can easily blind us to these quiet truths, yet they keep surfacing whenever we finally pause long enough to listen. Perhaps that is the real lesson: meaning isn't found in the extraordinary, but in how deeply we choose to feel the ordinary. ${t.tags} #${t.city.replace(/\s+/g, '')}`,
   ],
   Hindi: [
-    (t) => `जिंदगी की इस आपाधापी में कुछ लम्हे ऐसे आते हैं जो सीधे दिल को छू जाते हैं। ${t.city} की इस भागदौड़ भरी जिंदगी में जब ठहरकर अपनों और अपने संघर्ष को देखो, तो समझ आता है कि सुकून किसी बड़ी मंजिल में नहीं बल्कि इन सादे पलों में है। जब तक उम्मीद और मेहनत का साथ है, तब तक हर मुश्किल आसान लगने लगती है। यही वो जज्बा है जो हमें हर दिन एक नई सुबह के साथ आगे बढ़ाता है। ${t.tags} #${t.city.replace(/\s+/g, '')}`,
-    (t) => `${t.city} की सड़कों पर चलते हुए कई बार ऐसा एहसास होता है कि असली जिंदगी इन्हीं छोटे-छोटे पलों में बसती है। हर दिन की जद्दोजहद में भी अगर थोड़ा ठहरकर देखा जाए, तो अपनों का साथ और खुद पर भरोसा ही सबसे बड़ी ताकत बनकर उभरता है। यही सच्चाई हमें आगे बढ़ने का हौसला देती है। ${t.tags} #${t.city.replace(/\s+/g, '')}`,
-    (t) => `कभी-कभी सबसे साधारण दिन भी सबसे गहरी सीख दे जाते हैं। ${t.city} में बिताया हर पल यही याद दिलाता है कि जिंदगी की खूबसूरती बड़े-बड़े सपनों में नहीं, बल्कि छोटी-छोटी ईमानदार कोशिशों में छिपी होती है। ${t.tags} #${t.city.replace(/\s+/g, '')}`,
+    (t) => `जिंदगी की इस आपाधापी में कुछ लम्हे ऐसे आते हैं जो सीधे दिल को छू जाते हैं। ${t.city} की इस भागदौड़ भरी जिंदगी में जब ठहरकर अपनों और अपने संघर्ष को देखो, तो समझ आता है कि सुकून किसी बड़ी मंजिल में नहीं बल्कि इन सादे पलों में है। हर दिन कुछ नया सिखाता है, कभी हार का सामना कर के तो कभी छोटी सी जीत से मिलने वाली खुशी से। जब तक उम्मीद और मेहनत का साथ है, तब तक हर मुश्किल आसान लगने लगती है। यही वो जज्बा है जो हमें हर दिन एक नई सुबह के साथ आगे बढ़ाता है और खुद पर यकीन बनाए रखने की ताकत देता है। ${t.tags} #${t.city.replace(/\s+/g, '')}`,
+    (t) => `${t.city} की सड़कों पर चलते हुए कई बार ऐसा एहसास होता है कि असली जिंदगी इन्हीं छोटे-छोटे पलों में बसती है। हर दिन की जद्दोजहद में भी अगर थोड़ा ठहरकर देखा जाए, तो अपनों का साथ और खुद पर भरोसा ही सबसे बड़ी ताकत बनकर उभरता है। कभी थकान हावी होती है, कभी हौसला टूटता भी है, मगर हर बार खुद को संभालकर फिर से खड़ा हो जाना ही असली जीत है। यही सच्चाई हमें आगे बढ़ने का हौसला देती है और हर नए दिन को थोड़ा और बेहतर बनाने की उम्मीद जगाए रखती है। ${t.tags} #${t.city.replace(/\s+/g, '')}`,
+    (t) => `कभी-कभी सबसे साधारण दिन भी सबसे गहरी सीख दे जाते हैं। ${t.city} में बिताया हर पल यही याद दिलाता है कि जिंदगी की खूबसूरती बड़े-बड़े सपनों में नहीं, बल्कि छोटी-छोटी ईमानदार कोशिशों में छिपी होती है। रोज की भागदौड़ के बीच जब कोई अपना साथ खड़ा मिल जाए, तो सारी थकान अपने आप हल्की लगने लगती है। यही एहसास हमें सिखाता है कि जिंदगी को जीना है तो हर पल को दिल से महसूस करना जरूरी है। ${t.tags} #${t.city.replace(/\s+/g, '')}`,
   ],
   Bengali: [
-    (t) => `জীবনের বাস্তব লড়াইয়ের মাঝে কিছু মুহূর্ত এমনভাবে আসে যা আমাদের হৃদয়কে গভীরভাবে নাড়া দিয়ে যায়। ${t.city} শহরের চেনা ভিড়ের মাঝে দাঁড়িয়ে নিজের ফেলে আসা স্মৃতি আর অনুভূতির কথাগুলো নতুন করে ভাবায়। সততার সাথে পথ চলা আর নিজের মানুষের পাশে নিঃশব্দে থাকাটাই হয়তো মানুষের আসল সার্থকতা। সময়ের সাথে সাথে পরিস্থিতি বদলালেও অন্তরের এই টান কোনোদিন মলিন হয় না। ${t.tags} #${t.city.replace(/\s+/g, '')}`,
-    (t) => `${t.city} শহরের রোজকার ব্যস্ততার মাঝেও কিছু মুহূর্ত থেকে যায়, যা মনে করিয়ে দেয় জীবনের আসল সৌন্দর্য কোথায় লুকিয়ে আছে। ছোট ছোট মুহূর্তগুলোতেই আসলে জীবনের গভীরতম অনুভূতিগুলো লুকিয়ে থাকে, যেগুলো আমরা প্রায়ই খেয়াল করি না। ${t.tags} #${t.city.replace(/\s+/g, '')}`,
-    (t) => `কিছু সাধারণ দিনও হঠাৎ করে অসাধারণ শিক্ষা দিয়ে যায়। ${t.city} শহরে কাটানো প্রতিটি মুহূর্ত মনে করিয়ে দেয় যে জীবনের সৌন্দর্য বড় স্বপ্নে নয়, বরং ছোট ছোট সৎ চেষ্টাতেই লুকিয়ে থাকে। ${t.tags} #${t.city.replace(/\s+/g, '')}`,
+    (t) => `জীবনের বাস্তব লড়াইয়ের মাঝে কিছু মুহূর্ত এমনভাবে আসে যা আমাদের হৃদয়কে গভীরভাবে নাড়া দিয়ে যায়। ${t.city} শহরের চেনা ভিড়ের মাঝে দাঁড়িয়ে নিজের ফেলে আসা স্মৃতি আর অনুভূতির কথাগুলো নতুন করে ভাবায়। সততার সাথে পথ চলা আর নিজের মানুষের পাশে নিঃশব্দে থাকাটাই হয়তো মানুষের আসল সার্থকতা। প্রতিটা দিন নতুন কিছু শেখায়, কখনো ব্যর্থতার মধ্য দিয়ে, কখনো ছোট্ট একটা জয়ের আনন্দ দিয়ে। সময়ের সাথে সাথে পরিস্থিতি বদলালেও অন্তরের এই টান কোনোদিন মলিন হয় না, বরং আরও গভীর হয়ে ওঠে। ${t.tags} #${t.city.replace(/\s+/g, '')}`,
+    (t) => `${t.city} শহরের রোজকার ব্যস্ততার মাঝেও কিছু মুহূর্ত থেকে যায়, যা মনে করিয়ে দেয় জীবনের আসল সৌন্দর্য কোথায় লুকিয়ে আছে। ছোট ছোট মুহূর্তগুলোতেই আসলে জীবনের গভীরতম অনুভূতিগুলো লুকিয়ে থাকে, যেগুলো আমরা প্রায়ই খেয়াল করি না। ক্লান্তি আসে, হতাশাও আসে, কিন্তু প্রতিবার নিজেকে গুছিয়ে আবার দাঁড়িয়ে যাওয়াটাই আসল লড়াই। এই উপলব্ধিই আমাদের প্রতিদিন একটু একটু করে বদলে দেয়। ${t.tags} #${t.city.replace(/\s+/g, '')}`,
+    (t) => `কিছু সাধারণ দিনও হঠাৎ করে অসাধারণ শিক্ষা দিয়ে যায়। ${t.city} শহরে কাটানো প্রতিটি মুহূর্ত মনে করিয়ে দেয় যে জীবনের সৌন্দর্য বড় স্বপ্নে নয়, বরং ছোট ছোট সৎ চেষ্টাতেই লুকিয়ে থাকে। রোজকার ব্যস্ততার ফাঁকে যখন আপন কাউকে পাশে পাওয়া যায়, তখন সব ক্লান্তি এমনিতেই হালকা হয়ে যায়। এটাই হয়তো জীবনের সবচেয়ে বড় শিক্ষা। ${t.tags} #${t.city.replace(/\s+/g, '')}`,
   ],
 };
+
+function getCategoryKeywords(config: CategoryConfig): string {
+  return config.photoKeywords;
+}
+
+// Fetch a fresh, category-relevant image URL from Unsplash's live search
+// (used only when every photo in the static list was used recently).
+async function fetchLiveCategoryImage(keywords: string): Promise<string | null> {
+  if (!UNSPLASH_ACCESS_KEY || UNSPLASH_ACCESS_KEY === 'YOUR_UNSPLASH_ACCESS_KEY') return null;
+  try {
+    const query = keywords.split(',')[0];
+    const res = await fetch(
+      `https://api.unsplash.com/photos/random?query=${encodeURIComponent(query)}&orientation=landscape&client_id=${UNSPLASH_ACCESS_KEY}`,
+      { signal: AbortSignal.timeout(4000) }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.urls?.regular || data?.urls?.raw || null;
+  } catch (e) {
+    return null;
+  }
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -435,8 +493,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let recentCategories: string[] = [];
     let recentImageUrls: string[] = [];
     try {
+      // Look further back (20 posts instead of 4) so image repetition is genuinely avoided,
+      // not just avoided against the last couple of posts.
       const recentRes = await fetch(
-        `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions?pageSize=4&key=${POSTS_API_KEY}`,
+        `https://firestore.googleapis.com/v1/projects/${POSTS_PROJECT_ID}/databases/(default)/documents/confessions?pageSize=20&key=${POSTS_API_KEY}`,
         { signal: AbortSignal.timeout(2500) }
       );
       const recentData = await recentRes.json();
@@ -454,14 +514,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const nowTime = Date.now();
     const nowIso = new Date().toISOString();
 
+    // 1. Pick a photo: prefer one from this category's static list that hasn't been used recently.
     const freshPhotoOptions = target.photoList.filter(
       (id) => !recentImageUrls.some((url) => url.includes(id))
     );
-    const photoPool = freshPhotoOptions.length > 0 ? freshPhotoOptions : target.photoList;
-    const selectedPhotoId = photoPool[Math.floor(Math.random() * photoPool.length)];
+
+    let rawUnsplashUrl = '';
+    if (freshPhotoOptions.length > 0) {
+      const selectedPhotoId = freshPhotoOptions[Math.floor(Math.random() * freshPhotoOptions.length)];
+      rawUnsplashUrl = `https://images.unsplash.com/${selectedPhotoId}?auto=format&fit=crop&w=720&h=480&q=80`;
+    } else {
+      // Every static photo for this category has been used recently — pull a fresh,
+      // category-matched image live instead of repeating an old one.
+      const liveUrl = await fetchLiveCategoryImage(getCategoryKeywords(target));
+      if (liveUrl) {
+        rawUnsplashUrl = liveUrl;
+      } else {
+        // Last resort only if the live fetch itself failed (no key / network issue):
+        // still pick from the category's own list (never from an unrelated category).
+        const fallbackId = target.photoList[Math.floor(Math.random() * target.photoList.length)];
+        rawUnsplashUrl = `https://images.unsplash.com/${fallbackId}?auto=format&fit=crop&w=720&h=480&q=80`;
+      }
+    }
 
     // 2. Cloudinary Upload & ~50KB JPG Compression in Storage
-    const rawUnsplashUrl = `https://images.unsplash.com/${selectedPhotoId}?auto=format&fit=crop&w=720&h=480&q=80`;
     let imageUrl = '';
 
     try {
@@ -488,17 +564,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       imageUrl = `https://res.cloudinary.com/${CLOUD_NAME}/image/fetch/f_jpg,q_auto:eco,w_720,h_480,c_fill/${encodeURIComponent(rawUnsplashUrl)}`;
     }
 
-    // 3. AI Full Paragraph Generation
+    // 3. AI Full Paragraph Generation (100-150 words, complete post, no cut-off ending)
     const langRule = target.lang === 'Bengali' ? 'Bengali (বাংলা হরফ)' : target.lang === 'Hindi' ? 'Hindi (देवनागरी)' : 'English';
     const prompt = `You are a real person sharing a thoughtful, genuine post on social media.
 Topic: ${target.topicPrompt}
 Location Context: ${target.city}, ${target.country}.
 Language: Strictly ${langRule}.
 MANDATORY RULES:
-1. Write a single expressive, meaningful paragraph (STRICTLY between 85 and 110 words).
-2. Human, authentic tone. Avoid buzzwords and robotic titles.
-3. HASHTAGS: At the very end, append: ${target.tags} #${target.city.replace(/\s+/g, '')}.
-4. Return raw text only.`;
+1. Write a single expressive, meaningful paragraph (STRICTLY between 100 and 150 words).
+2. The paragraph MUST feel complete and self-contained with a proper concluding thought — never end mid-sentence or mid-idea.
+3. Human, authentic tone. Avoid buzzwords and robotic titles.
+4. HASHTAGS: At the very end, append: ${target.tags} #${target.city.replace(/\s+/g, '')}.
+5. Return raw text only.`;
 
     let postText = '';
     try {
@@ -507,7 +584,11 @@ MANDATORY RULES:
       });
       if (aiRes.ok) {
         const raw = (await aiRes.text()).trim().replace(/^["']|["']$/g, '');
-        if (raw && !raw.includes('error') && raw.length > 70) {
+        const wordCount = raw.split(/\s+/).filter(Boolean).length;
+        // Reject text that's clearly incomplete/cut off: too short, or doesn't end
+        // with sentence-ending punctuation before the hashtags.
+        const endsCleanly = /[.!?।](\s|$)/.test(raw.split('#')[0].trim().slice(-2));
+        if (raw && !raw.includes('error') && wordCount >= 90 && endsCleanly) {
           postText = raw;
         }
       }
